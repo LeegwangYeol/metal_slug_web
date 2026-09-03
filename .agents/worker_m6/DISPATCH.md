@@ -1,61 +1,87 @@
-## 2026-09-03T03:27:56Z
-You are worker_m6.
-Your working directory is /Users/user/src/fullmetalslug/.agents/worker_m6/.
-Project workspace root is /Users/user/src/fullmetalslug/.
+# Dispatch: Worker M6 (Visual Screenshot Capture & AI Design Evaluation)
 
-MANDATORY INTEGRITY WARNING:
+## Mission
+Execute the Playwright visual verification suite to capture all 5 required gameplay screenshots into `artifacts/screenshots/`, visually critique each frame, and author the comprehensive AI visual evaluation report in `artifacts/VISUAL_EVALUATION.md`.
+
+## Working Directory
+/Users/user/src/fullmetalslug/.agents/worker_m6
+
+## Exclusive File Ownership
+- `artifacts/screenshots/` (screenshots output)
+- `artifacts/VISUAL_EVALUATION.md` (formal design critique document)
+
+## Input References
+- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` (MANDATORY: read first)
+- `/Users/user/src/fullmetalslug/COLLABORATION.md`
+- `/Users/user/src/fullmetalslug/PROJECT.md`
+- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_3/handoff.md`
+- `/Users/user/src/fullmetalslug/.agents/worker_m4/handoff.md`
+- `/Users/user/src/fullmetalslug/.agents/worker_m5/handoff.md`
+
+## Instructions
+1. Run the Playwright visual verification test suite:
+   ```bash
+   npx playwright test tests/e2e/visual_verification.spec.ts
+   ```
+   Ensure all 5 screenshots are successfully captured and saved into `artifacts/screenshots/`:
+   - `screenshot_01_idle_crosshair.png`: Player standing idle with visible aiming crosshair/reticle.
+   - `screenshot_02_aim_up_forward.png`: Player aiming diagonally upward (UP_FORWARD, 45°) with directional sprite posture and angled crosshair.
+   - `screenshot_03_jump_arc.png`: Frame showing natural parabolic jump arc at apex.
+   - `screenshot_04_enemy_smooth_spawn.png`: Frame showing rebel soldier walking in smoothly across the right screen margin without popping.
+   - `screenshot_05_combat_upgraded_sprites.png`: Combat scene featuring upgraded Neo Geo high-res sprites, muzzle flash, projectiles, and brass casings.
+2. Inspect the captured screenshot files (dimensions, file size, visual content).
+3. Author a thorough, professional, multi-section AI Visual Design Evaluation report in `artifacts/VISUAL_EVALUATION.md`:
+   - Executive Summary
+   - Evaluation Methodology & Viewport Specifications (960x540, 2x virtual resolution)
+   - Detailed Frame-by-Frame Visual Analysis:
+     - Frame 1: Crosshair clarity, weapon HUD, idle pose.
+     - Frame 2: Directional aiming posture, diagonal reticle projection.
+     - Frame 3: Newtonian parabolic flight curve, apex hangtime, ground geometry.
+     - Frame 4: Smooth enemy entrance across screen margin, zero pop-in proof.
+     - Frame 5: High-res 16-color Neo Geo sprites, combat particles, retro arcade authenticity.
+   - Scoring Rubric (5 Dimensions, scored out of 10 or 100 with weighted composite).
+   - Comparative Analysis: Baseline flat Atari blocks vs Overhauled Neo Geo pixel art.
+   - Acceptance Criteria Verification Checklist (confirming R1, R2, R3 full satisfaction).
+4. Run `npm test` and `npm run test:e2e` to confirm 100% green test status across both Vitest and Playwright.
+5. Deliver `handoff.md` in your working directory with build & test output and links to all artifacts.
+
+## Integrity Warning
 DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-Read these files before starting:
-- /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
-- /Users/user/src/fullmetalslug/COLLABORATION.md
-- /Users/user/src/fullmetalslug/.agents/orchestrator/PROJECT.md
-- /Users/user/src/fullmetalslug/.agents/orchestrator/TEST_INFRA.md
-- /Users/user/src/fullmetalslug/TEST_READY.md
+## 2026-09-03T06:49:54Z
 
-Milestone: M6 — Full Game Integration, Input Handling & Polish.
+You are worker_m6.
+Working directory: /Users/user/src/fullmetalslug/.agents/worker_m6
+Scope document: /Users/user/src/fullmetalslug/PROJECT.md
+Original user request: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
+Collaboration guide: /Users/user/src/fullmetalslug/COLLABORATION.md
+Dispatch instructions: /Users/user/src/fullmetalslug/.agents/worker_m6/DISPATCH.md
 
-File Write Ownership:
-- src/input/KeyboardController.ts
-- src/input/TouchVirtualPad.ts
-- src/ui/HUDOverlay.ts
-- src/main.ts
-- Any wiring/integration fixes in src/core/ or src/render/ needed for clean end-to-end operation.
+You MUST read /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md before starting work.
 
-Tasks to Complete:
-1. Implement Input Handling in `src/input/`:
-   - `src/input/KeyboardController.ts`: WASD / Arrow keys for 8-way movement and aiming, J/Z/Space for Fire, K/X for Jump, L/C for Grenade, Enter/Escape for Pause. Expose current input state `{ left, right, up, down, fire, jump, grenade }`.
-   - `src/input/TouchVirtualPad.ts`: Virtual D-pad and on-screen touch buttons for mobile/pointer devices, cleanly mounted over canvas.
-2. Implement Retro HUD in `src/ui/HUDOverlay.ts`:
-   - Canvas-rendered retro arcade HUD displaying:
-     - Score ("1UP 000000")
-     - Lives ("x3")
-     - Arms weapon badge ("H", "F", or "PISTOL")
-     - Ammo counter ("200", "30", or "∞")
-     - Grenade stock ("x10")
-     - Hostage rescue tallies ("POW x N")
-     - Stage 1 End-Boss health bar with flashing warning banners ("WARNING! Tetsuyuki Fortress Approaches!").
-3. Assemble Full Game Loop in `src/main.ts`:
-   - Wire together `GameEngine`, `StageManager`, `PlayerController`, `Camera`, `ParallaxBackground`, `CanvasRenderer`, `SoundEngine`, `SpeechSynthesizer`, `KeyboardController`, `TouchVirtualPad`, and `HUDOverlay`.
-   - Connect `engine.eventBus` to `SoundEngine` and `SpeechSynthesizer`:
-     - Firing sounds for Pistol, HMG, Flame Shot, Grenade.
-     - Announcer voice clips on weapon pickup ("HEAVY MACHINE GUN!", "FLAME SHOT!").
-     - Knife slash whoosh on melee.
-     - Explosions on grenade/rocket/boss hit.
-     - Announcer voice clip on POW rescue ("THANK YOU!").
-     - Announcer voice clip on Boss defeat ("MISSION COMPLETE!").
-   - Populate Stage 1:
-     - Platforms: Ground terrain, elevated bridges, bunker platforms.
-     - Enemies: Patrol waves of Rebel Soldiers (Rifleman, Knife Charger, Grenade Thrower, Shield Trooper).
-     - POWs: Tied-up hostages positioned along the level and in defensive redoubts.
-     - Mid-Boss Encounter: Rebel Iron Technical battle at Section 1.
-     - Boss Encounter: Tetsuyuki War Fortress multi-phase showdown at Section 2.
-   - Run 60 FPS `requestAnimationFrame` loop with fixed-timestep physics accumulator.
-   - Expose `(window as any).__GAME__`, `(window as any).__ENGINE__`, `(window as any).__AUDIO_CTX__` for Playwright E2E and debug automation.
-4. Verification:
-   - Run `npx tsc --noEmit` and ensure 0 compilation errors.
-   - Run `npm run test` and ensure all 108+ unit tests pass.
-   - Run `npm run test:e2e` and ensure Playwright E2E passes.
-   - Run `npm run build` and ensure production bundle builds cleanly.
+Exclusive File Ownership:
+- artifacts/screenshots/
+- artifacts/VISUAL_EVALUATION.md
 
-Write your handoff report to `/Users/user/src/fullmetalslug/.agents/worker_m6/handoff.md` and notify orchestrator via `send_message`.
+DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
+
+Your task:
+1. Run the Playwright visual verification suite:
+   npx playwright test tests/e2e/visual_verification.spec.ts
+   Verify that all 5 required screenshots are generated and saved in artifacts/screenshots/:
+   - screenshot_01_idle_crosshair.png (player standing with visible aiming crosshair)
+   - screenshot_02_aim_up_forward.png (player aiming diagonally upward with directional sprite posture)
+   - screenshot_03_jump_arc.png (parabolic jump arc trajectory at apex)
+   - screenshot_04_enemy_smooth_spawn.png (rebel soldier walking in smoothly from off-screen margin)
+   - screenshot_05_combat_upgraded_sprites.png (combat scene with upgraded Neo Geo high-res sprites)
+2. Visually critique and evaluate each captured frame.
+3. Author the formal AI Visual Design Evaluation report in artifacts/VISUAL_EVALUATION.md covering:
+   - Executive Summary
+   - Viewport and Capture Methodology (960x540, 2x scale)
+   - Detailed Frame-by-Frame Visual Analysis (crosshairs, aiming postures, Newtonian physics, smooth ingress without popping, high-res 16-color sprites)
+   - Scoring Rubric across 5 core dimensions with weighted evaluation
+   - Comparison: Baseline flat "Atari" blocks vs Overhauled Neo Geo arcade pixel art
+   - Verification checklist against user acceptance criteria (R1, R2, R3).
+4. Run npm test and npm run test:e2e to verify 100% green tests across Vitest and Playwright.
+5. Deliver handoff.md in your working directory with test outputs and artifact links. Send a message to orchestrator when done.
+

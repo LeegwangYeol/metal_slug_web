@@ -134,6 +134,8 @@ export interface SoldierConfig {
   patrolMaxX?: number;
   customHp?: number;
   walkSpeed?: number;
+  cameraX?: number;
+  isIngress?: boolean;
 }
 
 /**
@@ -157,6 +159,8 @@ export class SoldierEnemy implements EnemyEntity {
   public isMeleeVulnerable: boolean = true; // Required: all 4 soldiers are melee vulnerable
   public facing: 1 | -1 = -1; // Default faces left
   public state: string = 'IDLE';
+  public isIngress: boolean = false;
+  private ingressCameraX: number = 0;
 
   // Dimensions & bounds
   public readonly width: number = 24;
@@ -242,6 +246,19 @@ export class SoldierEnemy implements EnemyEntity {
       default:
         throw new Error(`Unsupported soldier enemy type: ${type}`);
     }
+
+    // Support smooth ingress: when spawned off-screen, minions move inward with a run-in velocity
+    // (vx = -110 px/s) until reaching the visible screen boundary margin (x <= cameraX + 460).
+    const isOffscreenRight = config.cameraX !== undefined && this.position.x > config.cameraX + 460;
+    const isOffscreenLeft = config.cameraX !== undefined && this.position.x < config.cameraX - 20;
+
+    if (config.isIngress || isOffscreenRight || isOffscreenLeft) {
+      this.isIngress = true;
+      this.ingressCameraX = config.cameraX ?? (isOffscreenRight ? this.position.x - 520 : 0);
+      this.facing = isOffscreenLeft ? 1 : -1;
+      this.velocity.x = this.facing * 110;
+      this.state = 'INGRESS';
+    }
   }
 
   // Factory methods for convenience
@@ -286,20 +303,24 @@ export class SoldierEnemy implements EnemyEntity {
       }
     }
 
-    // 2. State machine execution based on role
-    switch (this.role) {
-      case 'RIFLE':
-        this.updateRiflemanAI(dt, engine);
-        break;
-      case 'KNIFE':
-        this.updateKnifeChargerAI(dt, engine);
-        break;
-      case 'GRENADE':
-        this.updateGrenadeThrowerAI(dt, engine);
-        break;
-      case 'SHIELD':
-        this.updateShieldTrooperAI(dt, engine);
-        break;
+    // 2. State machine execution: smooth ingress or role-specific AI
+    if (this.state === 'INGRESS') {
+      this.updateIngressAI(dt, engine);
+    } else {
+      switch (this.role) {
+        case 'RIFLE':
+          this.updateRiflemanAI(dt, engine);
+          break;
+        case 'KNIFE':
+          this.updateKnifeChargerAI(dt, engine);
+          break;
+        case 'GRENADE':
+          this.updateGrenadeThrowerAI(dt, engine);
+          break;
+        case 'SHIELD':
+          this.updateShieldTrooperAI(dt, engine);
+          break;
+      }
     }
 
     // 3. Platform & Gravity Physics
@@ -308,6 +329,64 @@ export class SoldierEnemy implements EnemyEntity {
     // 4. Synchronize bounding box
     this.bounds.x = this.position.x;
     this.bounds.y = this.position.y;
+  }
+
+  public startIngress(cameraX: number): void {
+    this.ingressCameraX = cameraX;
+    this.isIngress = true;
+    if (this.position.x > cameraX + 460) {
+      this.facing = -1;
+      this.velocity.x = -110;
+    } else if (this.position.x < cameraX + 20) {
+      this.facing = 1;
+      this.velocity.x = 110;
+    } else {
+      this.facing = -1;
+      this.velocity.x = -110;
+    }
+    this.transitionTo('INGRESS');
+  }
+
+  private updateIngressAI(_dt: number, engine?: GameEngine): void {
+    if (engine && (engine as any).cameraX !== undefined) {
+      this.ingressCameraX = (engine as any).cameraX;
+    }
+
+    // Inward run velocity (-110 px/s for right spawn, +110 px/s for left spawn)
+    this.velocity.x = this.facing * 110;
+
+    // Check transition condition: reaches visible screen boundary margin (x <= cameraX + 460 for right)
+    const reachedBoundary =
+      (this.facing === -1 && this.position.x <= this.ingressCameraX + 460) ||
+      (this.facing === 1 && this.position.x >= this.ingressCameraX + 20);
+
+    if (reachedBoundary) {
+      this.isIngress = false;
+      this.transitionToNormalRoleAI();
+    }
+  }
+
+  private transitionToNormalRoleAI(): void {
+    switch (this.role) {
+      case 'RIFLE':
+        this.patrolMinX = this.position.x - 100;
+        this.patrolMaxX = this.position.x + 50;
+        this.velocity.x = this.facing * this.walkSpeed;
+        this.transitionTo('PATROL');
+        break;
+      case 'KNIFE':
+        this.velocity.x = 0;
+        this.transitionTo('IDLE');
+        break;
+      case 'GRENADE':
+        this.velocity.x = 0;
+        this.transitionTo('IDLE');
+        break;
+      case 'SHIELD':
+        this.velocity.x = this.facing * 45;
+        this.transitionTo('GUARD_ADVANCE');
+        break;
+    }
   }
 
   private applyPhysics(dt: number, engine?: GameEngine): void {

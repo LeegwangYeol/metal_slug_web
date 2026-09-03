@@ -1,18 +1,21 @@
-# Progress — worker_m1 (Milestone M1)
+# Progress — worker_m1 (R1 Newtonian Physics & Arcade Kinematics Overhaul)
 
-Last visited: 2026-09-03T12:18:40+09:00
+Last visited: 2026-09-03T15:28:50+09:00
 
 ## Status
-Task complete. All files created, compiled, tested, and verified.
+Task complete. All physics constants updated, apex float dampening, single-shot jump cut, coyote time, and jump buffering implemented. 145/145 tests pass green.
 
 ## Steps
-- [x] Step 1: Read requirements, PROJECT.md, COLLABORATION.md, spec_report.md, survey_report.md.
-- [x] Step 2: Initialize project tooling (`package.json`, `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `index.html`).
-- [x] Step 3: Run `npm install` to install dependencies and verify toolchain.
-- [x] Step 4: Implement `src/core/math/Vector2D.ts`.
-- [x] Step 5: Implement `src/core/physics/AABB.ts`.
-- [x] Step 6: Implement `src/core/physics/SpatialGrid.ts`.
-- [x] Step 7: Implement `src/core/physics/Platform.ts`.
-- [x] Step 8: Implement `src/core/engine/GameEngine.ts` & `src/core/engine/StageManager.ts`.
-- [x] Step 9: Verify build (`npx tsc --noEmit` and `npm run build`, plus `npm run test` with 19/19 passing tests).
-- [x] Step 10: Produce handoff report and notify orchestrator.
+- [x] Step 1: Read DISPATCH.md, ORIGINAL_REQUEST.md, COLLABORATION.md, and explorer handoff.
+- [x] Step 2: Baseline test run verification (139 tests passing).
+- [x] Step 3: Update `src/core/player/PlayerKinematics.ts` constants.
+- [x] Step 4: Implement in `src/core/player/PlayerController.ts`:
+  - Single-shot jump cut on jump button release
+  - Apex float dampening ($|v_y| < 40\text{ px/s} \implies 0.65 \times \text{GRAVITY}$)
+  - 4-frame coyote time ($66.7\text{ms}$)
+  - 4-frame jump input buffering ($66.7\text{ms}$)
+  - Clean platform landing snapping and velocity zeroing
+- [x] Step 5: Update `tests/unit/player_kinematics_aiming.test.ts` to assert new constants and test new mechanics.
+- [x] Step 6: Run `npm test` and verify all tests pass (145/145 green, 13/13 test files).
+- [x] Step 7: Write handoff report `handoff.md` and notify parent.
+

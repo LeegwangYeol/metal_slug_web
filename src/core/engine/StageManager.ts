@@ -1,5 +1,6 @@
 import { Platform } from '../physics/Platform';
 import { GameEngine } from './GameEngine';
+import { SoldierEnemy } from '../entities/enemies/SoldierEnemy';
 
 export enum StageState {
   INITIALIZING = 'INITIALIZING',
@@ -18,14 +19,17 @@ export interface CameraBounds {
   maxY: number;
 }
 
-export interface SpawnTrigger {
+export interface StageTrigger {
   id: string;
   triggerX: number;
   triggered: boolean;
   lockCameraBounds?: CameraBounds;
-  spawnAction: (engine: GameEngine) => void;
+  spawnAction: (engine: GameEngine, cameraX: number) => void;
   isCompleted?: (engine: GameEngine) => boolean;
 }
+
+// Retain SpawnTrigger alias for backwards compatibility
+export type SpawnTrigger = StageTrigger;
 
 export interface StageData {
   id: string;
@@ -34,7 +38,7 @@ export interface StageData {
   height: number;
   initialCameraBounds: CameraBounds;
   platforms: Platform[];
-  triggers: SpawnTrigger[];
+  triggers: StageTrigger[];
 }
 
 /**
@@ -46,7 +50,8 @@ export class StageManager {
   private state: StageState = StageState.INITIALIZING;
   private cameraBounds: CameraBounds = { minX: 0, maxX: 480, minY: 0, maxY: 270 };
   private cameraLocked: boolean = false;
-  private activeLockTrigger: SpawnTrigger | null = null;
+  private activeLockTrigger: StageTrigger | null = null;
+  private currentCameraX: number = 0;
 
   constructor(private readonly engine: GameEngine) {}
 
@@ -85,6 +90,10 @@ export class StageManager {
     return this.cameraBounds;
   }
 
+  getCameraX(): number {
+    return this.currentCameraX;
+  }
+
   isCameraLocked(): boolean {
     return this.cameraLocked;
   }
@@ -107,9 +116,13 @@ export class StageManager {
   }
 
   /**
-   * Evaluates camera and player positions against spawn triggers.
+   * Evaluates camera and player positions against spawn triggers and cleans up off-screen entities.
    */
-  update(_cameraX: number, playerX: number): void {
+  update(cameraX: number, playerX: number): void {
+    this.currentCameraX = cameraX;
+    // Expose current cameraX on engine for entities that query engine
+    (this.engine as any).cameraX = cameraX;
+
     if (!this.currentStage) return;
 
     // If currently camera-locked by an active trigger, evaluate completion
@@ -117,6 +130,7 @@ export class StageManager {
       if (this.activeLockTrigger.isCompleted && this.activeLockTrigger.isCompleted(this.engine)) {
         this.unlockCamera();
       }
+      this.despawnOffscreenEntities(cameraX);
       return;
     }
 
@@ -130,8 +144,50 @@ export class StageManager {
           this.lockCamera(trigger.lockCameraBounds);
         }
 
-        trigger.spawnAction(this.engine);
-        this.engine.eventBus.emit('spawn_trigger_fired', { id: trigger.id });
+        trigger.spawnAction(this.engine, cameraX);
+        this.engine.eventBus.emit('spawn_trigger_fired', { id: trigger.id, cameraX });
+      }
+    }
+
+    // Cleanly despawn off-screen minions and projectiles behind camera or below stage
+    this.despawnOffscreenEntities(cameraX);
+  }
+
+  /**
+   * Scans active minions and cleanly despawns any minion that falls behind the camera
+   * (x < cameraX - 180) or drops below stage (y > 320), removing them from the engine
+   * to prevent memory leaks and spatial grid clutter.
+   */
+  despawnOffscreenEntities(cameraX: number = this.currentCameraX): void {
+    const allEntities = this.engine.getAllEntities();
+    for (const entity of allEntities) {
+      if (!entity.isAlive) continue;
+
+      // Player, Bosses, and POWs are never despawned by off-screen culling
+      if (
+        entity.id === 'player' ||
+        entity.type === 'PLAYER' ||
+        entity.type === 'BOSS_TETSUYUKI' ||
+        entity.type === 'MID_BOSS_VEHICLE' ||
+        entity.type === 'POW'
+      ) {
+        continue;
+      }
+
+      // Check minion classification
+      const isMinion =
+        entity instanceof SoldierEnemy ||
+        entity.type.startsWith('SOLDIER_') ||
+        entity.type === 'minion' ||
+        entity.type === 'ENEMY_BULLET' ||
+        entity.type === 'ENEMY_GRENADE';
+
+      if (isMinion) {
+        if (entity.position.x < cameraX - 180 || entity.position.y > 320) {
+          entity.isAlive = false;
+          this.engine.removeEntity(entity.id);
+          this.engine.eventBus.emit('entity_despawned', { id: entity.id, type: entity.type });
+        }
       }
     }
   }

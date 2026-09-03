@@ -1,48 +1,46 @@
-## 2026-09-03T03:19:31Z
+# Dispatch: Worker M3 (High-Resolution Neo Geo Pixel Art Sprites)
 
+## Mission
+Upgrade character, enemy, POW, and vehicle sprites from flat primitive "Atari" rectangles to high-resolution, detailed 16-color authentic Neo Geo pixel art in `src/render/sprites/ProceduralSpriteFactory.ts`.
+
+## Working Directory
+/Users/user/src/fullmetalslug/.agents/worker_m3
+
+## Exclusive File Ownership
+- `src/render/sprites/ProceduralSpriteFactory.ts`
+
+## Input References
+- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` (MANDATORY: read first)
+- `/Users/user/src/fullmetalslug/COLLABORATION.md`
+- `/Users/user/src/fullmetalslug/PROJECT.md`
+- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_2/handoff.md`
+- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_2/survey_report.md`
+
+## Instructions
+1. In `src/render/sprites/ProceduralSpriteFactory.ts`, introduce micro-primitive helper routines (`drawPixelCluster`, `drawContouredRect`, `drawBeveledPlate`, `drawRivet`, etc.) using standard 2D canvas context methods compatible with both headless Node and browser environments.
+2. Upgrade sprite generation with rich 16-color shaded pixel art:
+   - **Marco Rossi**: Red headband with fluttering ribbons, multi-tone blonde hair, 3-tone shaded skin, muscle definition, olive tactical vest with pockets and collar trim, ammo belt with brass cartridges, holster, combat boots.
+   - **Rebel Soldiers**: Stahlhelm helmets with metallic rim highlight, gas masks, uniform folds, webbing straps, detailed rifles and knives.
+   - **POW (Hostage)**: Untamed bushy beard, ripped yellow shorts, bare torso with anatomical muscle highlights, rope-bound wrists, and animated rescue wave.
+   - **Vehicles & Boss**: Riveted steel plates, panel lines, metallic rust/scratches, rotating turret barrels, dynamic smoke/exhaust.
+3. Crucial Requirement: Preserve ALL existing sprite cache keys (`player_idle_0..3`, `player_run_0..5`, `player_jump_rise`, `player_jump_fall`, `player_aim_0..7`, `soldier_rifle_idle`, etc.) so that existing unit tests (`tests/unit/render_components.test.ts`) continue to pass 100% green without breaking changes.
+4. Run `npm test` using `run_command` and confirm all render and sprite tests pass.
+5. Deliver `handoff.md` in your working directory with build & test output.
+
+## 2026-09-03T06:22:35Z
 You are worker_m3.
-Your working directory is /Users/user/src/fullmetalslug/.agents/worker_m3/.
-Project workspace root is /Users/user/src/fullmetalslug/.
+Working directory: /Users/user/src/fullmetalslug/.agents/worker_m3
+Scope document: /Users/user/src/fullmetalslug/PROJECT.md
+Original user request: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
+Collaboration guide: /Users/user/src/fullmetalslug/COLLABORATION.md
+Dispatch instructions: /Users/user/src/fullmetalslug/.agents/worker_m3/DISPATCH.md
 
-MANDATORY INTEGRITY WARNING:
-DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
+Exclusive File Ownership:
+- src/render/sprites/ProceduralSpriteFactory.ts
 
-Read these files before starting:
-- /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
-- /Users/user/src/fullmetalslug/COLLABORATION.md
-- /Users/user/src/fullmetalslug/.agents/orchestrator/PROJECT.md
-- /Users/user/src/fullmetalslug/.agents/spec_miner_survey_3/spec_report.md
-
-Milestone: M3 — Enemies, Mid-Boss Armored Vehicle & Tetsuyuki War Fortress Boss.
-
-File Write Ownership (Exclusively yours):
-- src/core/entities/enemies/EnemyTypes.ts
-- src/core/entities/enemies/SoldierEnemy.ts
-- src/core/entities/enemies/MidBossVehicle.ts
-- src/core/entities/boss/BossTypes.ts
-- src/core/entities/boss/TetsuyukiBoss.ts
-
-Specifications to implement (100% decoupled from DOM/Canvas):
-1. Rebel Infantry AI (4 distinct roles):
-   - SOLDIER_RIFLE: Patrol, sight detection, aim, burst rifle fire (3 shots).
-   - SOLDIER_KNIFE: Sprint charger when player is in range, knife attack triggering melee counter.
-   - SOLDIER_GRENADE: Curved parabolic grenade toss bypassing low obstacles.
-   - SOLDIER_SHIELD: Directional frontal shield (deflects frontal bullets; vulnerable to rear attacks, melee knife, and explosives).
-   - Melee vulnerability: All 4 soldiers have `isMeleeVulnerable: true`.
-2. Mid-Boss Rebel Iron Technical:
-   - Armored half-track / technical vehicle with tread kinematics.
-   - 360° rotating turret tracking player with angular velocity clamp (1.8 rad/s).
-   - Heavy cannon shell attacks with explosive impact.
-   - Reinforcement deployment (spawns soldier waves, capped at 3 active adds).
-   - `isMeleeVulnerable: false` (immune to knife).
-3. Stage 1 End-Boss: Tetsuyuki War Fortress:
-   - Multi-phase state machine with damage-gated transitions:
-     - PHASE_1_ARTILLERY: Dual heavy cannon barrage and homing rocket pods.
-     - PHASE_2_LASER_SWEEP: Hull breach, engine overheat, thermal laser sweep across battlefield, rapid gatling turret.
-     - PHASE_3_MELTDOWN: Emergency thruster shockwaves, exposed reactor core weak-point ($48\times 48$ px, takes $1.5\times$ damage).
-   - Death sequence: DEATH_EXPLODING 4-stage timed chain explosion sequence (3.2 seconds) transitioning to DESTROYED.
-
-Verification:
-- Run `npx tsc --noEmit` and confirm 0 errors.
-- Run `npm run test` and ensure existing tests remain passing.
-- Write handoff report to /Users/user/src/fullmetalslug/.agents/worker_m3/handoff.md and notify orchestrator via send_message.
+Task:
+1. Upgrade procedural sprites in src/render/sprites/ProceduralSpriteFactory.ts from primitive flat "Atari" blocks to high-resolution, detailed 16-color authentic Neo Geo pixel art.
+2. Introduce micro-primitive helper routines (drawPixelCluster, drawContouredRect, drawBeveledPlate, drawRivet, etc.).
+3. Rich detail for Marco Rossi, Rebel Soldiers, POW, Vehicles & Boss, Projectiles, Explosions, HUD.
+4. Preserve all existing sprite cache keys.
+5. Run npm test and write handoff.md.

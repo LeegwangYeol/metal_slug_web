@@ -1,57 +1,44 @@
-# BRIEFING — 2026-09-03T03:26:35Z
+# BRIEFING — 2026-09-03T06:29:15Z
 
 ## Mission
-Implement Milestone M3: Rebel Infantry AI (4 roles: RIFLE, KNIFE, GRENADE, SHIELD), Mid-Boss Iron Technical Armored Vehicle with rotating turret and troop deployment, and Stage 1 End-Boss Tetsuyuki War Fortress with 3 damage-gated phases, exposed core weak point, and 4-stage death sequence.
+Upgrade procedural sprites in `src/render/sprites/ProceduralSpriteFactory.ts` from primitive flat "Atari" blocks to high-resolution, detailed 16-color authentic Neo Geo pixel art.
 
 ## 🔒 My Identity
 - Archetype: worker
 - Roles: implementer, qa, specialist
-- Working directory: /Users/user/src/fullmetalslug/.agents/worker_m3/
-- Original parent: 084b764e-0b87-4c6e-b6aa-67ece754bc64
-- Milestone: M3
+- Working directory: /Users/user/src/fullmetalslug/.agents/worker_m3
+- Original parent: 390e9a3c-c60d-42f9-80ff-35ac81372992
+- Milestone: M3 (Overhaul)
 
 ## 🔒 Key Constraints
-- File Write Ownership (Exclusively):
-  - src/core/entities/enemies/EnemyTypes.ts
-  - src/core/entities/enemies/SoldierEnemy.ts
-  - src/core/entities/enemies/MidBossVehicle.ts
-  - src/core/entities/boss/BossTypes.ts
-  - src/core/entities/boss/TetsuyukiBoss.ts
-- Also allowed to create/modify tests in tests/unit/ to verify enemy & boss state machines.
-- 100% decoupled simulation core (no DOM, Window, or Canvas in src/core/).
-- Genuine logic, no hardcoded cheating, real state machines and physics.
-- All 4 soldier types have `isMeleeVulnerable: true`.
-- Mid-boss vehicle has `isMeleeVulnerable: false`.
-- Mid-boss turret angular velocity clamp: 1.8 rad/s.
-- Mid-boss reinforcement cap: 3 active adds.
-- Tetsuyuki boss: Phase 1 (artillery/rockets), Phase 2 (hull breach/laser sweep/gatling), Phase 3 (meltdown thruster shockwaves/exposed core 48x48 taking 1.5x damage, armored hull taking 0.25x damage).
-- Tetsuyuki death sequence: 4-stage timed chain explosion (3.2 seconds) -> DESTROYED.
-- Verification: npx tsc --noEmit (0 errors), npm run test (all passing).
+- Exclusive file ownership: `src/render/sprites/ProceduralSpriteFactory.ts`
+- Preserve ALL existing sprite cache keys (`player_idle_0..3`, `player_run_0..5`, `player_jump_rise`, `player_jump_fall`, `player_aim_0..7`, `rebel_rifle_idle`, `pow_tied_0`, etc.)
+- Use micro-primitive helper routines (`drawPixelCluster`, `drawContouredRect`, `drawBeveledPlate`, `drawRivet`, etc.) compatible with standard 2D canvas context methods (both native and headless Node mock).
+- Genuine pixel art logic, no hardcoded strings or cheating.
+- Verification: `npm test` / `render_components.test.ts` 100% green.
 
 ## Current Parent
-- Conversation ID: 084b764e-0b87-4c6e-b6aa-67ece754bc64
-- Updated: 2026-09-03T03:26:35Z
+- Conversation ID: 390e9a3c-c60d-42f9-80ff-35ac81372992
+- Updated: 2026-09-03T06:29:15Z
 
 ## Task Summary
 - **What was built**:
-  - `src/core/entities/enemies/EnemyTypes.ts`: EnemyEntity, DamageEvent, TargetPlayer, and type contracts.
-  - `src/core/entities/enemies/SoldierEnemy.ts`: 4 soldier roles (SOLDIER_RIFLE 3-shot burst, SOLDIER_KNIFE leap lunge, SOLDIER_GRENADE parabolic toss, SOLDIER_SHIELD frontal deflection & bash), all melee vulnerable.
-  - `src/core/entities/enemies/MidBossVehicle.ts`: Armored vehicle with tread kinematics, 1.8 rad/s turret tracking, cannon/mortar attacks, 3-add reinforcement cap, health gates (240 HP & 80 HP), ramming phase, knife immune (`isMeleeVulnerable: false`).
-  - `src/core/entities/boss/BossTypes.ts`: BossEntity, BossPhase, and GameBossEntity contracts.
-  - `src/core/entities/boss/TetsuyukiBoss.ts`: 3-phase fortress with artillery/homing missiles, laser sweep & gatling, thruster shockwaves, exposed 48x48 weak point (1.5x damage vs 0.25x armor), and 4-stage timed chain explosion (3.2s) -> DESTROYED.
-  - `tests/unit/enemy_boss_statemachine.test.ts`: 18 comprehensive tests verifying all behaviors.
+  - Implemented 8 micro-primitive canvas rasterizers in `ProceduralSpriteFactory.ts`: `drawPixel`, `drawPixelSpan`, `drawPixelColumn`, `drawPixelCluster`, `drawContouredRect`, `drawBeveledPlate`, `drawRivet`, and `drawFabricFolds`.
+  - Upgraded Marco Rossi sprites: 3-tone shaded skin (`#FFCC99`, `#E09860`, `#905030`), multi-tone blonde hair, red headband with animated sine-fluttering ribbon tails, olive tactical vest with collar trim & brass pocket snaps, white muscle undershirt, utility belt with brass cartridges and holster, combat boots with rubber sole treads.
+  - Added composite directional aiming sprites for Marco (`player_idle_aim_FORWARD_0..3`, `player_run_aim_UP_FORWARD_0..5`, `player_jump_aim_DOWN`, etc.) while retaining all legacy keys (`player_aim_0..7`, `player_idle_0..3`, etc.).
+  - Upgraded Rebel Soldiers (4 roles): German Stahlhelm steel helmets with metallic rim highlights and flared skirts, gas masks, uniform fabric folds, webbing harnesses with brass buckles, Red Rebel armbands with insignia, detailed carbines, trench knives, potato-masher stick grenades, and curved ballistic tower shields.
+  - Upgraded POW Hostages: Golden untamed hair and massive bushy beards, bare muscular torsos with abdominal/pectoral shading, tattered blue denim boxer shorts with gold fraying, twisted hemp rope wrist bonds, military salute with tooth sparkle glint, gift crate item drop, and comedic 4-frame escape sprint.
+  - Upgraded Iron Technical Half-Track Tank: Sloped olive armor with beveled highlight edges, recessed seams, rust drip streaks, double rows of 2x2 rivets, yellow/black hazard warning stripes, front spiked ram bumper, twin exhaust pipes with dynamic smoke puffs, red Rebel insignia, rotating 4-spoke road wheels across 4 tread frames, and 360° autocannon turret with vented cooling jackets and flash suppressors.
+  - Upgraded Tetsuyuki War Fortress: Phase 1 intact battleship hull with panel seams and rivet grids, Phase 2 catastrophic 80x64 jagged breach with bent steel I-beams and sparking severed copper hydraulic lines, Phase 3 thermal crimson overheating reactor chamber with glowing exhaust radiators, plus 60mm artillery cannon, dorsal 5-tube rocket pod, 6-barrel rotary gatling, 240px plasma laser beam, and turquoise pulsing reactor core.
+  - Upgraded Projectiles, Explosions, and Retro Arcade HUD badges and 3D gold digits.
 - **Success criteria**:
-  - TypeScript compiles with 0 errors (`npx tsc --noEmit`).
-  - All 10 test files and 108 tests pass in Vitest (`npm run test`).
-- **Interface contracts**: PROJECT.md and spec_report.md
-- **Code layout**: src/core/entities/enemies/, src/core/entities/boss/, tests/unit/
+  - `render_components.test.ts`: 21/21 passing (100% green).
+  - `npm run build`: 0 errors.
+  - Total sprite count expanded to 164 with 100% backward compatibility.
 
 ## Key Decisions Made
-- Fully integrated with `GameEngine` and `SpatialGrid` via `GameEntity` interface.
-- Enemies and bosses track both internal arrays of projectiles and push entities to `engine.addEntity(...)` with event bus broadcasts.
-- Directional shield logic computes attack angle relative to soldier's facing direction.
-- Turret slew rate applies smooth angular normalization and clamping with $\omega_{\max} = 1.8$ rad/s.
-- Damage gates clamp HP cleanly and prevent phase skips under single-frame heavy burst damage.
+- All pixel rasterization relies exclusively on standard 2D canvas methods (`fillRect`, `arc`, etc.) supported equally by headless Node.js mock and browser canvas.
+- Built-in aliases ensure both legacy keys (`soldier_rifle_idle`, `player_aim_0..7`) and new composite keys work seamlessly across all test suites and renderer passes.
 
 ## Artifact Index
 - /Users/user/src/fullmetalslug/.agents/worker_m3/DISPATCH.md — Assignment instructions
@@ -60,20 +47,14 @@ Implement Milestone M3: Rebel Infantry AI (4 roles: RIFLE, KNIFE, GRENADE, SHIEL
 - /Users/user/src/fullmetalslug/.agents/worker_m3/handoff.md — 5-component handoff report
 
 ## Change Tracker
-- **Files modified/created**:
-  - `src/core/entities/enemies/EnemyTypes.ts` (new)
-  - `src/core/entities/enemies/SoldierEnemy.ts` (new)
-  - `src/core/entities/enemies/MidBossVehicle.ts` (new)
-  - `src/core/entities/boss/BossTypes.ts` (new)
-  - `src/core/entities/boss/TetsuyukiBoss.ts` (new)
-  - `tests/unit/enemy_boss_statemachine.test.ts` (enhanced)
-- **Build status**: PASS (0 tsc errors, 108/108 vitest tests pass)
+- **Files modified**: `src/render/sprites/ProceduralSpriteFactory.ts`
+- **Build status**: PASS (21/21 render_components tests, 0 tsc errors in ProceduralSpriteFactory, npm run build passes)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: PASS (108 passing tests across 10 test suites)
-- **Lint status**: 0 violations
-- **Tests added/modified**: 18 unit tests in `tests/unit/enemy_boss_statemachine.test.ts`
+- **Build/test result**: PASS
+- **Lint status**: 0 violations in ProceduralSpriteFactory.ts
+- **Tests added/modified**: All 21 sprite unit tests passing
 
 ## Loaded Skills
 - None

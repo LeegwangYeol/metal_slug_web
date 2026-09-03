@@ -51,12 +51,20 @@ export class PlayerKinematics {
   // Movement Physics Constants (Continuous px/s and px/s^2)
   static readonly RUN_SPEED: number = 132.0; // px/s
   static readonly CRAWL_SPEED: number = 54.0; // px/s
-  static readonly JUMP_IMPULSE: number = -348.0; // px/s (upward)
-  static readonly GRAVITY: number = 720.0; // px/s^2 (downward)
-  static readonly JUMP_CUT_RATIO: number = 0.45; // early jump release cut
-  static readonly TERMINAL_FALL_VELOCITY: number = 480.0; // px/s maximum fall speed
+  static readonly JUMP_IMPULSE: number = -360.0; // px/s (upward)
+  static readonly GRAVITY: number = 800.0; // px/s^2 (downward)
+  static readonly JUMP_CUT_RATIO: number = 0.5; // early jump release cut
+  static readonly TERMINAL_FALL_VELOCITY: number = 500.0; // px/s maximum fall speed
   static readonly DROP_THROUGH_IMPULSE: number = 120.0; // px/s downward push on semi-solid drop
   static readonly DROP_THROUGH_FRAMES: number = 18; // duration of platform exclusion (0.3s)
+
+  // Apex Float Dampening Constants
+  static readonly APEX_FLOAT_VELOCITY_THRESHOLD: number = 40.0; // px/s (|vy| < 40)
+  static readonly APEX_GRAVITY_SCALE: number = 0.65; // 0.65 * GRAVITY for arcade hangtime
+
+  // Coyote Time & Jump Input Buffering
+  static readonly COYOTE_FRAMES: number = 4; // 4 frames (~66.7ms @ 60Hz)
+  static readonly JUMP_BUFFER_FRAMES: number = 4; // 4 frames (~66.7ms @ 60Hz)
 
   // Bounding Box Dimensions
   static readonly STANDING_WIDTH: number = 24;

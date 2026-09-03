@@ -1,65 +1,188 @@
-# Milestone M2 Handoff Report: Player, 8-Way Aiming, Melee vs Ranged, Weapons System & Hostage POWs
+# Milestone M2 Overhaul Handoff Report: Smooth Out-of-Bounds Enemy Spawning & Clean Despawning
 
 **Agent**: `worker_m2`  
-**Milestone**: M2 (Player, Weapons, POWs)  
+**Milestone**: M2 Overhaul (R1: Smooth Out-of-Bounds Enemy Spawning & Off-Screen Despawning)  
 **Date**: 2026-09-03  
+**Target Recipient**: `parent` (orchestrator: `390e9a3c-c60d-42f9-80ff-35ac81372992`)  
+**Handoff Type**: Hard (Task Complete)  
 
 ---
 
 ## 1. Observation
-1. **Source Files Created / Owned**:
-   - `src/core/weapons/WeaponTypes.ts`: Full definitions of `WeaponType` (`PISTOL`, `HEAVY_MACHINE_GUN`, `FLAME_SHOT`), `WeaponConfig`, `WeaponState`, `BrassCasing`, `GroundFireAOE`, `ItemDropType`, and `POW_LOOT_TABLE`.
-   - `src/core/player/PlayerKinematics.ts`: Kinematic constants ($V_{\text{run}} = 132.0\text{ px/s}$, $V_{\text{crawl}} = 54.0\text{ px/s}$, $V_{\text{jump}} = -348.0\text{ px/s}$, $g = 720.0\text{ px/s}^2$, $k_{\text{jump\_cut}} = 0.45$, $V_{\text{term}} = 480.0\text{ px/s}$), AABBs ($24 \times 40\text{ px}$ standing, $24 \times 22\text{ px}$ crouching), 8-way directional unit vectors with strict airborne-only downward aim constraint, posture muzzle emission offsets, and forward knife scan box ($38\text{px}$ forward, $6\text{px}$ rear, $[-34, +10]\text{px}$ vertical).
-   - `src/core/player/PlayerController.ts`: Complete `GameEntity` implementation for the player. Integrated with 8-way aim vectors, crouch crawl locomotion, variable jump cut, semi-solid platform drop-through, secondary grenade throws, and melee vs. ranged combat arbitration.
-   - `src/core/weapons/WeaponManager.ts`: Player weapon inventory, ammo tracking (Handgun $\infty$, HMG 200, Flame Shot 30), grenade counter (10), $12\text{ rad/s}$ angular sweep with $\pm 2.5^\circ$ stochastic spray jitter, automatic zero-ammo fallback to `PISTOL`, and badge pickup stacking/switching with voice announcer triggers.
-   - `src/core/weapons/ProjectileManager.ts`: Bullet entities, pistol max 4 on-screen active throttle, HMG bullet kinematics ($780\text{ px/s}$, $1\text{ HP}$) with brass casing ejection simulation ($g = 900\text{ px/s}^2$, bounce restitution $0.4$), Flame Shot expanding fireball ($10\text{px} \to 36\text{px}$) with piercing multi-hit ($6$-frame per-target tick immunity) and ground burning AOE ($32 \times 16\text{px}$ footprint, $1.2\text{s}$ lifetime).
-   - `src/core/weapons/Grenade.ts`: Parabolic trajectory ($g = 780\text{ px/s}^2$), ground bounce restitution ($e_y = 0.5, e_x = 0.7$), contact detonation on enemy impact, $1.25\text{s}$ fuse detonation, inner ($18\text{px}$, $10\text{ HP}$) and outer ($52\text{px}$, $4\text{ HP}$ linear falloff) blast radius AOE, and screen shake event emission.
-   - `src/core/entities/pow/PowEntity.ts`: 6-state hostage machine (`TIED_UP` $\to$ `FREED` $\to$ `SALUTE` $\to$ `OFFERING_ITEM` $\to$ `ESCAPING` $\to$ `SAVED`), item drop pickup entity with ground collision, weighted loot drop table (HMG 35%, Flame 25%, Grenade 20%, Banana 8%, Chicken 6%, Coin 4%, Jewel 2%), and $+10,000\text{ pts}$ rescue bonus tally.
-2. **Automated Test Results**:
-   - `npx tsc --noEmit`: Exited with code 0 (0 compilation/type errors).
-   - `npm run test`: All 10 test suites passed (108/108 individual test cases passing).
-   - 5 dedicated unit test suites authored in `tests/unit/`:
-     - `tests/unit/player_kinematics_aiming.test.ts` (9 tests)
-     - `tests/unit/player_melee_ranged.test.ts` (4 tests)
-     - `tests/unit/weapons_system.test.ts` (5 tests)
-     - `tests/unit/grenade_physics.test.ts` (5 tests)
-     - `tests/unit/pow_system.test.ts` (3 tests)
-     - Plus existing unit tests: `tests/unit/player_weapon_state.test.ts` (17 tests), `tests/unit/melee_ranged_decision.test.ts` (7 tests), `tests/unit/core_engine.test.ts` (19 tests), `tests/unit/enemy_boss_statemachine.test.ts` (18 tests), `tests/unit/render_components.test.ts` (21 tests).
+
+### 1.1 Source Code Changes & Implementations
+1. **`src/core/engine/StageManager.ts`**:
+   - `StageTrigger` interface updated:
+     ```typescript
+     export interface StageTrigger {
+       id: string;
+       triggerX: number;
+       triggered: boolean;
+       lockCameraBounds?: CameraBounds;
+       spawnAction: (engine: GameEngine, cameraX: number) => void;
+       isCompleted?: (engine: GameEngine) => boolean;
+     }
+     export type SpawnTrigger = StageTrigger;
+     ```
+   - Trigger execution updated in `update(cameraX: number, playerX: number)`:
+     ```typescript
+     trigger.spawnAction(this.engine, cameraX);
+     this.engine.eventBus.emit('spawn_trigger_fired', { id: trigger.id, cameraX });
+     ```
+   - `despawnOffscreenEntities(cameraX: number)` implemented:
+     ```typescript
+     despawnOffscreenEntities(cameraX: number = this.currentCameraX): void {
+       const allEntities = this.engine.getAllEntities();
+       for (const entity of allEntities) {
+         if (!entity.isAlive) continue;
+         if (
+           entity.id === 'player' ||
+           entity.type === 'PLAYER' ||
+           entity.type === 'BOSS_TETSUYUKI' ||
+           entity.type === 'MID_BOSS_VEHICLE' ||
+           entity.type === 'POW'
+         ) {
+           continue;
+         }
+         const isMinion =
+           entity instanceof SoldierEnemy ||
+           entity.type.startsWith('SOLDIER_') ||
+           entity.type === 'minion' ||
+           entity.type === 'ENEMY_BULLET' ||
+           entity.type === 'ENEMY_GRENADE';
+
+         if (isMinion) {
+           if (entity.position.x < cameraX - 180 || entity.position.y > 320) {
+             entity.isAlive = false;
+             this.engine.removeEntity(entity.id);
+             this.engine.eventBus.emit('entity_despawned', { id: entity.id, type: entity.type });
+           }
+         }
+       }
+     }
+     ```
+
+2. **`src/core/entities/enemies/SoldierEnemy.ts`**:
+   - `SoldierConfig` extended with `cameraX?: number` and `isIngress?: boolean`.
+   - Constructor ingress detection:
+     ```typescript
+     const isOffscreenRight = config.cameraX !== undefined && this.position.x > config.cameraX + 460;
+     const isOffscreenLeft = config.cameraX !== undefined && this.position.x < config.cameraX - 20;
+
+     if (config.isIngress || isOffscreenRight || isOffscreenLeft) {
+       this.isIngress = true;
+       this.ingressCameraX = config.cameraX ?? (isOffscreenRight ? this.position.x - 520 : 0);
+       this.facing = isOffscreenLeft ? 1 : -1;
+       this.velocity.x = this.facing * 110;
+       this.state = 'INGRESS';
+     }
+     ```
+   - Ingress state update & seamless boundary transition:
+     ```typescript
+     private updateIngressAI(_dt: number, engine?: GameEngine): void {
+       if (engine && (engine as any).cameraX !== undefined) {
+         this.ingressCameraX = (engine as any).cameraX;
+       }
+       this.velocity.x = this.facing * 110;
+
+       const reachedBoundary =
+         (this.facing === -1 && this.position.x <= this.ingressCameraX + 460) ||
+         (this.facing === 1 && this.position.x >= this.ingressCameraX + 20);
+
+       if (reachedBoundary) {
+         this.isIngress = false;
+         this.transitionToNormalRoleAI();
+       }
+     }
+     ```
+
+3. **`src/main.ts`**:
+   - `stageManager.update(this.camera.x, this.player.position.x)` passes live camera position.
+   - All wave triggers (`trigger_wave_1`, `trigger_wave_2`, `trigger_wave_3`, `trigger_mid_boss`) calculate right-entering spawn positions out-of-bounds at `cameraX + 520px` with `+40px` echelon staggering:
+     - `trigger_wave_1`: `rebel_rifle_1` at `cameraX + 520`, `rebel_knife_1` at `cameraX + 560`.
+     - `trigger_wave_2`: `rebel_shield_1` at `cameraX + 520`, `rebel_grenade_1` at `cameraX + 560`, `rebel_rifle_2` at `cameraX + 600`.
+     - `trigger_mid_boss`: `rebel_mb_support` at `Math.max(cameraX + 520, 1220)` (outside locked arena boundary).
+     - `trigger_wave_3`: `rebel_knife_2` at `cameraX + 520`, `rebel_shield_2` at `cameraX + 560`, `rebel_grenade_2` at `cameraX + 600`.
+
+4. **`tests/unit/stage_spawning_despawn.test.ts`**:
+   - 11 dedicated unit tests created verifying:
+     1. StageTrigger camera parameter delivery to spawnAction.
+     2. Despawn of off-screen minions behind camera ($X < \text{cameraX} - 180$) and fallen entities ($Y > 320$).
+     3. Immunity of Player, Boss, and POW entities from off-screen culling.
+     4. Ingress state initialization at $v_x = -110\text{ px/s}$ for right-spawns.
+     5. Boundary crossing transition at $X \le \text{cameraX} + 460\text{px}$ into normal role AI.
+     6. Out-of-bounds placement and echelon staggering across all stage waves.
+
+### 1.2 Tool Execution Results
+- `npm run build`:
+  ```
+  > fullmetalslug@1.0.0 build
+  > tsc -b && vite build
+
+  vite v6.4.3 building for production...
+  transforming...
+  ✓ 31 modules transformed.
+  rendering chunks...
+  computing gzip size...
+  dist/index.html                  1.26 kB │ gzip:  0.58 kB
+  dist/assets/index-BxtTXTtJ.js  167.58 kB │ gzip: 43.77 kB │ map: 614.01 kB
+  ✓ built in 697ms
+  ```
+- `npm test`:
+  ```
+  Test Files  14 passed (14)
+       Tests  156 passed (156)
+    Duration  4.99s
+  ```
 
 ---
 
 ## 2. Logic Chain
-1. **Decoupled Simulation Architecture (R5)**:
-   - Zero references to `window`, `document`, DOM elements, or Canvas rendering contexts were introduced in `src/core/`.
-   - All physics calculations use pure 60Hz semi-implicit Euler integration and pure Vector2D mathematics.
-2. **8-Way Aiming & Downward Shooting Ground Constraint (R1)**:
-   - Pressing Down while grounded triggers crouch posture with a lowered muzzle offset $(F_x \cdot 18, -12)\text{px}$ and fires horizontally forward. Downward vertical and down-diagonal shooting are strictly prohibited while grounded and only execute when `isGrounded === false`.
-3. **Melee vs Ranged Arbitration Matrix (R1/R2)**:
-   - On Shoot button press, the player checks the forward knife scan box ($[X - F_x \cdot 6, X + F_x \cdot 38]\text{px}$, $\Delta Y \in [-34, +10]\text{px}$). If any alive, melee-vulnerable enemy or tied POW is in this box, the player transitions to `MELEE_SLASH` ($18\text{ frames}$, active hit frames 5–9, dealing $3.0\text{ HP}$ damage) and suppresses bullet spawning. If no melee candidate is detected, the ranged weapon fires normally.
-4. **Weapons & Ammo Fallback (R2)**:
-   - Handgun enforces infinite ammo and a maximum 4 on-screen active bullet throttle.
-   - HMG implements $12\text{ rad/s}$ smooth angular sweep when steering fire angle, $\pm 2.5^\circ$ stochastic spray dispersion, and spent brass casing particle ejection with floor restitution.
-   - Flame Shot delivers expanding fireballs with $6$-frame per-target tick immunity and spawns ground fire AOEs.
-   - When special ammo hits 0, automatic fallback immediately switches back to `PISTOL` without affecting in-flight projectiles.
-5. **Hostage POW System (R2)**:
-   - Rescuable hostages progress deterministically through all 6 phases, spawn physical item crates from the weighted drop table, escape toward screen boundaries, and grant rescue tallies and $+10,000\text{ pts}$ score bonus.
+
+1. **Root Cause of Pop-In**:
+   - Previously, wave spawn actions used hardcoded static coordinates such as $X=340$ and $X=420$ in `trigger_wave_1`. When the player triggered at $X=180$, the camera viewport spanned $[0, 480\text{px}]$. Entities placed at 340 and 420 appeared at 71% and 87.5% screen width, visibly popping into view.
+2. **Out-of-Bounds Formulation**:
+   - For a viewport width of $480\text{px}$, the visible right edge is $\text{cameraX} + 480\text{px}$. Setting the base spawn position to $X_{\text{spawn}} = \text{cameraX} + 520\text{px}$ places the entity $40\text{px}$ outside the frustum. Staggering squad members by $+40\text{px}$ ensures no AABB overlap upon instantiation.
+3. **Ingress Kinematics & Smooth Transition**:
+   - Walking at patrol speed ($40\text{ px/s}$) would take $> 1\text{ second}$ to reach the screen. Spawning with run-in velocity $v_x = -110\text{ px/s}$ allows the minion to enter the visible margin ($X \le \text{cameraX} + 460\text{px}$) within $\approx 0.54\text{s}$. Upon crossing this boundary, `SoldierEnemy` seamlessly switches to its tactical patrol / combat AI state (`PATROL` for rifle, `IDLE` for knife/grenade, `GUARD_ADVANCE` for shield) without abrupt velocity snaps.
+4. **Memory Hygiene & Despawning**:
+   - Because `Camera.forwardLock = true` prevents backward scrolling, minions left behind ($\Delta X < -180\text{px}$) or falling into pits ($Y > 320\text{px}$) cannot interact with the player. Marking `isAlive = false` and calling `engine.removeEntity(id)` completely unlinks them from physics simulation and the spatial hash grid, avoiding memory leaks.
 
 ---
 
 ## 3. Caveats
-- No caveats. All specifications outlined in `DISPATCH.md`, `PROJECT.md`, and `spec_report.md` for Milestone M2 are fully implemented and passing all tests without regressions.
+
+- **Immunity Constraints**: Player, boss vehicles/structures (`BOSS_TETSUYUKI`, `MID_BOSS_VEHICLE`), and hostage POWs are explicitly protected from off-screen culling so stage encounters and rescues remain stable regardless of camera position.
+- No other caveats.
 
 ---
 
 ## 4. Conclusion
-Milestone M2 is 100% complete and fully verified. Player Kinematics, 8-way aiming, melee arbitration, the weapons system with HMG sweep and Flame Shot piercing, secondary grenades, and Hostage POW systems are verified by 108 unit tests under Vitest and compile cleanly with 0 TypeScript errors.
+
+Milestone M2 Overhaul requirements are fully implemented, genuinely verified, and 100% green:
+- `StageTrigger` receives `cameraX`.
+- `despawnOffscreenEntities()` cleans up off-screen/fallen minions.
+- `SoldierEnemy` runs in smoothly at $-110\text{ px/s}$ and transitions cleanly at the screen margin.
+- `src/main.ts` waves spawn out-of-bounds at $\text{cameraX} + 520\text{px}$ with $+40\text{px}$ staggering. Zero popping.
+- All 14 test suites and 156 tests pass with 0 errors.
 
 ---
 
 ## 5. Verification Method
-Independently verifiable with:
-```bash
-npx tsc --noEmit
-npm run test
-```
-Both commands must exit with code 0.
+
+To independently verify this milestone:
+1. Build verification:
+   ```bash
+   npm run build
+   ```
+   Must exit with code 0 and build production bundle without errors.
+2. Full test suite execution:
+   ```bash
+   npm test
+   ```
+   Must exit with code 0, reporting 14 test files passed and 156 tests green (100%).
+3. Inspect files:
+   - `src/core/engine/StageManager.ts` (lines 20–35, 115–185)
+   - `src/core/entities/enemies/SoldierEnemy.ts` (lines 132–165, 245–265, 305–385)
+   - `src/main.ts` (lines 645–725)
+   - `tests/unit/stage_spawning_despawn.test.ts`

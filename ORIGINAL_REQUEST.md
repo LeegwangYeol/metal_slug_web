@@ -35,3 +35,33 @@ Decouple core game logic from rendering so that behaviors (health, weapon states
 ## 2026-09-03T03:10:10Z
 
 The user has explicitly approved the plan. Please proceed with the code implementation and dispatch the orchestrator swarm. (User message: "승인")
+
+## 2026-09-03T05:38:05Z
+
+Full team. Overhaul the existing Metal Slug web game to address major visual and gameplay issues. The focus is to fix broken physics, correct enemy spawn/despawn logic, significantly upgrade the character graphics to remove the "Atari" feel, add clear aiming indicators, and use visual verification (screenshots) to improve UI and screen design.
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Physics and Enemy Spawning
+Fix the broken physics logic (e.g., collision, gravity, movement) to feel natural and consistent. Correct the enemy spawning system so minions enter and exit the screen smoothly without jarring appearances or disappearances.
+
+### R2. Graphics and Aiming Overhaul
+Upgrade character and enemy sprites from the primitive "Atari" style to high-resolution, detailed pixel art. Implement a clear visual aiming indicator (like a crosshair) and distinct character animations so the aiming direction is immediately obvious.
+
+### R3. Visual Design Verification via Screenshots
+You MUST use a headless browser (e.g., Chrome DevTools or Playwright) to take screenshots of the game's UI and gameplay. The implementing agents must visually analyze these screenshots to judge and refine the screen design, layout, and art quality.
+
+## Acceptance Criteria
+
+### Visual & Gameplay Verification
+- [ ] Visual Proof: The team produces screenshot artifacts showing the upgraded graphics, UI layout, and crosshairs, along with an AI evaluation of the design.
+- [ ] AI Evaluation: An agent visually confirms that enemies spawn out-of-bounds and walk in (no popping).
+- [ ] AI Evaluation: An agent visually confirms the physics (jump arcs, gravity) appear natural in captured frames or that the physics simulation logic strictly follows Newtonian principles.
+- [ ] Automated tests: Existing and newly added Vitest / Playwright tests pass (100% green).
+
+## 2026-09-03T06:13:54Z
+
+The user has explicitly approved the plan. Please proceed with the code implementation and dispatch the orchestrator swarm. (User message: "승인")

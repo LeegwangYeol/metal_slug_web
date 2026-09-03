@@ -3,9 +3,12 @@ import { PALETTES, hexToRgba, rgbaToString } from '../../src/render/sprites/Pale
 import { ProceduralSpriteFactory, createCanvasBuffer } from '../../src/render/sprites/ProceduralSpriteFactory';
 import { Camera } from '../../src/render/Camera';
 import { ParallaxBackground } from '../../src/render/ParallaxBackground';
-import { CanvasRenderer, RenderSceneState } from '../../src/render/CanvasRenderer';
+import { CanvasRenderer, RenderSceneState, RenderPlayerState } from '../../src/render/CanvasRenderer';
 import { createAABB } from '../../src/core/physics/AABB';
 import { Platform } from '../../src/core/physics/Platform';
+import { AimAngle } from '../../src/core/player/PlayerKinematics';
+import { vec2 } from '../../src/core/math/Vector2D';
+import { FullMetalSlugGame } from '../../src/main';
 
 describe('Palette & Color Utility Suite', () => {
   it('should parse hex strings to RGBA arrays correctly', () => {
@@ -333,3 +336,265 @@ describe('CanvasRenderer Suite', () => {
     }).not.toThrow();
   });
 });
+
+describe('5-Directional Upper-Body Aiming Animations Suite', () => {
+  const renderer = new CanvasRenderer();
+
+  it('should select correct high-resolution composite sprites for standing idle aiming', () => {
+    // 1. Standing FORWARD
+    const pForward: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', aimAngle: AimAngle.FORWARD, animFrame: 0 };
+    expect(renderer.resolvePlayerSpriteKey(pForward, 0)).toBe('player_idle_aim_FORWARD_0');
+
+    // 2. Standing UP_FORWARD
+    const pUpForward: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', aimAngle: AimAngle.UP_FORWARD, animFrame: 1 };
+    expect(renderer.resolvePlayerSpriteKey(pUpForward, 0)).toBe('player_idle_aim_UP_FORWARD_1');
+
+    // 3. Standing UP
+    const pUp: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', aimAngle: AimAngle.UP, animFrame: 2 };
+    expect(renderer.resolvePlayerSpriteKey(pUp, 0)).toBe('player_idle_aim_UP_2');
+  });
+
+  it('should select correct high-resolution composite sprites for running with directional aiming', () => {
+    // 1. Running FORWARD
+    const pRunForward: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'run', aimAngle: AimAngle.FORWARD, animFrame: 3 };
+    expect(renderer.resolvePlayerSpriteKey(pRunForward, 0)).toBe('player_run_aim_FORWARD_3');
+
+    // 2. Running UP_FORWARD
+    const pRunUpForward: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'run', aimAngle: AimAngle.UP_FORWARD, animFrame: 4 };
+    expect(renderer.resolvePlayerSpriteKey(pRunUpForward, 0)).toBe('player_run_aim_UP_FORWARD_4');
+
+    // 3. Running UP
+    const pRunUp: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'run', aimAngle: AimAngle.UP, animFrame: 5 };
+    expect(renderer.resolvePlayerSpriteKey(pRunUp, 0)).toBe('player_run_aim_UP_5');
+  });
+
+  it('should select correct high-resolution composite sprites for airborne jump aiming (5 directions)', () => {
+    // 1. Airborne FORWARD
+    const pJumpForward: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'jump', aimAngle: AimAngle.FORWARD };
+    expect(renderer.resolvePlayerSpriteKey(pJumpForward, 0)).toBe('player_jump_aim_FORWARD');
+
+    // 2. Airborne UP_FORWARD
+    const pJumpUpForward: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'jump', aimAngle: AimAngle.UP_FORWARD };
+    expect(renderer.resolvePlayerSpriteKey(pJumpUpForward, 0)).toBe('player_jump_aim_UP_FORWARD');
+
+    // 3. Airborne UP
+    const pJumpUp: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'jump', aimAngle: AimAngle.UP };
+    expect(renderer.resolvePlayerSpriteKey(pJumpUp, 0)).toBe('player_jump_aim_UP');
+
+    // 4. Airborne DOWN_FORWARD
+    const pJumpDownForward: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'jump', aimAngle: AimAngle.DOWN_FORWARD };
+    expect(renderer.resolvePlayerSpriteKey(pJumpDownForward, 0)).toBe('player_jump_aim_DOWN_FORWARD');
+
+    // 5. Airborne DOWN
+    const pJumpDown: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'jump', aimAngle: AimAngle.DOWN };
+    expect(renderer.resolvePlayerSpriteKey(pJumpDown, 0)).toBe('player_jump_aim_DOWN');
+  });
+
+  it('should select correct composite sprite for grounded crouch aiming forward', () => {
+    const pCrouch: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'crouch', aimAngle: AimAngle.FORWARD };
+    expect(renderer.resolvePlayerSpriteKey(pCrouch, 0)).toBe('player_crouch_aim_FORWARD');
+  });
+
+  it('should handle special states (death, knife, fire) with high precedence', () => {
+    const pDeath: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'death', animFrame: 2 };
+    expect(renderer.resolvePlayerSpriteKey(pDeath, 0)).toBe('player_death_2');
+
+    const pKnife: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'knife', animFrame: 1 };
+    expect(renderer.resolvePlayerSpriteKey(pKnife, 0)).toBe('player_knife_1');
+
+    const pMeleeFlag: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', isMelee: true, animFrame: 0 };
+    expect(renderer.resolvePlayerSpriteKey(pMeleeFlag, 0)).toBe('player_knife_0');
+  });
+
+  it('should gracefully fallback when custom or legacy aimAngle is passed', () => {
+    // Legacy number aimAngle (e.g. 1 for up-forward)
+    const pLegacy: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', aimAngle: 1, animFrame: 0 };
+    expect(renderer.resolvePlayerSpriteKey(pLegacy, 0)).toBe('player_idle_aim_UP_FORWARD_0');
+
+    // String aimAngle
+    const pString: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', aimAngle: 'UP', animFrame: 0 };
+    expect(renderer.resolvePlayerSpriteKey(pString, 0)).toBe('player_idle_aim_UP_0');
+
+    // Undefined aimAngle defaults to FORWARD
+    const pUndef: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', animFrame: 0 };
+    expect(renderer.resolvePlayerSpriteKey(pUndef, 0)).toBe('player_idle_aim_FORWARD_0');
+  });
+});
+
+describe('Pass 3.5: Tactical Aiming Reticle / Crosshair Suite', () => {
+  const renderer = new CanvasRenderer();
+
+  it('should project crosshair along aimDirection from muzzle correctly for facing right', () => {
+    const pRight: RenderPlayerState = {
+      x: 100,
+      y: 200,
+      facing: 1,
+      state: 'idle',
+      aimAngle: AimAngle.FORWARD,
+      aimDirection: vec2(1, 0),
+      weaponType: 'PISTOL',
+    };
+
+    const geom = renderer.calculateCrosshairGeometry(pRight, 0);
+
+    // Muzzle should be in front of player
+    expect(geom.muzzle.x).toBe(118); // 100 + 1 * 18
+    expect(geom.muzzle.y).toBe(176); // 200 - 24
+
+    // Aim direction normalized
+    expect(geom.aimDir.x).toBeCloseTo(1.0, 4);
+    expect(geom.aimDir.y).toBeCloseTo(0.0, 4);
+
+    // Reticle should be projected forward along aimDir
+    expect(geom.worldReticle.x).toBeGreaterThan(geom.muzzle.x);
+    expect(geom.worldReticle.y).toBeCloseTo(geom.muzzle.y, 1);
+  });
+
+  it('should project crosshair cleanly to the left when player faces left', () => {
+    const pLeft: RenderPlayerState = {
+      x: 100,
+      y: 200,
+      facing: -1,
+      state: 'idle',
+      aimAngle: AimAngle.FORWARD,
+      aimDirection: vec2(-1, 0),
+      weaponType: 'PISTOL',
+    };
+
+    const geom = renderer.calculateCrosshairGeometry(pLeft, 0);
+
+    // Muzzle should be behind player center in world coordinates (facing left)
+    expect(geom.muzzle.x).toBe(82); // 100 - 18
+    expect(geom.aimDir.x).toBeCloseTo(-1.0, 4);
+
+    // Reticle world X must be strictly to the left of the muzzle
+    expect(geom.worldReticle.x).toBeLessThan(geom.muzzle.x);
+    expect(geom.worldReticle.y).toBeCloseTo(geom.muzzle.y, 1);
+  });
+
+  it('should project crosshair upward when aiming straight UP', () => {
+    const pUp: RenderPlayerState = {
+      x: 100,
+      y: 200,
+      facing: 1,
+      state: 'idle',
+      aimAngle: AimAngle.UP,
+      aimDirection: vec2(0, -1),
+      weaponType: 'PISTOL',
+    };
+
+    const geom = renderer.calculateCrosshairGeometry(pUp, 0);
+
+    // Muzzle above player
+    expect(geom.muzzle.y).toBe(154); // 200 - 46
+    expect(geom.aimDir.x).toBeCloseTo(0.0, 4);
+    expect(geom.aimDir.y).toBeCloseTo(-1.0, 4);
+
+    // Reticle strictly above muzzle
+    expect(geom.worldReticle.y).toBeLessThan(geom.muzzle.y);
+    expect(geom.worldReticle.x).toBeCloseTo(geom.muzzle.x, 1);
+  });
+
+  it('should project crosshair downward when airborne aiming straight DOWN', () => {
+    const pDown: RenderPlayerState = {
+      x: 100,
+      y: 200,
+      facing: 1,
+      state: 'jump',
+      aimAngle: AimAngle.DOWN,
+      aimDirection: vec2(0, 1),
+      weaponType: 'PISTOL',
+    };
+
+    const geom = renderer.calculateCrosshairGeometry(pDown, 0);
+
+    expect(geom.aimDir.x).toBeCloseTo(0.0, 4);
+    expect(geom.aimDir.y).toBeCloseTo(1.0, 4);
+
+    // Reticle strictly below muzzle
+    expect(geom.worldReticle.y).toBeGreaterThan(geom.muzzle.y);
+    expect(geom.worldReticle.x).toBeCloseTo(geom.muzzle.x, 1);
+  });
+
+  it('should provide distinct weapon reticle distances for Pistol, HMG, and Flame Shot', () => {
+    const pPistol: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', aimAngle: AimAngle.FORWARD, weaponType: 'PISTOL' };
+    const pHmg: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', aimAngle: AimAngle.FORWARD, weaponType: 'HEAVY_MACHINE_GUN' };
+    const pFlame: RenderPlayerState = { x: 100, y: 200, facing: 1, state: 'idle', aimAngle: AimAngle.FORWARD, weaponType: 'FLAME_SHOT' };
+
+    const geomPistol = renderer.calculateCrosshairGeometry(pPistol, 0);
+    const geomHmg = renderer.calculateCrosshairGeometry(pHmg, 0);
+    const geomFlame = renderer.calculateCrosshairGeometry(pFlame, 0);
+
+    expect(geomPistol.distance).toBeCloseTo(44, 1);
+    expect(geomHmg.distance).toBe(48);
+    expect(geomFlame.distance).toBeCloseTo(52, 1);
+  });
+
+  it('should render all weapon crosshair styles without exceptions in full render passes', () => {
+    const weapons: Array<'PISTOL' | 'HEAVY_MACHINE_GUN' | 'FLAME_SHOT'> = ['PISTOL', 'HEAVY_MACHINE_GUN', 'FLAME_SHOT'];
+
+    for (const w of weapons) {
+      const scene: RenderSceneState = {
+        camera: renderer.camera,
+        time: 1.0,
+        player: {
+          x: 100,
+          y: 200,
+          facing: 1,
+          state: 'idle',
+          aimAngle: AimAngle.UP_FORWARD,
+          aimDirection: vec2(0.7071, -0.7071),
+          weaponType: w,
+          isFiring: true,
+        },
+      };
+
+      expect(() => {
+        renderer.renderScene(scene);
+      }).not.toThrow();
+    }
+  });
+
+  it('should suppress Pass 3.5 crosshair when player state is death', () => {
+    const scene: RenderSceneState = {
+      camera: renderer.camera,
+      time: 1.0,
+      player: {
+        x: 100,
+        y: 200,
+        facing: 1,
+        state: 'death',
+        aimAngle: AimAngle.FORWARD,
+      },
+    };
+
+    expect(() => {
+      renderer.renderScene(scene);
+    }).not.toThrow();
+  });
+});
+
+describe('Main Game buildRenderSceneState Forwarding Suite', () => {
+  it('should forward aimAngle and aimDirection correctly in buildRenderSceneState', () => {
+    const game = new FullMetalSlugGame();
+
+    // Direct access to private buildRenderSceneState via casting for testing
+    const scene = (game as any).buildRenderSceneState();
+    expect(scene.player).toBeDefined();
+    expect(scene.player.aimAngle).toBe(AimAngle.FORWARD);
+    expect(scene.player.aimDirection).toBeDefined();
+    expect(scene.player.aimDirection.x).toBe(1);
+    expect(scene.player.aimDirection.y).toBe(0);
+    expect(scene.player.weaponType).toBe('PISTOL');
+
+    // Simulate aiming up-forward
+    game.player.aimAngle = AimAngle.UP_FORWARD;
+    game.player.aimDirection = vec2(0.7071, -0.7071);
+
+    const sceneUpdated = (game as any).buildRenderSceneState();
+    expect(sceneUpdated.player.aimAngle).toBe(AimAngle.UP_FORWARD);
+    expect(sceneUpdated.player.aimDirection.x).toBeCloseTo(0.7071, 4);
+    expect(sceneUpdated.player.aimDirection.y).toBeCloseTo(-0.7071, 4);
+  });
+});
+

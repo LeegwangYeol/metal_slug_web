@@ -1,45 +1,75 @@
-## 2026-09-03T03:19:31Z
-You are worker_m4.
-Your working directory is /Users/user/src/fullmetalslug/.agents/worker_m4/.
-Project workspace root is /Users/user/src/fullmetalslug/.
+# Dispatch: Worker M4 (Dynamic Aiming Crosshair & 5-Directional Upper-Body Animations)
 
-MANDATORY INTEGRITY WARNING:
+## Mission
+Implement dynamic weapon aiming crosshairs/reticles and 5-directional upper-body aiming animations according to R2 requirements and Explorer 2's handoff specification.
+
+## Working Directory
+/Users/user/src/fullmetalslug/.agents/worker_m4
+
+## Exclusive File Ownership
+- `src/render/CanvasRenderer.ts`
+- `src/main.ts` (`buildRenderSceneState()` player render state forwarding)
+
+## Input References
+- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` (MANDATORY: read first)
+- `/Users/user/src/fullmetalslug/COLLABORATION.md`
+- `/Users/user/src/fullmetalslug/PROJECT.md`
+- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_2/handoff.md`
+- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_2/survey_report.md`
+- `/Users/user/src/fullmetalslug/.agents/worker_m3/handoff.md` (check composite sprite keys)
+
+## Instructions
+1. In `src/main.ts`:
+   - In `RenderPlayerState` interface: ensure `aimAngle?: number | string` (or `AimAngle`) and `aimDirection?: Vector2D` are present.
+   - In `buildRenderSceneState()`: pass `aimAngle: this.player.aimAngle` and `aimDirection: this.player.aimDirection` in `playerRenderState`.
+2. In `src/render/CanvasRenderer.ts`:
+   - Implement Pass 3.5: Tactical Aiming Reticle / Crosshair:
+     - Render crosshair along player aim vector from player position / muzzle.
+     - Provide weapon-specific visual styling:
+       - Handgun / Pistol: Laser targeting pip and subtle crosshair bracket.
+       - Heavy Machine Gun: Tactical circular reticle with bullet spread pips.
+       - Flame Shot: Tapered incendiary arc / cone indicator.
+     - Reticle distance: positioned at responsive targeting distance (e.g. 36-54px along aim vector), flipping orientation cleanly when player faces left.
+   - Implement 5-Directional Upper-Body Aiming Animations:
+     - Select sprite using the high-resolution composite keys pre-baked by Worker M3:
+       - `FORWARD`: `player_idle_aim_FORWARD_0..3`, `player_run_aim_FORWARD_0..5`, `player_jump_aim_FORWARD`
+       - `UP_FORWARD`: `player_idle_aim_UP_FORWARD_0..3`, `player_run_aim_UP_FORWARD_0..5`, `player_jump_aim_UP_FORWARD`
+       - `UP`: `player_idle_aim_UP_0..3`, `player_run_aim_UP_0..5`, `player_jump_aim_UP`
+       - `DOWN_FORWARD`: `player_jump_aim_DOWN_FORWARD` (airborne)
+       - `DOWN`: `player_jump_aim_DOWN` (airborne)
+       - Grounded crouch: `player_crouch_aim_FORWARD`
+       - Fallback to `player_aim_0..7` or base locomotion sprite if key not found.
+3. Run `npm test` and `npm run build` to confirm 100% green tests and 0 compilation errors.
+4. Deliver `handoff.md` in your working directory with build & test output.
+
+## Integrity Warning
 DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-Read these files before starting:
-- /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
-- /Users/user/src/fullmetalslug/COLLABORATION.md
-- /Users/user/src/fullmetalslug/.agents/orchestrator/PROJECT.md
-- /Users/user/src/fullmetalslug/.agents/spec_miner_survey_3/spec_report.md
+## 2026-09-03T06:40:33Z
 
-Milestone: M4 — Procedural Pixel-Art Generation, Parallax Backgrounds & Canvas 2D Renderer.
+You are worker_m4.
+Working directory: /Users/user/src/fullmetalslug/.agents/worker_m4
+Scope document: /Users/user/src/fullmetalslug/PROJECT.md
+Original user request: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
+Collaboration guide: /Users/user/src/fullmetalslug/COLLABORATION.md
+Dispatch instructions: /Users/user/src/fullmetalslug/.agents/worker_m4/DISPATCH.md
 
-File Write Ownership (Exclusively yours):
-- src/render/Camera.ts
-- src/render/ParallaxBackground.ts
-- src/render/sprites/Palette.ts
-- src/render/sprites/ProceduralSpriteFactory.ts
+Exclusive File Ownership:
 - src/render/CanvasRenderer.ts
+- src/main.ts (buildRenderSceneState player render state forwarding)
 
-Specifications to implement:
-1. Procedural 16-Color Pixel-Art Sprite Engine:
-   - Authentic Neo Geo / Metal Slug style indexed color palette (`Palette.ts`).
-   - Procedural rasterization into cached OffscreenCanvas / Canvas image buffers:
-     - Player (Marco soldier: idle, run, jump, crouch, aim 8 directions, knife slash, fire, death).
-     - Rebel soldiers (rifleman, knife charger, grenade thrower, shield trooper).
-     - Hostage POW (tied, freed, salute, escape).
-     - Mid-Boss Iron Technical (hull, tread animation, rotating turret).
-     - Tetsuyuki War Fortress (multi-part fortress hull, turrets, laser beam, reactor core).
-     - Projectiles (handgun bullet, HMG tracer & casing, flame stream fireball, grenade) and multi-frame explosion anims.
-     - HUD badges ("H", "F", grenade icon, score digits).
-2. Parallax Background & Camera System:
-   - 4-layer parallax scrolling (Layer 0: desert sky & clouds, Layer 1: distant ruins/mountains, Layer 2: midground fortress structures, Layer 3: foreground combat surface).
-   - Camera deadzone tracking with forward scrolling lock and boss arena boundary locking.
-3. High-Performance Canvas Renderer:
-   - Virtual resolution letterbox scaling (480x270 virtual frame buffer cleanly centered and scaled with nearest-neighbor crisp pixel rendering).
-   - Render passes: Background Parallax -> Terrain/Platforms -> Entities (Enemies, Boss, POWs, Player) -> Projectiles & Explosions -> HUD Overlay.
+Your task:
+1. In src/main.ts:
+   - Ensure RenderPlayerState interface has aimAngle?: any and aimDirection?: Vector2D.
+   - In buildRenderSceneState(): pass aimAngle: this.player.aimAngle and aimDirection: this.player.aimDirection in playerRenderState.
+2. In src/render/CanvasRenderer.ts:
+   - Implement Pass 3.5: Tactical Aiming Reticle / Crosshair:
+     - Render crosshairs projected along aimDirection from the player position.
+     - Weapon-specific styling: Pistol (laser targeting pip and subtle bracket), Heavy Machine Gun (tactical circular reticle with bullet spread pips), Flame Shot (tapered incendiary arc / cone indicator).
+     - Cleanly handle facing orientation when player faces left.
+   - Implement 5-Directional Upper-Body Aiming Animations:
+     - Select sprite using the high-resolution composite keys pre-baked by Worker M3 (player_idle_aim_FORWARD_0..3, player_idle_aim_UP_FORWARD_0..3, player_idle_aim_UP_0..3, player_run_aim_FORWARD_0..5, player_run_aim_UP_FORWARD_0..5, player_run_aim_UP_0..5, player_jump_aim_FORWARD, player_jump_aim_UP_FORWARD, player_jump_aim_UP, player_jump_aim_DOWN_FORWARD, player_jump_aim_DOWN, player_crouch_aim_FORWARD).
+     - Graceful fallback to player_aim_${aimAngle} or base locomotion sprite if key not found.
+3. Run npm test and npm run build to verify all tests pass 100% green and 0 build errors.
+4. Deliver handoff.md in your working directory with test outputs. Send a message to orchestrator when done.
 
-Verification:
-- Run `npx tsc --noEmit` and confirm 0 errors.
-- Run `npm run build` and confirm production bundle compiles cleanly.
-- Write handoff report to /Users/user/src/fullmetalslug/.agents/worker_m4/handoff.md and notify orchestrator via send_message.

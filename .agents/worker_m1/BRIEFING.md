@@ -9,6 +9,7 @@ Deliver Milestone M1: Project Tooling Initialization, Strict TypeScript Config, 
 - Working directory: /Users/user/src/fullmetalslug/.agents/worker_m1/
 - Original parent: 084b764e-0b87-4c6e-b6aa-67ece754bc64
 - Milestone: M1 — Project Scaffolding & Decoupled Core Simulation Engine
+- Current Milestone: R1 Overhaul — Newtonian Physics & Arcade Kinematics
 
 ## 🔒 Key Constraints
 - File Write Ownership exclusively:
@@ -22,29 +23,49 @@ Deliver Milestone M1: Project Tooling Initialization, Strict TypeScript Config, 
   - src/core/physics/*
   - src/core/engine/*
   - .agents/worker_m1/*
+- Current Task Exclusive File Ownership:
+  - `src/core/player/PlayerKinematics.ts`
+  - `src/core/player/PlayerController.ts`
+  - `tests/unit/player_kinematics_aiming.test.ts`
+  - `.agents/worker_m1/*`
 - Integrity Mandate: No cheating, no hardcoding test outputs, genuine mathematical & physics models.
 - Pure decoupled simulation core: Zero DOM/Window/Canvas imports in src/core/*.
 - 60Hz fixed timestep semi-implicit Euler integration (dt = 1/60).
-- Communicate with caller via send_message using caller ID 084b764e-0b87-4c6e-b6aa-67ece754bc64 and RecipientName "parent".
+- Communicate with caller via send_message using caller ID 390e9a3c-c60d-42f9-80ff-35ac81372992 and RecipientName "parent".
 
 ## Current Parent
-- Conversation ID: 084b764e-0b87-4c6e-b6aa-67ece754bc64
-- Updated: 2026-09-03T12:18:45+09:00
+- Conversation ID: 390e9a3c-c60d-42f9-80ff-35ac81372992
+- Updated: 2026-09-03T15:23:30+09:00
 
 ## Task Summary
 - **What to build**:
-  1. Tooling: package.json, tsconfig.json, vite.config.ts, vitest.config.ts, playwright.config.ts, index.html.
-  2. Math: Vector2D (arithmetic, dot, norm, distance, angle, rotate, lerp).
-  3. Physics: AABB (intersection, containment, expand, center, offset), SpatialGrid (broadphase hash grid), Platform (solid ground & semi-solid one-way platforms with drop-through).
-  4. Engine: GameEngine (60Hz fixed tick, entity registry, collision pipeline, event bus), StageManager (stage progression, camera bounds, platform list, spawn triggers).
-- **Success criteria**: npx tsc --noEmit passes with zero errors; npm run build succeeds and produces dist/; tests can run.
-- **Interface contracts**: PROJECT.md & spec_report.md
+  1. `src/core/player/PlayerKinematics.ts`: Update constants:
+     - `RUN_SPEED = 132.0`
+     - `CRAWL_SPEED = 54.0`
+     - `JUMP_IMPULSE = -360.0`
+     - `GRAVITY = 800.0`
+     - `TERMINAL_FALL_VELOCITY = 500.0`
+     - `JUMP_CUT_RATIO = 0.5`
+  2. `src/core/player/PlayerController.ts`:
+     - Apex float dampening: when airborne and $|v_y| < 40\text{ px/s}$, apply $0.65 \times \text{GRAVITY}$ to achieve signature arcade apex hangtime.
+     - Single-shot jump cut: apply jump cut strictly ONCE when jump key is released (`!input.jumpHeld`), rather than repeatedly every frame.
+     - 4-frame ($66.7\text{ms}$) coyote time: allow jumping within 4 frames after leaving a ledge.
+     - 4-frame jump input buffering: buffer a jump press within 4 frames before touching ground and execute on landing.
+     - Clean platform landing snapping and velocity zeroing.
+  3. `tests/unit/player_kinematics_aiming.test.ts`: Sync with new constants and test new behavior.
+  4. Run `npm test` to verify all kinematics tests pass.
+- **Success criteria**: All tests green (100% pass), authentic arcade physics feel, clean landing snapping, coyote time & jump buffering working.
+- **Interface contracts**: PROJECT.md, COLLABORATION.md, DISPATCH.md
 - **Code layout**: PROJECT.md § Code Layout
 
 ## Key Decisions Made
-- Implemented pure decoupled simulation core in `src/core/` with zero DOM/window/canvas imports.
-- Created `tests/unit/core_engine.test.ts` covering math, AABB, spatial grid, platform physics, and engine ticks. All 19 unit tests passing.
-- Verified production build compiles cleanly into `dist/` with `npm run build`.
+- Prior M1 scaffolding completed cleanly.
+- Updated physics constants in PlayerKinematics: RUN_SPEED=132.0, CRAWL_SPEED=54.0, JUMP_IMPULSE=-360.0, GRAVITY=800.0, JUMP_CUT_RATIO=0.5, TERMINAL_FALL_VELOCITY=500.0.
+- Implemented apex float dampening in PlayerController: 0.65 * GRAVITY when airborne and |vy| < 40 px/s for signature arcade apex hangtime.
+- Implemented single-shot jump cut strictly once on jump key release (!jumpHeld && !jumpPressed).
+- Implemented 4-frame coyote time and 4-frame jump input buffering.
+- Implemented clean platform landing snapping and velocity zeroing.
+- Expanded player_kinematics_aiming.test.ts to 15 tests, verifying all physics features.
 
 ## Artifact Index
 - DISPATCH.md — Assignment instructions
@@ -54,27 +75,17 @@ Deliver Milestone M1: Project Tooling Initialization, Strict TypeScript Config, 
 
 ## Change Tracker
 - **Files modified**:
-  - `package.json`: Configured scripts & devDependencies
-  - `tsconfig.json`: Strict ES2022 TypeScript configuration
-  - `vite.config.ts`: Vite dev & build configuration
-  - `vitest.config.ts`: Vitest node environment configuration
-  - `playwright.config.ts`: Playwright preview webServer configuration
-  - `index.html`: Responsive Canvas container
-  - `src/core/math/Vector2D.ts`: 2D vector mathematics
-  - `src/core/physics/AABB.ts`: Axis-aligned bounding box routines
-  - `src/core/physics/SpatialGrid.ts`: Fast spatial hash grid
-  - `src/core/physics/Platform.ts`: Solid ground & semi-solid one-way platform physics
-  - `src/core/engine/GameEngine.ts`: 60Hz fixed-timestep simulation engine & event bus
-  - `src/core/engine/StageManager.ts`: Stage progression & spawn triggers
-  - `src/main.ts`: Application bootstrap entrypoint
-  - `tests/unit/core_engine.test.ts`: Comprehensive unit test suite
-- **Build status**: PASS (tsc --noEmit, npm run build, vitest run all exit code 0)
+  - `src/core/player/PlayerKinematics.ts`: Updated physics constants, added apex & buffer constants.
+  - `src/core/player/PlayerController.ts`: Single-shot jump cut, apex float dampening, coyote time, jump input buffer, landing snap.
+  - `tests/unit/player_kinematics_aiming.test.ts`: Updated constants assertions, added 6 new Newtonian kinematics tests.
+- **Build status**: PASS (tsc --noEmit: 0 errors; npm test: 145/145 passing; npm run build: clean dist output)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: PASS (19 tests passed in 4ms, production build succeeded in 57ms)
+- **Build/test result**: 145 passed (13 test files, 100% green)
 - **Lint status**: 0 errors
-- **Tests added/modified**: 19 tests in `tests/unit/core_engine.test.ts`
+- **Tests added/modified**: 6 new unit tests in player_kinematics_aiming.test.ts (15 tests total in file)
 
 ## Loaded Skills
 - None
+

@@ -67,6 +67,11 @@ export class PlayerController implements GameEntity {
   private dropThroughTimer: number = 0;
   private ignoredPlatformId: string | null = null;
 
+  // Jump Enhancements: Coyote Time, Jump Buffering, Single-shot Jump Cut
+  public coyoteTimer: number = 0; // remaining coyote time in seconds
+  public jumpBufferTimer: number = 0; // remaining jump buffer time in seconds
+  public jumpCutApplied: boolean = false;
+
   // Invulnerability after hit / respawn
   public invulnerabilityTimer: number = 0;
 
@@ -88,6 +93,23 @@ export class PlayerController implements GameEntity {
       this.position.y,
       this.posture
     );
+    this.coyoteTimer = PlayerKinematics.COYOTE_FRAMES * GameEngine.DEFAULT_TIMESTEP;
+    this.jumpBufferTimer = 0;
+    this.jumpCutApplied = false;
+  }
+
+  /**
+   * Executes a jump impulse with clean state reset and audio event dispatch.
+   */
+  public performJump(engine: GameEngine): void {
+    this.velocity.y = PlayerKinematics.JUMP_IMPULSE; // -360 px/s
+    this.isGrounded = false;
+    this.coyoteTimer = 0;
+    this.jumpBufferTimer = 0;
+    this.jumpCutApplied = false;
+    this.posture = PlayerPosture.AIRBORNE;
+    this.actionState = PlayerActionState.JUMPING;
+    engine.eventBus.emit('play_sound', { sound: 'sfx_player_jump' });
   }
 
   getPlayerState(): PlayerState {
@@ -110,8 +132,20 @@ export class PlayerController implements GameEntity {
   /**
    * Main input handling and kinematic update step.
    */
-  handleInput(input: PlayerInputSnapshot, _dt: number, engine: GameEngine): void {
+  handleInput(input: PlayerInputSnapshot, dt: number, engine: GameEngine): void {
     if (!this.isAlive) return;
+
+    const timestep = dt > 0 ? dt : GameEngine.DEFAULT_TIMESTEP;
+
+    // Refresh coyote timer while firmly grounded
+    if (this.isGrounded) {
+      this.coyoteTimer = PlayerKinematics.COYOTE_FRAMES * timestep;
+    }
+
+    // Buffer jump input on press (unless pressing DOWN to crouch/drop-through)
+    if (input.jumpPressed && !input.down) {
+      this.jumpBufferTimer = PlayerKinematics.JUMP_BUFFER_FRAMES * timestep;
+    }
 
     // 1. Process Horizontal Facing Direction
     if (input.right && !input.left) {
@@ -156,20 +190,22 @@ export class PlayerController implements GameEntity {
     // 5. Process Semi-Solid Platform Drop-Through
     if (this.isGrounded && input.down && input.jumpPressed) {
       this.initiateDropThrough();
+      return;
     }
 
-    // 6. Process Jump
-    if (this.isGrounded && input.jumpPressed && !input.down) {
-      this.velocity.y = PlayerKinematics.JUMP_IMPULSE; // -348 px/s
-      this.isGrounded = false;
-      this.posture = PlayerPosture.AIRBORNE;
-      this.actionState = PlayerActionState.JUMPING;
-      engine.eventBus.emit('play_sound', { sound: 'sfx_player_jump' });
+    // 6. Process Jump (with Coyote Time and Jump Buffering)
+    const wantsJump = (input.jumpPressed || this.jumpBufferTimer > 0) && !input.down;
+    const canJump = (this.isGrounded || this.coyoteTimer > 0) && !this.isDroppingThrough;
+
+    if (canJump && wantsJump) {
+      this.performJump(engine);
     }
 
-    // Variable Jump Apex Cut
-    if (!this.isGrounded && this.velocity.y < 0 && !input.jumpHeld) {
+    // Single-Shot Variable Jump Apex Cut
+    // Strictly execute ONCE upon releasing jump key (!input.jumpHeld && !input.jumpPressed) while ascending
+    if (!this.isGrounded && this.velocity.y < 0 && !input.jumpHeld && !input.jumpPressed && !this.jumpCutApplied) {
       this.velocity.y = PlayerKinematics.applyJumpCut(this.velocity.y);
+      this.jumpCutApplied = true;
     }
 
     // 7. Process Horizontal Movement
@@ -398,6 +434,8 @@ export class PlayerController implements GameEntity {
     this.dropThroughTimer = PlayerKinematics.DROP_THROUGH_FRAMES * GameEngine.DEFAULT_TIMESTEP;
     this.velocity.y = PlayerKinematics.DROP_THROUGH_IMPULSE;
     this.isGrounded = false;
+    this.coyoteTimer = 0;
+    this.jumpBufferTimer = 0;
   }
 
   update(dt: number, engine: GameEngine): void {
@@ -408,7 +446,7 @@ export class PlayerController implements GameEntity {
       this.velocity.x = 0;
     }
 
-    // Cooldown timers
+    // Cooldown and jump timers
     if (this.meleeCooldown > 0) {
       this.meleeCooldown = Math.max(0, this.meleeCooldown - dt);
     }
@@ -422,13 +460,25 @@ export class PlayerController implements GameEntity {
         this.ignoredPlatformId = null;
       }
     }
+    if (!this.isGrounded && this.coyoteTimer > 0) {
+      this.coyoteTimer = Math.max(0, this.coyoteTimer - dt);
+    }
+    if (this.jumpBufferTimer > 0) {
+      this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt);
+    }
 
     // Update weapon manager
     this.weaponManager.update(dt, engine);
 
-    // Gravity Integration
+    // Gravity Integration with Apex Float Dampening
+    // When airborne and |velocity.y| < 40 px/s, apply 0.65 * GRAVITY for arcade apex hangtime
     if (!this.isGrounded) {
-      this.velocity.y += PlayerKinematics.GRAVITY * dt;
+      const isApex = Math.abs(this.velocity.y) < PlayerKinematics.APEX_FLOAT_VELOCITY_THRESHOLD;
+      const effectiveGravity = isApex
+        ? PlayerKinematics.GRAVITY * PlayerKinematics.APEX_GRAVITY_SCALE
+        : PlayerKinematics.GRAVITY;
+
+      this.velocity.y += effectiveGravity * dt;
       if (this.velocity.y > PlayerKinematics.TERMINAL_FALL_VELOCITY) {
         this.velocity.y = PlayerKinematics.TERMINAL_FALL_VELOCITY;
       }
@@ -457,11 +507,25 @@ export class PlayerController implements GameEntity {
       );
 
       if (contact.isGrounded) {
+        // Clean platform landing snapping and velocity zeroing
         this.position.y = contact.groundY;
         this.velocity.y = 0;
         this.isGrounded = true;
+        this.coyoteTimer = PlayerKinematics.COYOTE_FRAMES * dt;
+        this.jumpCutApplied = false;
         if (contact.platform && this.isDroppingThrough) {
           this.ignoredPlatformId = contact.platform.id;
+        }
+
+        if (this.actionState === PlayerActionState.FALLING || this.actionState === PlayerActionState.JUMPING) {
+          this.actionState = this.isCrouching
+            ? (this.velocity.x !== 0 ? PlayerActionState.CRAWLING : PlayerActionState.CROUCH_IDLE)
+            : (this.velocity.x !== 0 ? PlayerActionState.RUNNING : PlayerActionState.IDLE);
+        }
+
+        // Jump input buffering: execute jump on landing if buffer is active and not dropping through
+        if (this.jumpBufferTimer > 0 && !this.isDroppingThrough) {
+          this.performJump(engine);
         }
       } else {
         this.isGrounded = false;
@@ -490,6 +554,9 @@ export class PlayerController implements GameEntity {
         this.health = this.maxHealth;
         this.invulnerabilityTimer = 2.0;
         this.actionState = PlayerActionState.IDLE;
+        this.coyoteTimer = PlayerKinematics.COYOTE_FRAMES * GameEngine.DEFAULT_TIMESTEP;
+        this.jumpBufferTimer = 0;
+        this.jumpCutApplied = false;
       }
     } else {
       this.invulnerabilityTimer = 1.0;

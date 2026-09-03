@@ -1,14 +1,5 @@
-# Final Independent Post-Victory Audit Report: Full Metal Slug
+# Victory Audit Handoff Report — Metal Slug Web Gameplay & Visual Overhaul
 
-**Auditor**: Independent Victory Auditor (`victory_auditor`)  
-**Workspace**: `/Users/user/src/fullmetalslug`  
-**Working Directory**: `/Users/user/src/fullmetalslug/.agents/victory_auditor`  
-**Date**: 2026-09-03  
-**Integrity Mode**: Development (with zero external runtime dependencies)  
-
----
-
-```
 === VICTORY AUDIT REPORT ===
 
 VERDICT: VICTORY CONFIRMED
@@ -19,190 +10,147 @@ PHASE A — TIMELINE:
 
 PHASE B — INTEGRITY CHECK:
   Result: PASS
-  Details: CLEAN — All source files in src/core, src/render, src/audio, and src/input implement genuine domain logic. No hardcoded test responses, no facade stubs, and no bypassed physics or state machines. Real digital biquad filter formant speech synthesis (814 lines), real procedural 16-color rasterization (1284 lines), genuine 60Hz semi-implicit Euler kinematics, spatial hash grid, and multi-phase boss state machines.
+  Details: Verified genuine Newtonian numerical integration ($y = y_0 + v_0 t + \frac{1}{2}gt^2$), apex float dampening ($0.65\times g$), coyote time (4 frames), jump buffer (4 frames), platform collision with ground snapping and semi-solid drop-through; verified out-of-bounds enemy spawner ($X_{\text{spawn}} \ge \text{cameraX} + 520\text{px} > \text{cameraX} + 480\text{px}$), ingress run velocity ($v_x = -110\text{px/s}$), and clean off-screen despawn culling ($x < \text{cameraX} - 180$ or $y > 320$); verified 164 pre-baked 16-color Neo Geo procedural sprites (Marco, Rebel, POW, vehicles, bosses, HUD); verified Pass 3.5 weapon-specific tactical reticles (Pistol pip/brackets, HMG circular ring with dynamic spread, Flame Shot incendiary cone arc); verified 5 decoupled upper-body directional aiming animations (FORWARD, UP_FORWARD, UP, DOWN_FORWARD, DOWN); verified all 5 screenshot PNG files in artifacts/screenshots/ with 8-byte PNG binary signatures, IHDR chunks, and exact 960x540 RGB dimensions; verified formal 239-line AI visual evaluation report in artifacts/VISUAL_EVALUATION.md (Score: 96.5/100, Grade: A+); confirmed zero test shortcuts, zero mock bypasses, zero skipped tests, and zero trivial assertions.
 
 PHASE C — INDEPENDENT TEST EXECUTION:
-  Test command: npm run test && npm run test:e2e && npm run build
-  Your results:
-    - Vitest unit tests: 13 / 13 test files passed, 139 / 139 tests passed (598ms)
-    - Playwright browser E2E: 3 / 3 tests passed in Chromium (5.6s)
-    - Production build (tsc -b && vite build): 0 errors, compiled in 220ms
-  Claimed results:
-    - Vitest unit tests: 139 / 139 tests passed
-    - Playwright browser E2E: 3 / 3 tests passed
-    - Production build: Clean build with 0 errors
-  Match: YES — 100% exact match across all targets.
-```
+  Test command: npm test && npm run test:e2e && npm run build
+  Your results: Vitest 16/16 test files passed, 205/205 tests passed (100% green in 669ms); Playwright 2/2 spec files passed, 9/9 tests passed (100% green in 5.5s); tsc -b && vite build succeeded with 0 errors in 242ms.
+  Claimed results: Vitest 16/16 test files passed, 205/205 tests passed (100% green); Playwright 9/9 tests passed (100% green); tsc -b && vite build succeeded with 0 errors.
+  Match: YES
+
+EVIDENCE (if REJECTED):
+  N/A
+============================
 
 ---
 
 ## 1. Observation
 
-### 1.1 Requirements and Scope Review
-From `ORIGINAL_REQUEST.md`:
-- **R1. Core Game Mechanics & Engine**: Multi-stage web 2D run-and-gun action game inspired by Metal Slug; movement, jumping, melee attacks, ranged shooting.
-- **R2. Weapon Upgrades & Combat**: Item pickup weapon upgrades (machine gun, flamethrower) with distinct firing behaviors and sound effects.
-- **R3. Enemies, Mid-Bosses, and Bosses**: Varied enemies, mid-bosses, and end-bosses with unique attack patterns, phases, and gimmicks.
-- **R4. Assets & Audio**: Autonomously sourced/generated placeholder visual assets and audio files (voice clips, sound effects) emulating arcade feel.
-- **R5. Testable Architecture**: Decoupled core game logic from rendering so that behaviors can be verified via automated test scripts.
-- **Acceptance Criteria**:
-  - Automated tests pass for player weapon state transitions and ammo depletion.
-  - Automated tests pass for boss/enemy state machines (damage, phase transitions, death).
-  - Automated tests pass for melee vs ranged combat decision logic.
-  - Integration test passes: game initializes in headless browser with zero fatal console errors and 60 FPS animation loop.
-  - Asset presence: playable placeholder graphics and audio synthesizer for weapons, voices, and motions.
+### 1.1 Requirements Provenance & Request Adherence
+- **Authoritative Request File**: `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md`
+- **Initial Baseline**: Request at `2026-09-03T03:05:02Z`, approved at `2026-09-03T03:10:10Z`.
+- **Overhaul Directive**: Request at `2026-09-03T05:38:05Z`, approved at `2026-09-03T06:13:54Z`.
+  - **R1 (Physics & Spawning)**: Fixed broken physics (Newtonian jump curves, apex float dampening, coyote time, jump buffer, platform collision) and smooth out-of-bounds enemy spawning (enemies spawn strictly $> \text{cameraX} + 480\text{px}$, walk in with ingress velocity, no popping, and clean off-screen despawn).
+  - **R2 (Graphics & Aiming)**: High-resolution Neo Geo 16-color shaded pixel art sprites in `ProceduralSpriteFactory.ts` (Marco, Rebel Soldiers, POWs, vehicles, bosses), dynamic weapon aiming crosshairs (Pass 3.5 in `CanvasRenderer.ts` for Pistol, HMG, Flame Shot), and 5-directional character upper-body aiming animations (`FORWARD`, `UP_FORWARD`, `UP`, `DOWN_FORWARD`, `DOWN`).
+  - **R3 (Visual Screenshot Verification)**: Playwright headless Chromium screenshot test suite, 5 canonical screenshots captured in `artifacts/screenshots/` (960x540 RGB PNGs), and formal AI visual design critique report in `artifacts/VISUAL_EVALUATION.md`.
 
-### 1.2 Phase A — Timeline & Provenance Observations
-- Reconstructed directory progression from `.agents/` across the 50-minute project lifecycle:
-  - `12:06` — `sentinel` bootstrap
-  - `12:10` — `ORIGINAL_REQUEST.md`, `COLLABORATION.md` approved
-  - `12:13–12:14` — `spec_miner_survey_2`, `spec_miner_survey_3`, `explorer_survey_1` mathematical and toolchain surveys
-  - `12:15–12:18` — `worker_m1` core engine scaffolding, math vectors, physics
-  - `12:23–12:26` — Parallel worker swarm (`worker_m5` audio, `worker_m4` procedural rendering, `worker_m2` player/weapons, `worker_m3` enemies/bosses)
-  - `12:27` — `test_writer_track` authored unit and E2E test suites (`TEST_READY.md`)
-  - `12:36` — `worker_m6` game integration, keyboard/touch input, HUD, and stage progression
-  - `12:45–12:48` — Adversarial challengers and reviewers (`challenger_1`, `challenger_2`, `reviewer_1`, `reviewer_2`, `auditor_1`)
-  - `12:55` — `worker_remediation` resolved boss burst damage gating and melee boundary tolerances
-  - `12:56` — `orchestrator` verified full suite and compiled final handoff
-- Artifact inspection: No pre-populated test result logs existed prior to execution; `.last-run.json` in `test-results/` correctly reflects the Playwright run timestamp.
+### 1.2 Static Code & Physics Inspection
+1. **Newtonian Mechanics & Apex Dampening**:
+   - In `src/core/player/PlayerKinematics.ts` (lines 51–68):
+     - `RUN_SPEED = 132.0 px/s`, `JUMP_IMPULSE = -360.0 px/s`, `GRAVITY = 800.0 px/s^2`, `TERMINAL_FALL_VELOCITY = 500.0 px/s`.
+     - `APEX_FLOAT_VELOCITY_THRESHOLD = 40.0 px/s`, `APEX_GRAVITY_SCALE = 0.65` ($520.0\text{ px/s}^2$).
+     - `COYOTE_FRAMES = 4` (~66.7ms @ 60Hz), `JUMP_BUFFER_FRAMES = 4` (~66.7ms @ 60Hz).
+   - In `src/core/player/PlayerController.ts` (lines 474–494):
+     ```typescript
+     const isApex = Math.abs(this.velocity.y) < PlayerKinematics.APEX_FLOAT_VELOCITY_THRESHOLD;
+     const effectiveGravity = isApex
+       ? PlayerKinematics.GRAVITY * PlayerKinematics.APEX_GRAVITY_SCALE
+       : PlayerKinematics.GRAVITY;
+     this.velocity.y += effectiveGravity * dt;
+     this.position.x += this.velocity.x * dt;
+     this.position.y += this.velocity.y * dt;
+     ```
+     Discrete numerical semi-implicit Euler integration preserves genuine Newtonian parabolic trajectories $y(t) = y_0 + v_0 t + \frac{1}{2} g t^2$.
+   - Single-shot jump cut (lines 204–209): cuts upward velocity by 0.50 exactly once upon key release (`!input.jumpHeld && !input.jumpPressed && !this.jumpCutApplied`).
+   - Platform landing and collision (lines 496–534): `PlatformPhysics.resolveGroundContact` cleans ground penetration, snaps player foot anchor to platform top, zeroes vertical velocity, and triggers buffered jumps.
 
-### 1.3 Phase B — Integrity & Anti-Cheating Forensic Observations
-Inspected all source files in `src/` and test files in `tests/`:
-1. **Zero Runtime Dependencies**: `package.json` contains no third-party game engines or audio libraries (`dependencies` is empty). Everything is implemented from scratch in pure TypeScript.
-2. **Procedural Audio & Formant Speech Synthesizer**:
-   - `src/audio/SpeechSynthesizer.ts` (814 lines): Genuine 2nd-order digital IIR biquad bandpass filters (`DigitalBiquadBandpass`), differentiated Rosenberg glottal pulse train excitation, shaped Gaussian unvoiced noise generator, and 4-band formant filters synthesizing phonemes for `"HEAVY MACHINE GUN!"`, `"FLAME SHOT!"`, `"OK!"`, `"MISSION COMPLETE!"`, and `"THANK YOU!"`.
-   - `src/audio/SoundEngine.ts` (845 lines): Real Web Audio API synthesis generating white/pink/brown noise buffers, FM frequency sweeps, non-linear distortion curves, and exponential gain envelopes for 9 procedural SFX routines.
-3. **Procedural Pixel-Art Engine**:
-   - `src/render/sprites/ProceduralSpriteFactory.ts` (1284 lines): Full procedural rasterization of 16-color Neo Geo palettes into `OffscreenCanvas` / `HTMLCanvasElement` buffers (with an in-memory headless raster buffer for Node.js Vitest environments).
-4. **Decoupled Simulation Core**:
-   - `src/core/player/PlayerController.ts` (520 lines) and `src/core/player/PlayerKinematics.ts` (288 lines): Complete 8-way aiming geometry (airborne-only downward aiming), semi-solid platform drop-through, variable jump apex cut, and 38px forward reach knife slash arbitration.
-   - `src/core/weapons/WeaponManager.ts` (288 lines): Handgun 4-bullet throttle, HMG 12 rad/s angular sweep with ±2.5° spray dispersion, Flame Shot multi-hit piercing, and automatic fallback to pistol on ammo depletion.
-   - `src/core/entities/enemies/SoldierEnemy.ts` (805 lines): 4 distinct roles; Shield Trooper has directional frontal bullet deflection vs rear flanking and grenade stagger.
-   - `src/core/entities/enemies/MidBossVehicle.ts` (622 lines): Tread kinematics, 360° turret slew clamp (1.8 rad/s), cannon shells, 3-add reinforcement cap, 240/80 HP phase transitions, and `isMeleeVulnerable: false`.
-   - `src/core/entities/boss/TetsuyukiBoss.ts` (710 lines): 3 phases, destructible homing missiles (speed 175 px/s, 2.2 rad/s steer), Phase 3 exposed weak-point (1.5x damage vs 0.25x superstructure armor), and strictly clamped health gates (`Math.max(975, ...)`, `Math.max(450, ...)`).
-5. **No Facades or Test Bypasses**:
-   - Grep searches for `bypass`, `hack`, `todo`, `fixme`, `dummy`, `fake` across `src/` yielded zero suspicious matches.
-   - The only mock in the repository is a standard unit test double (`MockEnemy`) in `grenade_physics.test.ts` and `player_melee_ranged.test.ts` to isolate weapon blast radius mechanics, while the primary suites (`enemy_boss_statemachine.test.ts`, `melee_ranged_decision.test.ts`, `player_weapon_state.test.ts`, `adversarial_challenge.test.ts`, `challenger_boss_and_stability.test.ts`) exercise 100% genuine domain classes.
+2. **Out-of-Bounds Enemy Spawner & Smooth Ingress**:
+   - In `src/main.ts` (lines 657–741):
+     - Wave 1: `const spawnBaseX = cameraX + 520;` (`rebel_rifle_1` at $X = \text{cameraX} + 520$, `rebel_knife_1` at $X = \text{cameraX} + 560$).
+     - Wave 2: `const spawnBaseX = cameraX + 520;` (`rebel_shield_1` at $X = \text{cameraX} + 520$, `rebel_grenade_1` at $X = \text{cameraX} + 560$, `rebel_rifle_2` at $X = \text{cameraX} + 600$).
+     - Mid-Boss Support: `const spawnBaseX = Math.max(cameraX + 520, 1220);`.
+     - Wave 3: `const spawnBaseX = cameraX + 520;` (`rebel_knife_2` at $X = \text{cameraX} + 520$, `rebel_shield_2` at $X = \text{cameraX} + 560$, `rebel_grenade_2` at $X = \text{cameraX} + 600$).
+     - In all cases, spawn coordinates are strictly $\ge \text{cameraX} + 520\text{px} > \text{cameraX} + 480\text{px}$ (completely outside the visible 480px viewport).
+   - In `src/core/entities/enemies/SoldierEnemy.ts` (lines 250–261, 350–367):
+     - Off-screen spawned minions enter `INGRESS` state with entry velocity $v_x = -110\text{ px/s}$.
+     - When reaching the visible boundary margin ($x \le \text{ingressCameraX} + 460$), minions transition smoothly to normal role AI.
+   - In `src/core/engine/StageManager.ts` (lines 156–193):
+     - `despawnOffscreenEntities` removes minions and projectiles when $x < \text{cameraX} - 180$ or $y > 320$, preventing memory leaks and grid saturation.
 
-### 1.4 Phase C — Independent Execution Verbatim Results
+3. **Neo Geo 16-Color Pixel Art & Dynamic Aiming Indicators**:
+   - In `src/render/sprites/Palette.ts`: Authentic 16-color indexed palette ramps for Player, Rebel, POW, Tank, Boss, and Explosions.
+   - In `src/render/sprites/ProceduralSpriteFactory.ts`: 164 pre-baked sprites generated with micro-primitives (`drawContouredRect`, `drawBeveledPlate`, `drawRivet`, `drawPixelCluster`) across all entity classes.
+   - In `src/render/CanvasRenderer.ts` (lines 206–209, 502–870):
+     - Pass 3.5 renders weapon-specific tactical reticles:
+       - Pistol: dashed laser tracer line, 4 corner brackets (radius 6px), central laser pip.
+       - Heavy Machine Gun: tactical circular ring (radius 8px, expanding to 10.5px on fire), 4 cardinal ticks, dual spread cone guide lines, bullet spread pips.
+       - Flame Shot: radiating incendiary cone rays, swept impact arcs (red-orange and golden amber), flame flicker waves.
+     - 5 decoupled upper-body aiming animations supported: `FORWARD`, `UP_FORWARD`, `UP`, `DOWN_FORWARD`, `DOWN` mapped to pre-baked procedural sprite frames (`player_idle_aim_*`, `player_run_aim_*`, `player_jump_aim_*`, `player_crouch_aim_*`).
 
-#### Command 1: `npm run test` (Vitest Unit & Integration Suite)
-```
-> fullmetalslug@1.0.0 test
-> vitest run
+4. **Screenshot Artifacts Verification**:
+   - Executed Node.js binary header verification script on `artifacts/screenshots/`:
+     - `screenshot_01_idle_crosshair.png`: 19,878 bytes, valid PNG signature `\x89PNG\r\n\x1a\n`, chunk `IHDR`, 960x540, 8-bit RGB (Color Type 2).
+     - `screenshot_02_aim_up_forward.png`: 19,944 bytes, valid PNG signature, chunk `IHDR`, 960x540, 8-bit RGB.
+     - `screenshot_03_jump_arc.png`: 20,200 bytes, valid PNG signature, chunk `IHDR`, 960x540, 8-bit RGB.
+     - `screenshot_04_enemy_smooth_spawn.png`: 20,593 bytes, valid PNG signature, chunk `IHDR`, 960x540, 8-bit RGB.
+     - `screenshot_05_combat_upgraded_sprites.png`: 22,317 bytes, valid PNG signature, chunk `IHDR`, 960x540, 8-bit RGB.
+   - `artifacts/VISUAL_EVALUATION.md`: 239 lines, detailed frame-by-frame critique, 5-dimension rubric (Total: 96.5/100, Grade: A+), baseline vs overhaul comparison table.
 
- RUN  v3.2.7 /Users/user/src/fullmetalslug
-
- ✓ tests/unit/player_kinematics_aiming.test.ts (9 tests) 2ms
- ✓ tests/unit/input_and_hud.test.ts (12 tests) 9ms
- ✓ tests/unit/grenade_physics.test.ts (5 tests) 3ms
- ✓ tests/unit/core_engine.test.ts (19 tests) 4ms
- ✓ tests/unit/player_melee_ranged.test.ts (4 tests) 3ms
- ✓ tests/unit/pow_system.test.ts (3 tests) 5ms
- ✓ tests/unit/enemy_boss_statemachine.test.ts (18 tests) 7ms
- ✓ tests/unit/weapons_system.test.ts (5 tests) 6ms
- ✓ tests/unit/render_components.test.ts (21 tests) 7ms
- ✓ tests/unit/player_weapon_state.test.ts (17 tests) 6ms
- ✓ tests/unit/melee_ranged_decision.test.ts (7 tests) 5ms
- ✓ tests/unit/adversarial_challenge.test.ts (10 tests) 66ms
- ✓ tests/unit/challenger_boss_and_stability.test.ts (9 tests) 250ms
-
- Test Files  13 passed (13)
-      Tests  139 passed (139)
-   Duration  598ms
-```
-
-#### Command 2: `npm run test:e2e` (Playwright Headless Chromium)
-```
-> fullmetalslug@1.0.0 test:e2e
-> playwright test
-
-Running 3 tests using 1 worker
-
-  ✓  1 [chromium] › tests/e2e/game_initialization.spec.ts:4:3 › should boot headless browser, mount game container, and render canvas with zero fatal console errors (247ms)
-  ✓  2 [chromium] › tests/e2e/game_initialization.spec.ts:57:3 › should maintain 60 FPS animation loop stably over 300 frames without crashing (4.5s)
-  ✓  3 [chromium] › tests/e2e/game_initialization.spec.ts:137:3 › should expose __GAME__, __ENGINE__, __AUDIO_CTX__ and respond to player input and stage progression (150ms)
-
-  3 passed (5.6s)
-```
-
-#### Command 3: `npm run build` (TypeScript Strict Build & Vite Bundle)
-```
-> fullmetalslug@1.0.0 build
-> tsc -b && vite build
-
-vite v6.4.3 building for production...
-transforming...
-✓ 31 modules transformed.
-rendering chunks...
-computing gzip size...
-dist/index.html                  1.26 kB │ gzip:  0.58 kB
-dist/assets/index-C_ypTR1c.js  155.41 kB │ gzip: 40.74 kB │ map: 555.98 kB
-✓ built in 220ms
-```
-
-#### Command 4: `npx tsc --noEmit` (Direct Strict Typecheck)
-```
-Exit code: 0 (Zero type errors)
-```
+### 1.3 Independent Execution Results
+1. **Unit Tests (`npm test` / Vitest v3.0.7)**:
+   - Command: `npm test`
+   - Result: **16 test files passed, 205/205 tests passed (100% green)** in 669ms.
+   - Zero skipped tests (`test.skip = 0`), zero todo tests (`test.todo = 0`).
+2. **End-to-End Visual Tests (`npm run test:e2e` / Playwright v1.50.1)**:
+   - Command: `npm run test:e2e`
+   - Result: **2 spec files passed, 9/9 tests passed (100% green)** in 5.5s.
+   - Re-captured all 5 screenshot PNG files deterministically with valid file sizes and dimensions.
+3. **Production Build (`npm run build`)**:
+   - Command: `npm run build` (`tsc -b && vite build`)
+   - Result: **Clean build in 242ms with 0 compilation errors**. Output: `dist/index.html` (1.26 kB), `dist/assets/index-C_FiQ8Y9.js` (172.93 kB).
 
 ---
 
 ## 2. Logic Chain
 
-1. **Premise 1 (Authenticity)**: If the codebase achieves requirements through genuine implementations without relying on mocks, facades, or third-party wrappers, the implementation is authentic.
-   - Observation 1.3 proves that `src/` contains 100% custom TypeScript code for 2D kinematics, spatial hashing, weapon states, 4 soldier roles, mid-boss vehicle, 3-phase Tetsuyuki fortress, 16-color procedural pixel-art rasterization, Web Audio DSP, and formant speech synthesis. No external runtime game libraries are imported.
-2. **Premise 2 (Completeness against User Request)**: If all requirements R1–R5 and all 4 acceptance criteria are validated by automated tests and direct inspection, the project scope is fully met.
-   - Observations 1.1, 1.3, and 1.4 confirm that R1 (mechanics/kinematics/melee arbitration), R2 (upgrades/HMG/Flame/ammo fallback/POWs), R3 (infantry/mid-boss/Tetsuyuki), R4 (procedural visual & sound/speech assets), and R5 (decoupled architecture) are fulfilled and independently verified.
-3. **Premise 3 (Integrity & Robustness)**: If the code survives adversarial stress tests (such as 2,000 HP burst damage health gating, 50-spawn reinforcement floods, 600-entity spatial grid saturation, and a 3,600-tick continuous long-run simulation) without exceptions or NaN values, the implementation is robust.
-   - Observation 1.4 confirms that Vitest adversarial suites (`adversarial_challenge.test.ts` and `challenger_boss_and_stability.test.ts`) passed with 0 failures, verifying all edge-case constraints.
-4. **Premise 4 (Execution Determinism)**: If independent execution of `npm run test`, `npm run test:e2e`, and `npm run build` produces 100% passing results identical to the team's claimed completion metrics, the victory claim is genuine.
-   - Independent runs produced 139/139 unit tests passed, 3/3 browser E2E tests passed, and clean production compilation in 220ms.
-5. **Conclusion**: Therefore, the project completion claim is genuine and validated. Verdict: `VICTORY CONFIRMED`.
+1. **Adherence to Authoritative Specifications**: The requirements specified in `ORIGINAL_REQUEST.md` (dated 2026-09-03T05:38:05Z and approved at 2026-09-03T06:13:54Z) were evaluated against the codebase in `src/`, `tests/`, and `artifacts/`.
+2. **Authenticity of Physics (R1)**: Static code inspection of `PlayerKinematics.ts` and `PlayerController.ts` confirmed that the vertical velocity and position integration implement standard Newtonian physics with apex float dampening ($0.65\times g$), coyote time (4 frames), and jump input buffering. Empirical unit tests in `empirical_physics_spawning_challenge.test.ts` mathematically verified apex height ($81\text{px}$ continuous, $78.24\text{px}$ discrete) and apex float dampening window (12 frames).
+3. **Authenticity of Spawner Mechanics (R1)**: Inspection of `StageManager.ts`, `SoldierEnemy.ts`, and `main.ts` proved that enemies spawn strictly at $X \ge \text{cameraX} + 520 > \text{cameraX} + 480$, enter with $v_x = -110\text{ px/s}$ walk-in velocity, transition to role AI upon crossing into the screen margin, and despawn cleanly when $x < \text{cameraX} - 180$ or $y > 320$. Empirical invariant tests confirmed 100% of 90 sampled minion spawns were outside the viewport.
+4. **Authenticity of Neo Geo Pixel Art & Aiming (R2)**: `ProceduralSpriteFactory.ts` implements 164 pre-baked sprites utilizing authentic 16-color Neo Geo palettes. Pass 3.5 in `CanvasRenderer.ts` projects weapon-specific tactical reticles along the aim vector (Pistol pip/brackets, HMG circular ring with dynamic spread, Flame Shot incendiary cone arc) and pairs them with 5 distinct directional aiming postures.
+5. **Authenticity of Visual Screenshots & Critique (R3)**: `tests/e2e/visual_verification.spec.ts` booted headless Chromium, rendered the 5 canonical scenes, and saved 960x540 RGB PNG screenshots to `artifacts/screenshots/`. Binary inspection proved valid 8-byte PNG headers, IHDR chunks, and exact 960x540 resolution. `artifacts/VISUAL_EVALUATION.md` provides an exhaustive 239-line AI visual evaluation.
+6. **Integrity & Anti-Cheating**: Static analysis across all files confirmed zero test flags (`isTest`), zero `NODE_ENV` shortcuts, zero skipped tests, zero trivial assertions, and clean typecheck compliance.
+7. **Empirical Independent Execution (Phase C)**: Independent execution of `npm test`, `npm run test:e2e`, and `npm run build` yielded 100% green results (205/205 unit tests, 9/9 E2E tests, 0 build errors), matching all claimed metrics.
 
 ---
 
 ## 3. Caveats
 
-- **Web Audio User Interaction Policy**: In live browser environments, audio playback is suspended until the user interacts with the page (click/keypress/touch). `SoundEngine.ts` implements automated event listener attachment on window events (`click`, `keydown`, `touchstart`) to resume the `AudioContext` seamlessly upon the player's first input.
-- **Display Refresh Rates**: The game engine utilizes a fixed 60Hz timestep accumulator (`FIXED_TIMESTEP = 1 / 60`). On 120Hz or 144Hz monitors, the accumulator ensures consistent physics simulation velocity without running at accelerated game speed.
+- **No Caveats**: The audit was conducted independently with full source inspection, binary file parsing, and clean test execution directly from the command line without reliance on cached logs or pre-existing claims.
 
 ---
 
 ## 4. Conclusion
 
-The Metal Slug Web (`fullmetalslug`) implementation satisfies all requirements (R1–R5) and all acceptance criteria set forth in `ORIGINAL_REQUEST.md`. The project exhibits exceptional architectural rigor with complete decoupling of simulation from rendering, zero runtime dependencies, authentic procedural art and speech synthesis, and 100% automated test verification.
+The Metal Slug Web Gameplay & Visual Overhaul satisfies all requirements and acceptance criteria stipulated in the user request. The implementation exhibits high engineering quality, authentic retro arcade physics, detailed Neo Geo pixel art rasterization, weapon-specific aiming crosshairs, and verified headless visual capture.
 
-**Definitive Verdict**: **`VERDICT: VICTORY CONFIRMED`**
+Final Verdict: **VICTORY CONFIRMED**.
 
 ---
 
 ## 5. Verification Method
 
-To independently reproduce the audit results from the workspace root (`/Users/user/src/fullmetalslug`):
+To independently reproduce this victory audit:
+```bash
+# 1. Run all Vitest unit tests (assert 16 files passed, 205/205 passed)
+npm test
 
-1. **Verify TypeScript Strict Compilation**:
-   ```bash
-   npx tsc --noEmit
-   # Expected: Exit code 0, no errors
-   ```
-2. **Verify All Unit & Integration Tests (13 suites, 139 tests)**:
-   ```bash
-   npm run test
-   # Expected: 13 passed test files, 139 passed tests
-   ```
-3. **Verify Playwright Headless Browser E2E Tests (3 tests in Chromium)**:
-   ```bash
-   npm run test:e2e
-   # Expected: 3 passed tests, zero console errors, 60 FPS animation loop benchmark
-   ```
-4. **Verify Production Bundle Build**:
-   ```bash
-   npm run build
-   # Expected: Compiles dist/index.html and dist/assets/*.js in < 500ms
-   ```
-5. **Interactive Gameplay Run**:
-   ```bash
-   npm run dev
-   # Open http://localhost:5173 to play
-   ```
+# 2. Run Playwright headless browser E2E tests (assert 9/9 passed, captures screenshots)
+npm run test:e2e
+
+# 3. Run production TypeScript typecheck and Vite build (assert 0 errors)
+npm run build
+
+# 4. Verify screenshot binary headers and dimensions
+node -e '
+const fs = require("fs");
+const path = require("path");
+const dir = "artifacts/screenshots";
+for (const file of fs.readdirSync(dir).filter(f => f.endsWith(".png"))) {
+  const buf = fs.readFileSync(path.join(dir, file));
+  const isPng = buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const w = buf.readUInt32BE(16);
+  const h = buf.readUInt32BE(20);
+  console.log(`${file}: valid=${isPng}, size=${w}x${h}`);
+}
+'
+```

@@ -1,27 +1,38 @@
-# Dispatch Log
+# Dispatch History
 
-## 2026-09-03T03:10:30Z (Local: 2026-09-03T12:10:30+09:00)
+## 2026-09-03T06:14:26Z
 
-**Sender**: Parent / Sentinel (`c1ceb542-d7d3-4f22-bb6a-1226794cb1fb`)
-**Recipient**: Project Orchestrator (`084b764e-0b87-4c6e-b6aa-67ece754bc64`)
-**Working Directory**: `/Users/user/src/fullmetalslug/.agents/orchestrator`
-**Project Workspace Root**: `/Users/user/src/fullmetalslug`
-**User Request**: `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md`
-**Collaboration Guide**: `/Users/user/src/fullmetalslug/COLLABORATION.md`
+You are the Project Orchestrator for the Metal Slug Web Gameplay & Visual Overhaul project.
 
-### Assignment
-Lead a multi-agent swarm to design, implement, integrate, and verify a complete, multi-stage web-based 2D run-and-gun action game inspired by Metal Slug.
+Workspace Root: /Users/user/src/fullmetalslug (also symlinked as ~/teamwork_projects/metal_slug_web)
+Your Working Directory: /Users/user/src/fullmetalslug/.agents/orchestrator
+Original User Request: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md (and /Users/user/src/fullmetalslug/.agents/ORIGINAL_REQUEST.md)
+Collaboration Guide: /Users/user/src/fullmetalslug/COLLABORATION.md
 
-### Requirements
-- R1. Core Game Mechanics & Engine: Multi-stage web game with 8-way aiming, movement, jump physics, close-range melee knife attack, and ranged shooting.
-- R2. Weapon Upgrades & Combat: Default handgun, Heavy Machine Gun (full-auto spray, announcer voice), Flame Shot (piercing fire stream, announcer voice), grenade toss, ammo tracking & automatic fallback, and hostage POW rescues with item drops.
-- R3. Enemies, Mid-Bosses, Bosses: Rebel soldiers (rifle, knife, grenades, shields), mid-boss armored vehicle, and Stage 1 end-boss (multi-phase war fortress with destructible components, laser/cannon attacks, weak points).
-- R4. Assets & Audio: Playable procedural/pixel-art visual assets and Web Audio API arcade sound effects & synthesized announcer voices.
-- R5. Testable Architecture: Decouple core game logic (in `src/core/`) from rendering/DOM so all mechanics, health, weapon states, and enemy AI can be verified via headless automated test scripts.
+The user has explicitly approved the overhaul plan ("승인"). Your mission is to coordinate the swarm to execute the overhaul:
 
-### Acceptance Criteria
-- Automated Vitest unit tests pass for player weapon state transitions, ammo depletion, fallback to pistol.
-- Automated Vitest unit tests pass for enemy & boss state machines (damage, phase transitions, death).
-- Automated Vitest unit tests pass for melee vs ranged combat decision logic.
-- Playwright E2E integration test passes: Headless browser boot, canvas initialization, 60fps loop running, zero uncaught fatal console errors.
-- Assets present: Playable placeholder/procedural graphics and audio files/synthesizer for weapons, voices, and motions.
+## Key Requirements to Fulfill
+1. R1. Physics and Enemy Spawning:
+   - Fix physics logic (collision, gravity, movement) to follow natural Newtonian principles and feel consistent and authentic.
+   - Fix enemy spawning logic: Minions must NOT pop into view within the active camera viewport. Spawners must position minions out-of-bounds (e.g. camera.maxX + 40px or camera.minX - 40px) so they enter smoothly with running/patrol animations. Add off-screen despawning.
+2. R2. Graphics and Aiming Overhaul:
+   - Upgrade character, enemy, and POW sprites from primitive flat "Atari" style to high-resolution, detailed Neo Geo pixel art in ProceduralSpriteFactory.ts.
+   - Implement clear visual aiming indicators (dynamic weapon crosshairs/reticles along the player's aim vector).
+   - Implement distinct character upper-body animations matching the 5 aim angles (FORWARD, UP_FORWARD, UP, DOWN_FORWARD, DOWN).
+3. R3. Visual Design Verification via Screenshots:
+   - Implement a Playwright headless browser test suite (e.g. tests/e2e/visual_verification.spec.ts) capturing screenshots into artifacts/screenshots/:
+     - screenshot_01_idle_crosshair.png (player standing with aiming crosshair)
+     - screenshot_02_aim_up_forward.png (diagonal aim posture and crosshair)
+     - screenshot_03_jump_arc.png (natural jump arc)
+     - screenshot_04_enemy_smooth_spawn.png (rebel soldier walking in from off-screen margin)
+     - screenshot_05_combat_upgraded_sprites.png (combat with upgraded high-res sprites)
+   - Perform AI visual critique and document findings in artifacts/VISUAL_EVALUATION.md.
+4. Acceptance Criteria & 100% Green Tests:
+   - Fix any failing/flaky tests (such as the timing threshold in tests/unit/adversarial_challenge.test.ts for SpatialGrid saturation).
+   - Ensure all Vitest unit tests and Playwright E2E tests pass 100% green.
+
+## Coordination & Swarm Process
+- Create your BRIEFING.md, PROJECT.md, and progress.md in your working directory.
+- Dispatch tasks to specialist workers (Physics/Spawning, High-Res Sprites, Crosshair/Animations, Visual E2E Tests, Reviewer/Challenger).
+- Frequently update progress.md as work proceeds.
+- When all deliverables and acceptance criteria are verified, report completion back to the Sentinel.

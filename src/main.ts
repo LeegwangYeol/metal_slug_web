@@ -40,6 +40,9 @@ import { TetsuyukiBoss } from './core/entities/boss/TetsuyukiBoss';
 import { PowEntity, PowState } from './core/entities/pow/PowEntity';
 import { ItemDropType } from './core/weapons/WeaponTypes';
 import { vec2 } from './core/math/Vector2D';
+import type { Vector2D } from './core/math/Vector2D';
+
+export type { RenderPlayerState, Vector2D };
 
 export class FullMetalSlugGame {
   public readonly engine: GameEngine;
@@ -70,6 +73,9 @@ export class FullMetalSlugGame {
   // Dynamic Explosions Tracker
   private activeExplosions: RenderExplosionState[] = [];
   private nextExplosionId: number = 1;
+
+  // Last input snapshot for renderer animation & crosshair state
+  private lastInputSnapshot: PlayerInputSnapshot | null = null;
 
   constructor(container?: HTMLElement) {
     // 1. Simulation Core
@@ -208,6 +214,8 @@ export class FullMetalSlugGame {
       grenadePressed: kbSnap.grenadePressed || touchSnap.grenadePressed,
     };
 
+    this.lastInputSnapshot = input;
+
     // Update Player controller with input
     this.player.handleInput(input, dt, this.engine);
 
@@ -268,6 +276,12 @@ export class FullMetalSlugGame {
       facing: this.player.facing,
       state: this.resolvePlayerRenderState(),
       isMelee: this.player.isAttackingMelee,
+      aimAngle: this.player.aimAngle,
+      aimDirection: this.player.aimDirection,
+      weaponType: this.player.weaponManager.getActiveWeapon(),
+      isFiring: this.lastInputSnapshot
+        ? this.lastInputSnapshot.shootPressed || (this.lastInputSnapshot.shootHeld && this.player.weaponManager.getWeaponState().isAutomatic)
+        : false,
     };
 
     // 2. Compile Living Enemies & Mid-Boss
@@ -286,7 +300,7 @@ export class FullMetalSlugGame {
           id: soldier.id,
           type: soldier.type,
           x: soldier.position.x,
-          y: soldier.position.y,
+          y: soldier.position.y + soldier.height,
           facing: soldier.facing,
           state: soldier.state,
           health: soldier.health,
@@ -645,13 +659,16 @@ export class FullMetalSlugGame {
         id: 'trigger_wave_1',
         triggerX: 180,
         triggered: false,
-        spawnAction: (eng: GameEngine) => {
+        spawnAction: (eng: GameEngine, cameraX: number = 0) => {
           // POW 1 with Heavy Machine Gun badge on wooden pier
           eng.addEntity(new PowEntity('pow_1', vec2(180, 175), ItemDropType.WEAPON_HMG));
-          // Rebel Rifleman
-          eng.addEntity(new SoldierEnemy('rebel_rifle_1', 'SOLDIER_RIFLE', vec2(340, 230)));
-          // Rebel Knife Charger
-          eng.addEntity(new SoldierEnemy('rebel_knife_1', 'SOLDIER_KNIFE', vec2(420, 230)));
+
+          // Out-of-bounds right spawn: cameraX + 520px (staggered +40px)
+          const spawnBaseX = cameraX + 520;
+          // Rebel Rifleman (smooth ingress vx = -110)
+          eng.addEntity(new SoldierEnemy('rebel_rifle_1', 'SOLDIER_RIFLE', vec2(spawnBaseX, 230), { cameraX }));
+          // Rebel Knife Charger (staggered by +40px)
+          eng.addEntity(new SoldierEnemy('rebel_knife_1', 'SOLDIER_KNIFE', vec2(spawnBaseX + 40, 230), { cameraX }));
         },
       },
 
@@ -660,15 +677,18 @@ export class FullMetalSlugGame {
         id: 'trigger_wave_2',
         triggerX: 420,
         triggered: false,
-        spawnAction: (eng: GameEngine) => {
-          // Grenade Thrower on elevated bridge
-          eng.addEntity(new SoldierEnemy('rebel_grenade_1', 'SOLDIER_GRENADE', vec2(500, 140)));
-          // Shield Trooper on ground
-          eng.addEntity(new SoldierEnemy('rebel_shield_1', 'SOLDIER_SHIELD', vec2(580, 230)));
+        spawnAction: (eng: GameEngine, cameraX: number = 0) => {
           // POW 2 with Flame Shot badge
           eng.addEntity(new PowEntity('pow_2', vec2(640, 230), ItemDropType.WEAPON_FLAME));
+
+          // Out-of-bounds right spawn: cameraX + 520px (staggered +40px)
+          const spawnBaseX = cameraX + 520;
+          // Shield Trooper on ground
+          eng.addEntity(new SoldierEnemy('rebel_shield_1', 'SOLDIER_SHIELD', vec2(spawnBaseX, 230), { cameraX }));
+          // Grenade Thrower
+          eng.addEntity(new SoldierEnemy('rebel_grenade_1', 'SOLDIER_GRENADE', vec2(spawnBaseX + 40, 230), { cameraX }));
           // Rear Rifleman
-          eng.addEntity(new SoldierEnemy('rebel_rifle_2', 'SOLDIER_RIFLE', vec2(700, 230)));
+          eng.addEntity(new SoldierEnemy('rebel_rifle_2', 'SOLDIER_RIFLE', vec2(spawnBaseX + 80, 230), { cameraX }));
         },
       },
 
@@ -678,7 +698,7 @@ export class FullMetalSlugGame {
         triggerX: 740,
         triggered: false,
         lockCameraBounds: { minX: 720, maxX: 1200, minY: 0, maxY: 270 },
-        spawnAction: (eng: GameEngine) => {
+        spawnAction: (eng: GameEngine, cameraX: number = 0) => {
           this.stageManager.setState(StageState.MID_BOSS_BATTLE);
           // Rebel Iron Technical Armored Vehicle
           const midBoss = new MidBossVehicle('mid_boss_1', vec2(1050, 162), {
@@ -687,8 +707,9 @@ export class FullMetalSlugGame {
             patrolMaxX: 1150,
           });
           eng.addEntity(midBoss);
-          // Infantry support
-          eng.addEntity(new SoldierEnemy('rebel_mb_support', 'SOLDIER_RIFLE', vec2(1120, 230)));
+          // Infantry support entering out-of-bounds
+          const spawnBaseX = Math.max(cameraX + 520, 1220);
+          eng.addEntity(new SoldierEnemy('rebel_mb_support', 'SOLDIER_RIFLE', vec2(spawnBaseX, 230), { cameraX }));
         },
         isCompleted: (eng: GameEngine) => {
           const mb = eng.getEntity('mid_boss_1');
@@ -701,16 +722,19 @@ export class FullMetalSlugGame {
         id: 'trigger_wave_3',
         triggerX: 1240,
         triggered: false,
-        spawnAction: (eng: GameEngine) => {
+        spawnAction: (eng: GameEngine, cameraX: number = 0) => {
           this.stageManager.setState(StageState.SECTION_2_ADVANCE);
           // POW 3 with Grenade Crate
           eng.addEntity(new PowEntity('pow_3', vec2(1360, 165), ItemDropType.GRENADE_CRATE));
+
+          // Out-of-bounds right spawn: cameraX + 520px (staggered +40px)
+          const spawnBaseX = cameraX + 520;
           // Fast Knife Charger
-          eng.addEntity(new SoldierEnemy('rebel_knife_2', 'SOLDIER_KNIFE', vec2(1440, 230)));
-          // Watchtower Shield Trooper
-          eng.addEntity(new SoldierEnemy('rebel_shield_2', 'SOLDIER_SHIELD', vec2(1560, 130)));
+          eng.addEntity(new SoldierEnemy('rebel_knife_2', 'SOLDIER_KNIFE', vec2(spawnBaseX, 230), { cameraX }));
+          // Shield Trooper
+          eng.addEntity(new SoldierEnemy('rebel_shield_2', 'SOLDIER_SHIELD', vec2(spawnBaseX + 40, 230), { cameraX }));
           // Ground Grenadier
-          eng.addEntity(new SoldierEnemy('rebel_grenade_2', 'SOLDIER_GRENADE', vec2(1640, 230)));
+          eng.addEntity(new SoldierEnemy('rebel_grenade_2', 'SOLDIER_GRENADE', vec2(spawnBaseX + 80, 230), { cameraX }));
           // POW 4 with Heavy Machine Gun
           eng.addEntity(new PowEntity('pow_4', vec2(1710, 175), ItemDropType.WEAPON_HMG));
         },

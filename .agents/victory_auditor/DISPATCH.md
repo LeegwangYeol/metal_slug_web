@@ -1,35 +1,25 @@
-## 2026-09-03T03:56:44Z
+## 2026-09-03T07:25:09Z
 
-You are the independent post-victory auditor for the Metal Slug Web (fullmetalslug) project.
+You are the independent Victory Auditor for the Metal Slug Web Gameplay & Visual Overhaul.
 
-Working directory: /Users/user/src/fullmetalslug/.agents/victory_auditor
-Project workspace root: /Users/user/src/fullmetalslug (also symlinked as ~/teamwork_projects/metal_slug_web)
-Original user request path: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md (and /Users/user/src/fullmetalslug/.agents/ORIGINAL_REQUEST.md)
-Orchestrator handoff: /Users/user/src/fullmetalslug/.agents/orchestrator/handoff.md
-Test blueprint: /Users/user/src/fullmetalslug/TEST_READY.md
+Your Working Directory: /Users/user/src/fullmetalslug/.agents/victory_auditor
+Workspace Root: /Users/user/src/fullmetalslug
+Authoritative Original User Request: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md (and /Users/user/src/fullmetalslug/.agents/ORIGINAL_REQUEST.md)
+Collaboration Guide: /Users/user/src/fullmetalslug/COLLABORATION.md
+Orchestrator Final Handoff: /Users/user/src/fullmetalslug/.agents/orchestrator/handoff.md
 
-Your mission:
-Conduct an independent, blocking 3-phase post-victory audit to verify whether the project satisfies the user request and acceptance criteria:
-1. Phase 1 — Timeline & Forensic Verification: Check project artifact timeline, handoffs, git/file history, and task logs.
-2. Phase 2 — Anti-Cheating & Implementation Authenticity: Verify no hardcoded test shortcuts, fake mock returns, mocked tests, or bypassed physics/mechanics. Inspect `src/core/`, `src/render/`, `src/audio/`, and `src/input/`.
-3. Phase 3 — Independent Test Execution & Verification against ORIGINAL_REQUEST.md:
-   - R1: Core Game Mechanics & Engine (8-way aiming, movement, jump physics, close-range melee knife vs ranged fire).
-   - R2: Weapon Upgrades & Combat (Handgun, HMG, Flame Shot, Grenades, ammo fallback, POW rescues).
-   - R3: Enemies, Mid-Bosses, Bosses (Rebel infantry, Armored Technical, Tetsuyuki multi-phase war fortress).
-   - R4: Assets & Audio (Procedural pixel art rasterization, Web Audio API sound effects and formant speech announcer).
-   - R5: Decoupled Testable Architecture (Node-testable simulation core without DOM).
-   - Acceptance Criteria:
-     * Automated unit tests pass (player weapon state transitions, ammo depletion, pistol fallback).
-     * Automated tests pass (enemy & boss state machines, damage, phase transitions, death).
-     * Automated tests pass (melee vs ranged combat decision logic).
-     * Integration test passes (headless browser boot, canvas init, 60 FPS animation loop, zero fatal console errors).
-     * Asset presence: playable placeholder/procedural graphics and audio synthesizer for weapons, voices, motions.
+Conduct a rigorous, independent 3-phase victory audit:
+1. Timeline & Requirements Verification:
+   - Verify that all requirements from the latest user request (timestamp 2026-09-03T05:38:05Z and approval at 2026-09-03T06:13:54Z) are fully implemented:
+     - R1: Fixed physics (natural Newtonian jump curves, apex float dampening, coyote time, jump buffer, platform collision) and smooth out-of-bounds enemy spawning (enemies spawn strictly > cameraX + 480px, walk in with ingress velocity, no popping, and clean off-screen despawn).
+     - R2: High-resolution Neo Geo 16-color shaded pixel art sprites in ProceduralSpriteFactory.ts (Marco, Rebel Soldiers, POWs, vehicles, bosses), dynamic weapon aiming crosshairs (Pass 3.5 in CanvasRenderer.ts for Pistol, HMG, Flame Shot), and 5-directional character upper-body aiming animations (FORWARD, UP_FORWARD, UP, DOWN_FORWARD, DOWN).
+     - R3: Playwright headless Chromium screenshot test suite, 5 canonical screenshots captured in artifacts/screenshots/ (960x540 RGB PNGs), and formal AI visual design critique report in artifacts/VISUAL_EVALUATION.md (with rubrics and evaluation).
+2. Anti-Cheating & Implementation Forensics:
+   - Perform static code inspection on modified files in `src/` to confirm zero hardcoded test shortcuts, zero mock bypasses, and genuine Newtonian equations ($y = y_0 + v_0 t + \frac{1}{2} g t^2$).
+   - Verify binary headers and dimensions of all 5 screenshot PNG files in `artifacts/screenshots/`.
+3. Independent Verification Commands Execution:
+   - Run `npm test` and assert 100% green pass rate across all unit test suites.
+   - Run `npm run test:e2e` and assert 100% green pass rate across Playwright browser tests.
+   - Run `npm run build` and assert clean compilation (tsc -b && vite build) with 0 errors.
 
-Execute independent test runs:
-- `npm run test` (Vitest)
-- `npm run test:e2e` (Playwright headless Chromium)
-- `npm run build` (TypeScript compiler & Vite bundler)
-
-Write your complete audit report to `handoff.md` in your working directory (/Users/user/src/fullmetalslug/.agents/victory_auditor/handoff.md) and deliver a definitive structured verdict:
-VERDICT: VICTORY CONFIRMED or VERDICT: VICTORY REJECTED.
-Send your verdict and findings back to the Sentinel.
+Write your final audit report to `/Users/user/src/fullmetalslug/.agents/victory_auditor/handoff.md` and send your structured verdict (`VICTORY CONFIRMED` or `VICTORY REJECTED`) via `send_message` back to the Sentinel.

@@ -1,52 +1,136 @@
-# Milestone M4 Handoff Report: Procedural Pixel-Art Generation, Parallax Backgrounds & Canvas 2D Renderer
+# Milestone M4 Overhaul Handoff Report: Dynamic Weapon Aiming Reticles & 5-Directional Upper-Body Aiming Animations
+
+**Agent**: `worker_m4`  
+**Working Directory**: `/Users/user/src/fullmetalslug/.agents/worker_m4`  
+**Exclusive File Ownership**:
+- `src/render/CanvasRenderer.ts`
+- `src/main.ts` (`buildRenderSceneState()` player render state forwarding)
+- `tests/unit/render_components.test.ts`
+**Target Recipient**: `orchestrator` (`390e9a3c-c60d-42f9-80ff-35ac81372992`)  
+**Date**: 2026-09-03  
+
+---
 
 ## 1. Observation
-Directly implemented and verified all 5 assigned files under `src/render/` in accordance with the M4 Milestone specification and `PROJECT.md`:
-- `src/render/sprites/Palette.ts`: Authentic Neo Geo 16-color indexed palettes (`PLAYER`, `REBEL`, `POW`, `FIRE`, `VEHICLE`, `FORTRESS`, `HUD`, `TERRAIN`) and color parsing utilities (`hexToRgba`, `rgbaToString`).
-- `src/render/sprites/ProceduralSpriteFactory.ts`: Procedural rasterization engine and sprite caching into `CanvasBuffer` (`OffscreenCanvas`, `HTMLCanvasElement`, and headless in-memory 2D mock). Implemented complete sprite sets:
-  - Player (Marco soldier: 4 idle frames, 6 run frames, jump rise/fall, crouch idle/crawl, 8 aiming directions, 3 knife slash frames, fire recoil with muzzle flash, 4 death animation frames).
-  - Rebel Soldiers (Rifleman walk/fire/death, Knife Charger run/leap/slash, Grenade Thrower idle/throw, Shield Trooper guard/bash).
-  - Hostage POW (tied sway frames, freed joy jump, military salute, item gift box drop, escape run cycle).
-  - Mid-Boss Iron Technical (chassis with riveted plates/bull-bar bumper, 4 animated caterpillar tread frames, 360° rotating 20mm autocannon turret, charred wreckage).
-  - Stage 1 Boss Tetsuyuki War Fortress (Phase 1 intact bomber hull, Phase 2 hull breach with exposed structural steel, Phase 3 emergency thruster meltdown, underside 60mm artillery cannon, dorsal 5-missile rocket pod, rotary gatling minigun, 240px thermal laser beam, pulsing cyan reactor core).
-  - Projectiles & Explosions (handgun bullet, HMG tracer with blue/gold aura, 4 tumbling brass casing frames, 5 expanding flame fireballs, 4 rotating pineapple grenades, homing rockets, mortar shells, and 4-frame small, 6-frame medium, and 8-frame large explosions).
-  - HUD Badges & Digits (weapons "H", "F", pistol, grenade icon, POW icon, golden arcade digits 0-9, infinity symbol, metallic boss health bar).
-- `src/render/Camera.ts`: Viewport camera (480x270 virtual resolution) featuring deadzone tracking (horizontal 35%-45%, vertical 30%-70%), forward-only scrolling ratchet lock, boss arena boundary locking (`bounds.minX`, `maxX`, `minY`, `maxY`), exponential screen shake trauma decay, frustum culling (`isVisible`), and world-to-screen coordinate transforms.
-- `src/render/ParallaxBackground.ts`: 4-layer parallax scrolling background system (Layer 0: coastal dawn sky gradient with animated drifting clouds at 0.0x scroll; Layer 1: distant desert mountains and ancient ruins at 0.2x scroll; Layer 2: midground concrete bunkers, sandbags, shattered palm trees, and radio towers at 0.5x scroll; Layer 3: foreground dock stilts, pier pilings, and ocean shoreline at 1.0x scroll). Pre-renders seamless repeating buffers for 60fps performance.
-- `src/render/CanvasRenderer.ts`: High-performance 2D Canvas renderer with virtual 480x270 framebuffer, automatic letterbox / pillarbox scaling with nearest-neighbor crisp pixel rendering (`imageSmoothingEnabled = false`), and an ordered 5-pass rendering pipeline:
-  1. Background Parallax
-  2. Terrain & Platforms
-  3. Entities (Enemies, Mid-Boss, Boss, POWs, Player)
-  4. Projectiles & Explosions
-  5. Retro Arcade HUD Overlay
-- `tests/unit/render_components.test.ts`: 21 comprehensive unit tests covering palettes, sprite generation, camera tracking, parallax rendering, and canvas letterboxing.
+
+1. **Aiming State Forwarding Gap in `src/main.ts`**:
+   - In `src/main.ts:265-272`, `buildRenderSceneState()` previously only passed `x`, `y`, `facing`, `state`, and `isMelee` to `RenderPlayerState`. `aimAngle` and `aimDirection` were omitted, preventing the renderer from knowing the player's true aiming vector.
+   - `RenderPlayerState` in `src/render/CanvasRenderer.ts` was previously constrained to `aimAngle?: number`, lacking `aimDirection`, `weaponType`, and `isFiring`.
+
+2. **Absence of Visual Tactical Crosshair (Pass 3.5)**:
+   - In `src/render/CanvasRenderer.ts:184-213`, `renderScene()` transitioned immediately from Pass 3 (Entities) to Pass 4 (Projectiles & Explosions). No visual crosshair or aiming indicator was rendered on-screen along the aim vector.
+
+3. **Decoupled 5-Directional Upper-Body Animation Support**:
+   - Worker M3 generated and registered 164 high-resolution 16-color Neo Geo sprites in `ProceduralSpriteFactory.ts`, including composite directional keys:
+     - Standing idle: `player_idle_aim_FORWARD_0..3`, `player_idle_aim_UP_FORWARD_0..3`, `player_idle_aim_UP_0..3`
+     - Running: `player_run_aim_FORWARD_0..5`, `player_run_aim_UP_FORWARD_0..5`, `player_run_aim_UP_0..5`
+     - Airborne jump: `player_jump_aim_FORWARD`, `player_jump_aim_UP_FORWARD`, `player_jump_aim_UP`, `player_jump_aim_DOWN_FORWARD`, `player_jump_aim_DOWN`
+     - Crouching: `player_crouch_aim_FORWARD`
+     - Legacy aliases: `player_aim_0..7`, `player_idle_0..3`, `player_run_0..5`, etc.
+   - `CanvasRenderer.ts:425-455` previously selected player sprites via static `p.state` without checking `p.aimAngle` or using the composite keys.
+
+4. **Implementation and Verification**:
+   - Updated `RenderPlayerState` in `src/render/CanvasRenderer.ts` and re-exported it in `src/main.ts`:
+     ```typescript
+     export interface RenderPlayerState {
+       x: number;
+       y: number;
+       facing: 1 | -1;
+       state: 'idle' | 'run' | 'jump' | 'crouch' | 'aim' | 'knife' | 'fire' | 'death';
+       aimAngle?: any;
+       aimDirection?: Vector2D;
+       weaponType?: 'PISTOL' | 'HEAVY_MACHINE_GUN' | 'FLAME_SHOT';
+       animFrame?: number;
+       isMelee?: boolean;
+       isFiring?: boolean;
+     }
+     ```
+   - Updated `src/main.ts:buildRenderSceneState()` to pass `aimAngle: this.player.aimAngle`, `aimDirection: this.player.aimDirection`, `weaponType: this.player.weaponManager.getActiveWeapon()`, and `isFiring` based on `this.lastInputSnapshot`.
+   - Implemented Pass 3.5 (`renderCrosshairPass` & `calculateCrosshairGeometry`) in `src/render/CanvasRenderer.ts`:
+     - **Pistol (`PISTOL`)**: Laser targeting pip (2x2 white-hot core with `#2ECC71` neon green glow), 4 corner brackets at 6px radius, and subtle dashed laser sight tracer line.
+     - **Heavy Machine Gun (`HEAVY_MACHINE_GUN`)**: Tactical amber circular ring (`#F1C40F`) with 4 cardinal ticks, dynamic recoil spread expansion during firing (8px -> 10.5px), and dual bullet spread pips framing the bullet trajectory cone.
+     - **Flame Shot (`FLAME_SHOT`)**: Tapered incendiary cone radiating from muzzle across $\pm 24^\circ$ spread, 3 swept fiery concentric pressure arcs (`#E84800` $\to$ `#FFA010` $\to$ `#FFF060`), sinusoidal flame flicker pulse, and center hazard diamond.
+     - Pure vector and trigonometric projection seamlessly handles facing left ($p.facing = -1$), facing right ($p.facing = 1$), vertical aiming (UP, DOWN), and diagonals (UP_FORWARD, DOWN_FORWARD).
+   - Implemented `resolvePlayerSpriteKey()` in `CanvasRenderer.ts` resolving the 5 authentic aim directions across idle, running, jumping, and crouching states, with graceful fallback to base locomotion or `player_aim_${aimAngle}`.
+   - Added 14 new comprehensive unit tests in `tests/unit/render_components.test.ts` (now 35 total tests in file).
+   - `npm test`: **14 test files, 170 passed (100% green)** in 1.07s.
+   - `npm run build`: **Built successfully in 340ms** with 0 errors (`tsc -b && vite build`).
+
+---
 
 ## 2. Logic Chain
-1. **Decoupled Performance Design**: By pre-rasterizing pixel matrices into canvas buffers upon initialization, subsequent game loop frames require only fast `drawImage` blits instead of recomputing geometry every frame.
-2. **Headless Execution Compatibility**: Implementing a lightweight in-memory 2D canvas context mock in `createCanvasBuffer` ensures that the procedural sprite generator, camera, parallax, and renderer can be executed and tested in Vitest / Node.js without requiring browser DOM or external dependencies.
-3. **Authentic Arcade Look & Feel**: Using the exact 16-color ramps from Neo Geo Metal Slug hardware (yellow blonde hair with red headband for Marco, grey stalhelms with red armbands for General Morden's rebel infantry, wild yellow beards with torn blue shorts for POWs) delivers the classic retro visual signature.
-4. **Letterbox Framebuffer**: The virtual 480x270 resolution maintains a clean 16:9 aspect ratio that scales cleanly to standard modern displays (e.g. integer 4x scale for 1080p, 2x scale for 540p) with zero distortion and crisp pixels.
+
+1. **Unified State Pipeline (`src/main.ts` -> `CanvasRenderer.ts`)**:
+   - `PlayerKinematics.calculateAim` already outputs canonical unit vectors and `AimAngle` enums (`FORWARD`, `UP_FORWARD`, `UP`, `DOWN_FORWARD`, `DOWN`), tracked by `PlayerController`.
+   - By populating `aimAngle` and `aimDirection` inside `buildRenderSceneState()`, the presentation pipeline directly mirrors simulation kinematics with zero lag.
+2. **Decoupled Upper-Body Aiming Animation Selection**:
+   - In 2D run-and-gun arcade shooters like Metal Slug, leg locomotion (running, idling, jumping) must be decoupled from upper-body gun aiming.
+   - `CanvasRenderer.resolvePlayerSpriteKey()` queries the pre-baked composite sprites (`player_idle_aim_${aimName}_${frame}`, `player_run_aim_${aimName}_${frame}`, `player_jump_aim_${aimName}`). If a specific composite is absent, it gracefully falls back to base locomotion or legacy `player_aim_${aimAngle}`, preventing any missing-texture or rendering crash bugs.
+3. **Pass 3.5 Crosshair Layering & Kinematics**:
+   - Rendering Pass 3.5 after Pass 3 (Entities) and before Pass 4 (Projectiles/Explosions) ensures the crosshair is drawn above world terrain and player/enemy bodies, yet underneath active bullet tracers and screen-space HUD overlays.
+   - Muzzle offsets are accurately computed using `PlayerKinematics.getMuzzlePosition(anchorX, anchorY, facing, posture, aimAngle)`, ensuring the reticle and tracer lines originate from the actual gun barrel rather than the player's feet.
+   - Left-facing orientation is handled naturally: the direction vector has $dirX < 0$, placing the reticle at $x_{\text{reticle}} < x_{\text{muzzle}}$, and flame cone arcs/spread normal vectors rotate symmetrically according to $\theta = \text{atan2}(dirY, dirX)$.
+4. **Headless & CI Resilience**:
+   - Canvas context calls check `typeof (ctx as any).setLineDash === 'function'` before invoking, ensuring seamless execution on Node.js headless in-memory canvas mocks under Vitest where `setLineDash` is undefined.
+
+---
 
 ## 3. Caveats
-- No external image files or sound assets were used; all graphics are 100% procedurally generated in TypeScript.
-- Other workers are concurrently working on their respective modules (weapons, audio, enemies); our files only interact through clean decoupled interfaces (`AABB`, `Platform`, `CameraBounds`).
+
+1. **Grounded Downward Aiming Constraint**:
+   - As per authentic Metal Slug mechanics and `PlayerKinematics.ts`, pressing DOWN while grounded transitions the player into crouch and fires HORIZONTALLY FORWARD. Downward (`DOWN`) and down-diagonal (`DOWN_FORWARD`) aiming are strictly available only while airborne. Crosshair projection and upper-body animation keys adhere strictly to this rule.
+2. **No External Asset Dependencies**:
+   - All reticle graphics, laser sights, tactical rings, and incendiary arcs are generated procedurally on Canvas 2D without requiring external image bitmaps.
+3. **Exclusive File Ownership Preserved**:
+   - Only `src/main.ts`, `src/render/CanvasRenderer.ts`, and `tests/unit/render_components.test.ts` were modified. No other workers' files were touched.
+
+---
 
 ## 4. Conclusion
-Milestone M4 is 100% complete and verified. All 5 files under exclusive ownership (`src/render/Camera.ts`, `src/render/ParallaxBackground.ts`, `src/render/sprites/Palette.ts`, `src/render/sprites/ProceduralSpriteFactory.ts`, and `src/render/CanvasRenderer.ts`) are implemented with genuine procedural logic and zero TypeScript compilation errors. Production build (`npx vite build`) builds cleanly.
+
+- Milestone M4 overhaul objectives are **100% complete**.
+- Dynamic weapon-specific crosshairs / reticles (Pistol laser pip/brackets, HMG tactical circle with spread pips, Flame Shot incendiary arc/cone) are implemented and operational in Pass 3.5.
+- 5-directional upper-body aiming animations are integrated and active across idle, run, jump, and crouch states.
+- Both `src/main.ts` and `src/render/CanvasRenderer.ts` export `RenderPlayerState` with `aimAngle` and `aimDirection`.
+- All 170 unit tests across 14 suites pass 100% green, and `npm run build` completes cleanly with 0 compilation errors.
+
+---
 
 ## 5. Verification Method
-- Run render unit tests:
-  ```bash
-  npx vitest run tests/unit/render_components.test.ts
-  ```
-  Result: 21 passed (21 tests).
-- Run scoped TypeScript check:
-  ```bash
-  npx tsc src/render/Camera.ts src/render/ParallaxBackground.ts src/render/sprites/Palette.ts src/render/sprites/ProceduralSpriteFactory.ts src/render/CanvasRenderer.ts tests/unit/render_components.test.ts --noEmit --target ES2022 --module ESNext --moduleResolution bundler --lib ES2022,DOM
-  ```
-  Result: Exit code 0.
-- Run production bundle build:
-  ```bash
-  npx vite build
-  ```
-  Result: Exit code 0 (built in 56ms).
+
+To independently verify this implementation:
+
+1. **Run Full Test Suite**:
+   ```bash
+   npm test
+   ```
+   *Expected result*: All 14 test files and 170 tests pass (100% green).
+
+2. **Run Render & Crosshair Unit Tests**:
+   ```bash
+   npx vitest run tests/unit/render_components.test.ts
+   ```
+   *Expected result*: All 35 tests in `render_components.test.ts` pass with 0 failures.
+
+3. **Verify Production Compilation & Bundling**:
+   ```bash
+   npm run build
+   ```
+   *Expected result*: `tsc -b && vite build` succeeds with 0 errors.
+
+4. **Verify Crosshair Geometry & Sprite Resolution via CLI**:
+   ```bash
+   npx tsx -e "
+     import { CanvasRenderer } from './src/render/CanvasRenderer';
+     import { AimAngle } from './src/core/player/PlayerKinematics';
+     const r = new CanvasRenderer();
+     const geom = r.calculateCrosshairGeometry({ x: 100, y: 200, facing: 1, state: 'idle', aimAngle: AimAngle.UP_FORWARD, weaponType: 'HEAVY_MACHINE_GUN' });
+     console.log('Muzzle:', geom.muzzle, 'Reticle:', geom.worldReticle, 'Distance:', geom.distance);
+     console.log('Sprite Key:', r.resolvePlayerSpriteKey({ x: 100, y: 200, facing: 1, state: 'run', aimAngle: AimAngle.UP_FORWARD, animFrame: 2 }, 0));
+   "
+   ```
+   *Expected result*:
+   - Muzzle: `{ x: 116, y: 162 }`
+   - Reticle: `{ x: ~149.9, y: ~128.1 }`
+   - Distance: `48`
+   - Sprite Key: `'player_run_aim_UP_FORWARD_2'`

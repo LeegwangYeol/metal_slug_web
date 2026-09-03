@@ -1,17 +1,17 @@
-# Progress Tracking - worker_m4 (Milestone M4)
+# Progress Tracking - worker_m4 (Overhaul R2 - Crosshair & Aiming Animations)
 
-Last visited: 2026-09-03T03:24:00Z
+Last visited: 2026-09-03T06:48:00Z
 Status: Completed
 
 ## Milestones & Checklist
-- [x] Read ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, spec_report.md
-- [x] Create DISPATCH.md and BRIEFING.md
-- [x] Implement `src/render/sprites/Palette.ts`
-- [x] Implement `src/render/sprites/ProceduralSpriteFactory.ts`
-- [x] Implement `src/render/Camera.ts`
-- [x] Implement `src/render/ParallaxBackground.ts`
-- [x] Implement `src/render/CanvasRenderer.ts`
-- [x] Add unit tests for render components (`tests/unit/render_components.test.ts`)
-- [x] Run `npx tsc` check on render files (0 errors)
-- [x] Run `npx vite build` production build (0 errors)
-- [x] Write `handoff.md` and send completion message
+- [x] Read ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, DISPATCH.md
+- [x] Update BRIEFING.md and DISPATCH.md
+- [x] Inspect `src/main.ts` and `src/render/CanvasRenderer.ts`
+- [x] Implement `RenderPlayerState` update and `buildRenderSceneState` forwarding in `src/main.ts`
+- [x] Implement Pass 3.5 Tactical Crosshair & Reticle in `src/render/CanvasRenderer.ts`
+- [x] Implement 5-Directional Upper-Body Aiming Sprite Selection in `src/render/CanvasRenderer.ts`
+- [x] Add/update unit tests in `tests/unit/render_components.test.ts` (14 new tests added, 35 total)
+- [x] Run `npm test` (170/170 passed, 100% green) and `npm run build` (0 errors)
+- [x] Deliver `handoff.md` and notify orchestrator via `send_message`
+
+

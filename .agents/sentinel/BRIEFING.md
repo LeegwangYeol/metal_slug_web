@@ -1,13 +1,13 @@
-# BRIEFING — 2026-09-03T12:10:35+09:00
+# BRIEFING — 2026-09-03T16:29:30+09:00
 
 ## Mission
-Sentinel oversight for Metal Slug Web 2D Run-and-Gun Action Game project. Ensure verbatim user request capture, maintain Claude collaboration guide, enforce explicit user approval before implementation, route to General orchestrator, and perform independent victory audit upon completion.
+Sentinel oversight for Metal Slug Web Gameplay & Visual Overhaul. Ensure verbatim user request capture, maintain Claude collaboration guide, enforce explicit user approval before implementation, route to General orchestrator, monitor swarm execution via crons, and perform independent victory audit upon completion.
 
 ## 🔒 My Identity
 - Archetype: sentinel
 - Working directory: /Users/user/src/fullmetalslug/.agents/sentinel
-- Orchestrator: 084b764e-0b87-4c6e-b6aa-67ece754bc64 (completed & terminated)
-- Victory Auditor: 125f2661-04e0-4a4a-a478-2d9fdd8a3c41 (completed & terminated)
+- Orchestrator: 390e9a3c-c60d-42f9-80ff-35ac81372992 (completed & terminated)
+- Victory Auditor: bc4ac7cd-ee23-4756-9787-632acda19ab2 (completed & terminated)
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
@@ -16,14 +16,16 @@ Sentinel oversight for Metal Slug Web 2D Run-and-Gun Action Game project. Ensure
 - Victory Audit is MANDATORY before reporting completion
 
 ## User Context
-- **Last user request**: Build a complete, multi-stage web-based 2D run-and-gun action game inspired by Metal Slug with weapon upgrades, enemies/bosses, procedural assets & audio, and decoupled testable architecture.
+- **Last user request**: The user has explicitly approved the plan ("승인"). Overhaul gameplay, physics, spawning, graphics, aiming indicators, and visual verification.
 - **Pending clarifications**: none
 - **Delivered results**:
-  - Full game implementation with decoupled core engine, combat, weapons, enemies, bosses, procedural pixel art, and Web Audio API synthesis.
-  - 139/139 unit tests passing across 13 suites.
-  - 3/3 Playwright browser E2E tests passing.
-  - Production build compiled cleanly.
-  - Independent Victory Audit completed with VICTORY CONFIRMED verdict.
+  - Overhaul plan documented, agreed upon, and approved in `COLLABORATION.md`.
+  - All 6 milestones (M1–M6) fully delivered and verified.
+  - 100% green test results across all test suites (205/205 unit tests, 9/9 Playwright E2E tests).
+  - Production build compiles cleanly in 242ms with 0 errors.
+  - All 5 Playwright visual screenshot artifacts captured at 960x540 in `artifacts/screenshots/`.
+  - Formal 239-line AI visual evaluation critique delivered in `artifacts/VISUAL_EVALUATION.md` (Score: 96.5/100, Grade: A+).
+  - Independent Victory Audit completed with verdict **VICTORY CONFIRMED**.
 
 ## Project Status
 - **Phase**: complete
@@ -34,18 +36,18 @@ Sentinel oversight for Metal Slug Web 2D Run-and-Gun Action Game project. Ensure
 - **Verdict**: VICTORY CONFIRMED
 - **Retry count**: 0
 
-## Artifact Index
-- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` — Authoritative verbatim user request
-- `/Users/user/src/fullmetalslug/COLLABORATION.md` — Claude collaboration specification
-- `/Users/user/src/fullmetalslug/TEST_READY.md` — Test certification report
-- `/Users/user/src/fullmetalslug/.agents/orchestrator/PROJECT.md` — Master specification
-- `/Users/user/src/fullmetalslug/.agents/orchestrator/handoff.md` — Orchestrator handoff report
-- `/Users/user/src/fullmetalslug/.agents/victory_auditor/handoff.md` — Victory Auditor verification report
-- `/Users/user/src/fullmetalslug/.agents/sentinel/BRIEFING.md` — Sentinel state
-- `/Users/user/src/fullmetalslug/.agents/sentinel/handoff.md` — Sentinel final handoff report
+## Crons & Subagent Cleanup
+- **Cron 1 (task-79)**: Terminated
+- **Cron 2 (task-81)**: Terminated
+- **Subagents**: All killed cleanly via `kill_all`
 
 ## Artifact Index
-- `/Users/user/src/fullmetalslug/.agents/ORIGINAL_REQUEST.md` — Authoritative verbatim user request
-- `/Users/user/src/fullmetalslug/COLLABORATION.md` — Claude collaboration and architecture specification guide
+- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` — Authoritative verbatim user request
+- `/Users/user/src/fullmetalslug/.agents/ORIGINAL_REQUEST.md` — Agent copy of verbatim user request
+- `/Users/user/src/fullmetalslug/COLLABORATION.md` — Claude collaboration and overhaul specification guide
+- `/Users/user/src/fullmetalslug/artifacts/screenshots/` — 5 canonical 960x540 visual verification screenshots
+- `/Users/user/src/fullmetalslug/artifacts/VISUAL_EVALUATION.md` — Formal AI visual design critique report
 - `/Users/user/src/fullmetalslug/.agents/sentinel/BRIEFING.md` — Sentinel working memory and state
-- `/Users/user/src/fullmetalslug/.agents/orchestrator/` — Project orchestrator workspace
+- `/Users/user/src/fullmetalslug/.agents/sentinel/handoff.md` — Sentinel final handoff report
+- `/Users/user/src/fullmetalslug/.agents/orchestrator/handoff.md` — Project orchestrator final handoff
+- `/Users/user/src/fullmetalslug/.agents/victory_auditor/handoff.md` — Independent Victory Auditor handoff report
