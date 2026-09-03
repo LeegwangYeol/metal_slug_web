@@ -3,8 +3,8 @@
  *
  * Mappings:
  * - Movement & 8-Way Aiming: WASD / Arrow Keys
- * - Fire: J / Z / Space
- * - Jump: K / X
+ * - Fire: J / Z
+ * - Jump: Space / K / X
  * - Grenade: L / C
  * - Pause: Enter / Escape
  *
@@ -39,6 +39,11 @@ export class KeyboardController {
   public grenade: boolean = false;
   public pause: boolean = false;
 
+  // Latched edge-detection flags to preserve fast key taps between frames
+  public jumpJustPressed: boolean = false;
+  public fireJustPressed: boolean = false;
+  public grenadeJustPressed: boolean = false;
+
   // Previous button states for edge-detection (Pressed vs Held)
   private prevJump: boolean = false;
   private prevFire: boolean = false;
@@ -69,16 +74,16 @@ export class KeyboardController {
     ArrowDown: 'down',
     ArrowRight: 'right',
 
-    // Fire: J, Z, Space
-    KeyJ: 'fire',
-    KeyZ: 'fire',
-    Space: 'fire',
-
-    // Jump: K, X
+    // Jump: Space, KeyK, KeyX
+    Space: 'jump',
     KeyK: 'jump',
     KeyX: 'jump',
 
-    // Grenade: L, C
+    // Fire: KeyJ, KeyZ
+    KeyJ: 'fire',
+    KeyZ: 'fire',
+
+    // Grenade: KeyL, KeyC
     KeyL: 'grenade',
     KeyC: 'grenade',
 
@@ -152,9 +157,14 @@ export class KeyboardController {
    * Generates and advances a PlayerInputSnapshot with edge-detected pressed flags.
    */
   public getSnapshot(): PlayerInputSnapshot {
-    const jumpPressed = this.jump && !this.prevJump;
-    const shootPressed = this.fire && !this.prevFire;
-    const grenadePressed = this.grenade && !this.prevGrenade;
+    const jumpPressed = this.jumpJustPressed || (this.jump && !this.prevJump);
+    const shootPressed = this.fireJustPressed || (this.fire && !this.prevFire);
+    const grenadePressed = this.grenadeJustPressed || (this.grenade && !this.prevGrenade);
+
+    // Clear edge-detection latches after snapshot consumption
+    this.jumpJustPressed = false;
+    this.fireJustPressed = false;
+    this.grenadeJustPressed = false;
 
     // Edge-detect pause toggle
     if (this.pause && !this.prevPause) {
@@ -193,6 +203,10 @@ export class KeyboardController {
     this.grenade = false;
     this.pause = false;
 
+    this.jumpJustPressed = false;
+    this.fireJustPressed = false;
+    this.grenadeJustPressed = false;
+
     this.prevJump = false;
     this.prevFire = false;
     this.prevGrenade = false;
@@ -219,10 +233,16 @@ export class KeyboardController {
     if (!action) return;
 
     // Prevent default scrolling for game controls
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) || e.key === ' ') {
       if (typeof e.preventDefault === 'function') {
         e.preventDefault();
       }
+    }
+
+    if (!e.repeat) {
+      if (action === 'jump' && !this.jump) this.jumpJustPressed = true;
+      if (action === 'fire' && !this.fire) this.fireJustPressed = true;
+      if (action === 'grenade' && !this.grenade) this.grenadeJustPressed = true;
     }
 
     this.setAction(action, true);
@@ -254,13 +274,13 @@ export class KeyboardController {
       case 'd':
       case 'arrowright':
         return 'right';
-      case 'j':
-      case 'z':
       case ' ':
-        return 'fire';
       case 'k':
       case 'x':
         return 'jump';
+      case 'j':
+      case 'z':
+        return 'fire';
       case 'l':
       case 'c':
         return 'grenade';
@@ -273,6 +293,11 @@ export class KeyboardController {
   }
 
   public setAction(action: KeyAction, value: boolean): void {
+    if (value) {
+      if (action === 'jump' && !this.jump) this.jumpJustPressed = true;
+      if (action === 'fire' && !this.fire) this.fireJustPressed = true;
+      if (action === 'grenade' && !this.grenade) this.grenadeJustPressed = true;
+    }
     switch (action) {
       case 'left':
         this.left = value;

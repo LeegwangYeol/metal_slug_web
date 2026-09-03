@@ -19,3 +19,28 @@ Write independent standalone verification scripts (e.g. in /tmp or running via N
 
 Report your empirical findings and issue a verdict: CONFIRMED or DISPROVED.
 Write your report to `/Users/user/src/fullmetalslug/.agents/challenger_1/handoff.md` and notify orchestrator via send_message.
+
+## 2026-09-03T08:48:16Z
+You are Challenger 1 for the Metal Slug Web Critical Gameplay Bugs Overhaul.
+
+Read the authoritative requirements and worker handoffs:
+- ORIGINAL_REQUEST.md: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
+- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_gameplay/PROJECT.md
+- Worker 1 Report (Controls & Jump): /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1_controls/handoff.md
+- Worker 4 Report (E2E & Unit Tests): /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_tests/handoff.md
+
+Your Working Directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_1
+
+Task:
+Empirically stress-test and challenge Controls, Keyboard Latches, and Jump Kinematics:
+1. Write/run empirical adversarial test scripts or harnesses:
+   - Test rapid repeated jump key presses (bouncing on ground contact).
+   - Test simultaneous jump + fire, jump + grenade, and jump + aim up/down.
+   - Test edge cases in input latching: rapid keydown/keyup sequences within a single frame tick.
+   - Verify that player vertical position Y strictly decreases on jump and parabolic arc correctly lands back on solid ground (Y = 230).
+2. Report empirical findings, test metrics, and stability results.
+3. Deliverable:
+   - Write handoff report to `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_1/handoff.md`.
+   - Your report MUST state an explicit verdict: `APPROVE` or `REQUEST_CHANGES`.
+   - Send completion message to parent with verdict and handoff path.

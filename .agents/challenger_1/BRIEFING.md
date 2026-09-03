@@ -19,32 +19,41 @@ Empirically stress-test kinematics, combat melee boundaries, armored target reje
 - .agents/ holds only agent metadata — NEVER place source code, tests, or data files here
 
 ## Current Parent
-- Conversation ID: 084b764e-0b87-4c6e-b6aa-67ece754bc64
-- Updated: 2026-09-03T03:37:05Z
+- Conversation ID: a2ad7268-5c33-444b-8b9c-8f3b306edacd
+- Updated: 2026-09-03T17:54:00+09:00
 
 ## Review Scope
-- **Files to review**: Kinematics, Combat, Weapons, Spatial Hash Grid, Collision systems
-- **Interface contracts**: PROJECT.md, SCOPE.md, TEST_READY.md
-- **Review criteria**: Empirical boundary verification, collision scaling, weapon state transitions, armored melee rejection
+- **Files to review**: `src/input/KeyboardController.ts`, `src/core/player/PlayerKinematics.ts`, `src/core/player/PlayerController.ts`, `src/main.ts`
+- **Interface contracts**: PROJECT.md, COLLABORATION.md, Worker 1 Report, Worker 4 Report
+- **Review criteria**: Rapid jump key presses, jump buffering, multimodal simultaneous inputs (jump+fire, jump+grenade, jump+aim up/down), edge-latching single-tick sequences, strictly decreasing jump Y ascent, and landing at Y = 230
 
 ## Key Decisions Made
-- Executed standalone adversarial verification suite via Vitest at `tests/unit/adversarial_challenge.test.ts`.
-- Verified Tasks 1-4 with exact empirical measurement and mathematical proofs.
+- Authored comprehensive 21-test adversarial challenge suite at `tests/unit/adversarial_controls_jump.test.ts`.
+- Verified rapid repeated jump mashing over 600 ticks (10 seconds), proving zero underground clipping, zero NaNs, and exactly 11 full jump cycles.
+- Verified jump buffering (within 4-frame window) produces instant ground contact bouncing with 0 idle grounded ticks.
+- Verified simultaneous multimodal actions (jump+fire, jump+grenade, jump+aim up/down, diagonal aim, airborne downward shooting/grenades).
+- Verified strict monotonic decrease in Y during ascent to apex ($Y = 151.76\text{px}$, peak delta $-78.24\text{px}$) and solid landing at $Y = 230.00\text{px}$.
+- Resolved TS error in peer test file `challenger_2_empirical_stress.test.ts` to allow production build `npm run build` to pass cleanly.
 
 ## Artifact Index
-- handoff.md — Final adversarial challenge report (5 components)
-- tests/unit/adversarial_challenge.test.ts — Comprehensive 10-test verification harness
+- `.agents/challenger_1/handoff.md` — Authoritative Challenger 1 report with explicit `APPROVE` verdict
+- `tests/unit/adversarial_controls_jump.test.ts` — 21 adversarial stress tests (all passing)
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Melee distance boundary (37.9px knife, 38.0px knife, 38.1px pistol, vertical limits [-34, +10], rear tolerance 6px).
-  - Armored target knife rejection (MidBossVehicle and TetsuyukiBoss at point blank).
-  - Rapid weapon switching & ammo starvation (760 frames across Pistol -> HMG -> Flame -> 0 ammo -> Pistol fallback).
-  - Spatial hash grid saturation (500 projectiles + 100 moving entities, 1000 queries, 120 kinematic frames, pathological clustering, clean eviction).
+  - Edge latching across Space, KeyK, KeyX, KeyJ, KeyZ, KeyL, KeyC under sub-frame keydown/keyup sequences.
+  - OS auto-repeat suppression (`e.repeat = true` ignores repeated edge triggers).
+  - Rapid repeated jump key mashing (600 frames, continuous 60Hz keydown/keyup).
+  - Jump buffering window (2 frames before ground contact).
+  - Multimodal simultaneous input triggers (jump+fire, jump+grenade, jump+aim up, jump+aim down, jump+aim diagonal).
+  - Solid ground drop-through rejection (holding down+jump on solid terrain maintains $Y = 230$ and never drops into abyss).
+  - Semi-solid platform drop-through (down+jump on elevated dock pier drops through cleanly to solid terrain).
+  - Continuous jump hold without releasing: asserts player lands and remains grounded without auto-bouncing.
 - **Vulnerabilities found**:
-  - Task 1 Boundary Defect: At distance 38.0px, knife fails to trigger and pistol fires instead because `BoundingBox.intersects` uses strict `>` inequality (`138.0 > 138.0` is false).
+  - Minor timing asymmetry: on the exact frame of landing, `actionState` immediately switches to `IDLE` and `isGrounded` becomes `true`, but `posture` updates to `STANDING` on the subsequent frame's `handleInput()`. Gameplay impact is negligible as physics and collision are fully resolved.
+  - Elevated platform collision: jumping rightward at standard run speed lands player on elevated pier `dock_1` at $Y = 175$ instead of ground terrain at $Y = 230$, which is the intended platform layout behavior.
 - **Untested angles**:
-  - High ping or multi-threaded physics tick desynchronization (web worker architecture).
+  - Gamepad API analogue stick deadzones (currently keyboard and virtual touch controls only).
 
 ## Loaded Skills
 None loaded.

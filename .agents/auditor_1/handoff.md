@@ -1,23 +1,28 @@
-# Forensic Audit Report — Full Metal Slug Web
+# Forensic Audit Report — Metal Slug Web Critical Gameplay Bugs Overhaul
 
-**Work Product**: Full Metal Slug Web Codebase (`src/` and `tests/`)  
-**Workspace**: `/Users/user/src/fullmetalslug/`  
+**Work Product**: Metal Slug Web Critical Gameplay Bugs Overhaul Source Code & Test Suites  
+**Workspace**: `/Users/user/teamwork_projects/metal_slug_web/`  
 **Profile**: General Project (Development Mode per `ORIGINAL_REQUEST.md`)  
 **Auditor**: `auditor_1` (Forensic Integrity Auditor)  
-**Date**: 2026-09-03  
+**Date**: 2026-09-03T17:52:00+09:00  
 **Verdict**: **CLEAN**
 
 ---
 
 ## 1. Executive Summary & Forensic Verdict
 
-A complete, independent, empirical forensic integrity audit was conducted across the entire Full Metal Slug codebase (`src/` and `tests/`). All forensic checks outlined in the audit charter were executed and passed without exception:
+An exhaustive, independent forensic integrity audit was conducted across all source code and test files modified or introduced during the **Metal Slug Web Critical Gameplay Bugs Overhaul** (covering Milestones M1 to M4):
+- Source Files: `src/input/KeyboardController.ts`, `src/main.ts`, `src/core/entities/boss/TetsuyukiBoss.ts`, `src/core/entities/enemies/SoldierEnemy.ts`
+- Test Files: `tests/e2e/gameplay_controls.spec.ts`, `tests/unit/boss_rebalance.test.ts`, `tests/unit/spawning_contract.test.ts`, `tests/unit/enemy_boss_statemachine.test.ts`, `tests/unit/challenger_boss_and_stability.test.ts`
 
-1. **Cheating / Mocking Check**: **PASS** — Zero hardcoded mock shortcuts, zero facade implementations, zero test-circumventing stubs in `src/`. All kinematics, physics equations, and collision solvers are authentic algorithmic implementations. All 11 unit test suites in `tests/` execute real simulation code in `src/core/` with zero `vi.mock()` calls.
-2. **Procedural Assets & Audio Integrity**: **PASS** — Zero external image files (`.png`, `.jpg`, etc.) and zero external audio files (`.mp3`, `.wav`, etc.) exist in the repository. Graphics are 100% procedural pixel-art rasterizations using authentic 16-color Neo Geo indexed palettes (`src/render/sprites/Palette.ts`). Sound effects and arcade announcer voice clips are 100% real-time Web Audio API DSP synthesis using oscillators, noise generators, and 4-band digital IIR biquad formant filters (`src/audio/SpeechSynthesizer.ts`).
-3. **Completeness Check (R1–R5)**: **PASS** — Complete verification against all core game mechanics (R1: 8-way aim, kinematics, knife melee vs ranged), weapon systems (R2: Pistol, HMG sweep/spray, Flame Shot piercing AOE, Grenades, POW loot pipeline), enemy and boss hierarchies (R3: 4 Rebel infantry roles, Mid-Boss Iron Technical, 3-Phase Tetsuyuki War Fortress with weak point), presentation (R4: 4-layer parallax, procedural sprite factory, HUD overlay), and testable decoupled architecture (R5: 100% DOM-free `src/core/`, 120 passing Vitest unit tests, passing Playwright 60 FPS E2E integration benchmark).
+### Phase Results
+- **Static Analysis & Cheat Detection**: **PASS** — Zero hardcoded mock shortcuts, zero dummy facade implementations, zero test-circumventing bypasses in `src/`. All kinematics, physics equations, and collision solvers are authentic algorithmic implementations.
+- **Test Authenticity Audit**: **PASS** — `tests/e2e/gameplay_controls.spec.ts` executes genuine browser DOM keyboard events (`page.keyboard.press('Space')` and arrow key down/up) against a live Chromium instance, measuring real canvas coordinate deltas ($\Delta Y < -20\text{px}$, $\Delta X \neq 0$) without mocked coordinates. `tests/unit/boss_rebalance.test.ts` and `tests/unit/spawning_contract.test.ts` rigorously test real classes and invariants without mocks.
+- **Pre-populated Artifact Detection**: **PASS** — Exactly 0 pre-populated logs, result files, or fake attestation artifacts exist in the workspace.
+- **Runtime Verification**: **PASS** — Production build (`npm run build`), all 18 Vitest unit test suites (221 tests), and all 3 Playwright E2E test suites (14 tests) passed 100% green.
+- **Independent Empirical Verification**: **PASS** — Custom auditor headless harnesses confirmed Spacebar jump mapping & edge-latching, upward jump displacement ($\Delta Y = -5.78\text{px}$ on frame 1), boss rebalance to 400 HP with dynamic 260/120 HP phase thresholds, out-of-bounds spawning ($X \ge \text{cameraX} + 480$), static POW pre-placement, and foot ground alignment ($Y = 192$, feet at $230$).
 
-**Final Verdict**: **CLEAN** (Approved for Milestone Gate Completion).
+**Final Verdict**: **CLEAN** (Zero Integrity Violations Found).
 
 ---
 
@@ -25,7 +30,62 @@ A complete, independent, empirical forensic integrity audit was conducted across
 
 ### 2.1 Observation
 
-#### Empirical Tool Execution Results:
+#### 1. Static Analysis & Cheat Detection in Source Code
+- **`src/input/KeyboardController.ts`**:
+  - Lines 77–81, 95–99: `Space`, `KeyK`, and `KeyX` map to `'jump'`.
+  - Lines 82–85: `KeyJ` and `KeyZ` map to `'fire'`.
+  - Lines 86–89: `KeyL` and `KeyC` map to `'grenade'`.
+  - Lines 274–281: `resolveAction()` correctly maps `' '`, `'k'`, `'x'` to `'jump'`, and `'j'`, `'z'` to `'fire'`.
+  - Lines 42–45, 149–154, 160–168: Latched edge-detection flags (`jumpJustPressed`, `fireJustPressed`, `grenadeJustPressed`) capture DOM keydown events even if keyup occurs before the 60Hz tick consumes the snapshot, preventing dropped rapid taps.
+  - Zero hardcoded mock shortcuts or dummy return values.
+- **`src/core/entities/boss/TetsuyukiBoss.ts`**:
+  - Line 207: `public maxHealth: number = 400;`
+  - Line 265: `this.maxHealth = config.customHp ?? 400;`
+  - Lines 689–714: Dynamic percentage formulas replace legacy hardcoded constants:
+    `const p1Threshold = Math.round(this.maxHealth * 0.65);` (260 HP for 400 HP default)
+    `const p2Threshold = Math.round(this.maxHealth * 0.30);` (120 HP for 400 HP default)
+    `this.health = Math.max(p1Threshold, this.health - effectiveDamage);`
+    `this.health = Math.max(p2Threshold, this.health - effectiveDamage);`
+  - Prevents multi-phase skipping under burst damage and guarantees authentic stage pacing.
+- **`src/main.ts`**:
+  - Lines 128–152: `initStaticPows()` statically pre-places all 4 POWs at stage initialization:
+    - `pow_1` at $(320, 175)$
+    - `pow_2` at $(850, 175)$
+    - `pow_3` at $(1450, 165)$
+    - `pow_4` at $(1710, 175)$
+  - Lines 690–785: All runtime wave triggers spawn soldiers at $X = \text{cameraX} + 520 \ge \text{cameraX} + 480 + 40$ and $Y = 192$ (feet at $192 + 38 = 230$, matching the top surface of the ground platform).
+  - Runtime triggers contain zero dynamic POW instantiations, completely eliminating in-frustum pop-ins.
+  - Line 779: `trigger_end_boss` configures `customHp: 400` ($\le 500$).
+- **`src/core/entities/enemies/SoldierEnemy.ts`**:
+  - Lines 256–273: `midboss_add_` reinforcements enter smoothly from off-screen right ($X \ge 1220$, $Y = 192$) with `state = 'INGRESS'`.
+  - Lines 381–404: `transitionToNormalRoleAI()` gives active forward velocity into the viewport (`this.facing * 70` for KNIFE, `this.facing * 50` for GRENADE, `patrolMaxX = this.position.x + 20` for RIFLE), eliminating boundary freezing and retreat off-screen.
+
+#### 2. Test Authenticity Audit
+- **`tests/e2e/gameplay_controls.spec.ts`**:
+  - Boots live Chromium browser with Vite preview server (`/`).
+  - Dispatches genuine browser DOM events:
+    - `await page.keyboard.press('Space');`
+    - `await page.keyboard.press('KeyK');`
+    - `await page.keyboard.down('ArrowRight');` / `await page.keyboard.up('ArrowRight');`
+    - `await page.keyboard.down('ArrowLeft');` / `await page.keyboard.up('ArrowLeft');`
+    - `await page.keyboard.down('KeyD');` / `await page.keyboard.up('KeyD');`
+    - `await page.keyboard.down('KeyA');` / `await page.keyboard.up('KeyA');`
+  - Samples real player state from live game instance:
+    `const current = await page.evaluate(() => ({ y: p.position.y, isGrounded: p.isGrounded }));`
+  - Mathematical assertions:
+    `expect(deltaY).toBeLessThan(-20);`
+    `expect(peakY).toBeLessThan(startY);`
+    `expect(observedAirborne).toBe(true);`
+    `expect(movedRightX).toBeGreaterThan(startX + 15);`
+    `expect(movedLeftX).toBeLessThan(movedRightX - 15);`
+  - Waits for physical landing on ground: `Math.abs(landed.y - startY) <= 2` and `landed.isGrounded === true`.
+  - Zero mocked coordinates or fake timers.
+- **`tests/unit/boss_rebalance.test.ts`**:
+  - 9 tests asserting `boss.maxHealth <= 500` (specifically 400), stage trigger HP $\le 500$, Phase 2 at 65% (260 HP), Phase 3 at 30% (120 HP), Phase 1 burst clamping (5000 burst clamps at 260 HP), Phase 2 burst clamping (5000 burst clamps at 120 HP), and custom HP scaling (300 -> 195/90, 500 -> 325/150).
+- **`tests/unit/spawning_contract.test.ts`**:
+  - 7 tests asserting out-of-bounds spawns ($X \ge \text{cameraX} + 480$, base $X \ge \text{cameraX} + 520$) across camera coordinates 0, 100, 300, 720, 1200, 1600; INGRESS state with forward facing; static POW placement ahead of player; 0 runtime POW triggers; 0 random pop-ins over 600 idle frames; and ground foot alignment ($192 + 38 = 230$) with 60-frame ground stability.
+
+#### 3. Empirical Tool Execution Outputs
 1. **Production Build (`npm run build`)**:
    ```
    > fullmetalslug@1.0.0 build
@@ -37,135 +97,140 @@ A complete, independent, empirical forensic integrity audit was conducted across
    rendering chunks...
    computing gzip size...
    dist/index.html                  1.26 kB │ gzip:  0.58 kB
-   dist/assets/index-Ce3aCGfs.js  155.03 kB │ gzip: 40.67 kB │ map: 555.06 kB
-   ✓ built in 13.60s
+   dist/assets/index-Cy7S9ANT.js  174.28 kB │ gzip: 45.45 kB │ map: 640.54 kB
+   ✓ built in 237ms
    Exit code: 0
    ```
-
-2. **Vitest Unit Test Suite (`npm run test`)**:
+2. **Vitest Unit Test Suite (`npx vitest run`)**:
    ```
-   RUN  v3.2.7 /Users/user/src/fullmetalslug
-
-    ✓ tests/unit/player_kinematics_aiming.test.ts (9 tests) 6ms
-    ✓ tests/unit/input_and_hud.test.ts (12 tests) 280ms
-    ✓ tests/unit/grenade_physics.test.ts (5 tests) 73ms
-    ✓ tests/unit/core_engine.test.ts (19 tests) 117ms
-    ✓ tests/unit/player_melee_ranged.test.ts (4 tests) 18ms
-    ✓ tests/unit/pow_system.test.ts (3 tests) 28ms
-    ✓ tests/unit/render_components.test.ts (21 tests) 376ms
-    ✓ tests/unit/weapons_system.test.ts (5 tests) 330ms
-    ✓ tests/unit/player_weapon_state.test.ts (17 tests) 331ms
-    ✓ tests/unit/melee_ranged_decision.test.ts (7 tests) 476ms
-    ✓ tests/unit/enemy_boss_statemachine.test.ts (18 tests) 462ms
-
-    Test Files  11 passed (11)
-         Tests  120 passed (120)
-      Duration  8.83s
+   Test Files  18 passed (18)
+        Tests  221 passed (221)
+     Duration  634ms
    Exit code: 0
    ```
-
-3. **Playwright E2E Integration Suite (`npm run test:e2e`)**:
+3. **Playwright E2E Integration Suite (`npx playwright test`)**:
    ```
-   > fullmetalslug@1.0.0 test:e2e
-   > playwright test
+   Running 14 tests using 3 workers
 
-   Running 3 tests using 1 worker
+     ✓  1 [chromium] › tests/e2e/game_initialization.spec.ts:4:3 (345ms)
+     ✓  2 [chromium] › tests/e2e/visual_verification.spec.ts:45:3 (362ms)
+     ✓  5 [chromium] › tests/e2e/visual_verification.spec.ts:79:3 (127ms)
+     ✓  6 [chromium] › tests/e2e/visual_verification.spec.ts:113:3 (148ms)
+     ✓  7 [chromium] › tests/e2e/visual_verification.spec.ts:151:3 (128ms)
+     ✓  8 [chromium] › tests/e2e/visual_verification.spec.ts:200:3 (148ms)
+     ✓  9 [chromium] › tests/e2e/visual_verification.spec.ts:251:3 (1ms)
+     ✓  3 [chromium] › tests/e2e/gameplay_controls.spec.ts:17:3 (959ms)
+     ✓ 10 [chromium] › tests/e2e/gameplay_controls.spec.ts:85:3 (640ms)
+     ✓ 11 [chromium] › tests/e2e/gameplay_controls.spec.ts:114:3 (743ms)
+     ✓ 12 [chromium] › tests/e2e/gameplay_controls.spec.ts:138:3 (631ms)
+     ✓ 13 [chromium] › tests/e2e/gameplay_controls.spec.ts:160:3 (627ms)
+     ✓  4 [chromium] › tests/e2e/game_initialization.spec.ts:57:3 (4.3s)
+     ✓ 14 [chromium] › tests/e2e/game_initialization.spec.ts:137:3 (118ms)
 
-     ✓  1 [chromium] › tests/e2e/game_initialization.spec.ts:4:3 › should boot headless browser, mount game container, and render canvas with zero fatal console errors (2.9s)
-     ✓  2 [chromium] › tests/e2e/game_initialization.spec.ts:57:3 › should maintain 60 FPS animation loop stably over 300 frames without crashing (5.8s)
-     ✓  3 [chromium] › tests/e2e/game_initialization.spec.ts:137:3 › should expose __GAME__, __ENGINE__, __AUDIO_CTX__ and respond to player input and stage progression (1.0s)
-
-     3 passed (32.7s)
+     14 passed (5.4s)
    Exit code: 0
    ```
-
-4. **External Media Asset Scan**:
-   - Executed file search for `.mp3`, `.wav`, `.ogg`, `.aac`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` excluding `node_modules` and `dist`:
-   - Found: `0` files. No external binary audio or graphical assets exist in the codebase.
-
-5. **Mock Scan in `tests/` and `src/`**:
-   - Searched for `vi.mock()` in `src/` and `tests/`: exactly `0` occurrences.
-   - `vi.fn()` is used exclusively for event listeners (e.g. `const knifeStartSpy = vi.fn()`) to observe real event bus dispatches.
-
-6. **Key Source Code Implementations Verified**:
-   - `src/core/math/Vector2D.ts` (lines 16–156): Pure 2D vector algebra, dot/cross products, normalization with zero-checks, angle calculations, lerp, and rotation matrices.
-   - `src/core/physics/AABB.ts` (lines 63–184): Genuine intersection tests, point containment, box union, and minimum penetration push-out calculation.
-   - `src/core/physics/Platform.ts` (lines 42–208): Semi-solid one-way platform crossing math (`prevFootY <= platTop + snapTolerance && currFootY >= platTop && vy >= 0`), downward drop-through impulse (`120 px/s`), and solid AABB obstacle resolution.
-   - `src/core/physics/SpatialGrid.ts` (lines 31–142): Full 2D spatial hash grid broadphase partitioning with hashed coordinates and bounding-box queries.
-   - `src/core/player/PlayerKinematics.ts` (lines 120–286): Authentic 8-way aiming (grounded crouch forces horizontal forward shooting; downward aiming enabled strictly while airborne), muzzle offsets for all postures, and exact forward knife reach box (`38px` forward, `6px` rear, `[-34, +10]px` vertical).
-   - `src/core/player/PlayerController.ts` (lines 219–371): Automatic melee vs ranged decision matrix: queries spatial grid for living melee-vulnerable enemies within `38px` reach box; on trigger, allocates knife slash state, deals `3.0 HP` on active frames 5–9, awards 500 score points, and suppresses projectile emission.
-   - `src/core/weapons/WeaponManager.ts` (lines 113–203): Pistol 4-bullet on-screen cap, HMG smooth `12 rad/s` angular sweep with `±2.5°` stochastic spray jitter and brass casings, Flame Shot expanding fireball (`10 -> 36px`) with 6-frame multi-hit immunity and ground fire, and instantaneous automatic fallback to Pistol upon special ammo exhaustion.
-   - `src/core/weapons/Grenade.ts` (lines 76–215): Parabolic ballistics (`gravity = 780 px/s²`), restitution ground bounce (`ey = 0.5`, `ex = 0.7`), rest threshold (`30 px/s`), `52px` blast radius AOE with linear damage falloff (`10 HP` down to `4 HP`).
-   - `src/core/entities/enemies/SoldierEnemy.ts` (lines 140–805): 4 distinct infantry roles (`SOLDIER_RIFLE`, `SOLDIER_KNIFE`, `SOLDIER_GRENADE`, `SOLDIER_SHIELD`), all with `isMeleeVulnerable: true`. Shield Trooper deflects frontal bullets, vulnerable to rear flanking and explosives.
-   - `src/core/entities/enemies/MidBossVehicle.ts` (lines 85–622): Armored half-track, `isMeleeVulnerable: false`, 360° turret tracking clamped at `1.8 rad/s`, cannon shells with `48px` blast, troop reinforcement capped at 3 active adds, and 2 health gates (`240 HP` and `80 HP`).
-   - `src/core/entities/boss/TetsuyukiBoss.ts` (lines 194–684): Stage 1 End-Boss (`1500 HP`), Phase 1 artillery barrage + homing missiles (`speed = 175 px/s`, `steer = 2.2 rad/s`), Phase 2 hull breach + thermal laser floor sweep + rapid gatling, Phase 3 meltdown thruster shockwaves + exposed `48x48` reactor core weak point (`1.5x` damage vs superstructure `0.25x`), and 4-stage timed death explosion sequence over `3.2s` transitioning to `DESTROYED`.
-   - `src/core/entities/pow/PowEntity.ts` (lines 71–264): 6-state machine (`TIED_UP` -> `FREED` -> `SALUTE` -> `OFFERING_ITEM` -> `ESCAPING` -> `SAVED`), weighted loot drop table from `POW_LOOT_TABLE`.
-   - `src/render/sprites/Palette.ts` (lines 44–204): 8 authentic 16-color Neo Geo arcade palettes (`PLAYER`, `REBEL`, `POW`, `FIRE`, `VEHICLE`, `FORTRESS`, `HUD`, `TERRAIN`).
-   - `src/render/sprites/ProceduralSpriteFactory.ts` (lines 272–1284): Procedural pixel-art rasterization cached into OffscreenCanvas buffers.
-   - `src/render/ParallaxBackground.ts` (lines 21–329): 4-layer parallax (Layer 0 dawn sky with animated drifting clouds, Layer 1 distant mountains `0.2x`, Layer 2 war ruins `0.5x`, Layer 3 combat terrain `1.0x`).
-   - `src/audio/SoundEngine.ts` (lines 100–845): Real oscillators, white/pink/brown noise buffers, biquad filters, tanh distortion.
-   - `src/audio/SpeechSynthesizer.ts` (lines 218–380): Acoustic source-filter model: differentiated Rosenberg glottal flow derivative, shaped unvoiced noise with plosive burst envelopes, 4 parallel digital IIR biquad formant filters (F1–F4), DC blocking, and arcade cabinet saturation. Synthesizes 5 voice clips: *"HEAVY MACHINE GUN!"*, *"FLAME SHOT!"*, *"OK!"*, *"MISSION COMPLETE!"*, *"THANK YOU!"*.
+4. **Independent Auditor Forensic Harness**:
+   - Check 1 (Keyboard mappings & edge-latching): PASSED. Space maps to jump, `jumpJustPressed` survives keyup until snapshot.
+   - Check 2 (Jump physics $\Delta Y$): PASSED. Player moves upward on tick 1 from $Y = 230$ to $Y = 224.22$ ($\Delta Y = -5.78\text{px}$, $v_y = -346.67\text{ px/s}$, `isGrounded = false`).
+   - Check 3 (Boss rebalance & dynamic thresholds): PASSED. `maxHealth = 400`, Phase 1 burst clamps at 260 HP, Phase 2 burst clamps at 120 HP.
+   - Check 4 (Spawning coordinates & static POWs): PASSED. Spawns strictly $\ge \text{cameraX} + 480$, feet at 230, all 4 POWs statically pre-placed.
 
 ---
 
 ### 2.2 Logic Chain
 
-1. **Premise 1**: The user request (`ORIGINAL_REQUEST.md`) defines development mode with R1–R5 specifications for core mechanics, weapons, enemies/bosses, procedural assets & audio, and testable decoupled architecture.
-2. **Premise 2**: A work product constitutes an integrity violation if it uses hardcoded test outputs, facade/dummy implementations, pre-populated result artifacts, external assets when procedural generation is required, or mocks internal logic during unit tests.
-3. **Verification Step A (Artifacts & Code Quality)**:
-   - Inspection of `src/` confirmed absence of facade functions (`return true/false` stubs) or hardcoded return values matching test fixtures.
-   - File search confirmed 0 external media files (`.mp3`, `.wav`, `.png`, etc.).
-   - Pre-populated artifact scan confirmed no leftover logs or fake results predating the run.
-4. **Verification Step B (Algorithmic Authenticity)**:
-   - Direct line-by-line inspection of `src/core/` and `src/audio/` confirmed real mathematical equations for vector algebra, semi-implicit Euler integration, AABB penetration solving, semi-solid platform crossing, spatial hashing, 8-way aiming, and acoustic formant DSP filters.
-5. **Verification Step C (Empirical Execution)**:
-   - `npm run build` completed with zero TypeScript errors.
-   - `npm run test` ran 11 Vitest test suites (120 tests), all passing in 8.83s without module mocking.
-   - `npm run test:e2e` ran 3 Playwright tests, booting the headless browser against the Vite preview server, confirming canvas rendering, and verifying 60 FPS animation loop stability across 300 frames without exceptions.
-6. **Deduction**: Because all required features exist, are authentically implemented, contain zero prohibited shortcuts, and pass empirical test suites, the work product meets all integrity standards.
+1. **Premise 1 (Ground-truth Requirements)**:
+   `ORIGINAL_REQUEST.md` (2026-09-03T08:22:19Z) dictates Development Mode with strict requirements:
+   - R1: Fix key controls and jump mechanic (Spacebar jump, smooth movement).
+   - R2: Fix spawning logic (enemies and POWs only at designated coordinates/wave triggers, no popping).
+   - R3: Rebalance boss health ($\le 500$ HP).
+   - Acceptance Criteria: Playwright E2E tests simulating real Spacebar and arrow key events with mathematical assertions on sprite coordinate deltas ($\Delta Y < 0$, $\Delta X \neq 0$), code verification of non-popping spawns, and boss max health $\le 500$.
+2. **Premise 2 (Integrity Violation Standards)**:
+   A work product violates integrity if it employs hardcoded mock shortcuts, dummy facade implementations, fabricated verification outputs, pre-populated logs, or fake tests that simulate actions without genuine execution.
+3. **Verification Step 1 (Code Authenticity)**:
+   Direct diff inspection of `KeyboardController.ts`, `TetsuyukiBoss.ts`, `SoldierEnemy.ts`, and `main.ts` proves genuine implementations:
+   - Spacebar remapped in both `codeMap` and `resolveAction()`.
+   - Edge latching accurately retains rapid keydowns across frame boundaries.
+   - Boss HP rebalanced to 400 with percentage-based threshold clamping ($65\%$ and $30\%$) that prevents multi-phase skips without hardcoding arbitrary magic numbers.
+   - Enemies spawned at $Y = 192$ ensuring their $38\text{px}$ bounding box aligns feet with ground surface at $Y = 230$, preventing clipping and premature culling.
+   - POWs statically instantiated at stage initialization ahead of the player, completely removing runtime pop-ins.
+4. **Verification Step 2 (Test Suite Rigor & Authenticity)**:
+   - `tests/e2e/gameplay_controls.spec.ts` relies on native Playwright browser automation (`page.keyboard.press('Space')`), observing live canvas physics state. The measured $\Delta Y < -20\text{px}$ and landing confirmations are mathematically derived from the running physics engine.
+   - `tests/unit/boss_rebalance.test.ts` and `spawning_contract.test.ts` execute real simulation loops with 0 module mocks.
+5. **Verification Step 3 (Empirical Execution)**:
+   - `npm run build` exits 0.
+   - `npx vitest run` exits 0 with 221 passing tests.
+   - `npx playwright test` exits 0 with 14 passing browser tests.
+   - Independent forensic script passes all 4 core checks.
+6. **Deduction**:
+   Because all requirements are fully realized through authentic logic, backed by genuine automated browser tests and exhaustive unit tests without any cheating or bypasses, the work product is rated **CLEAN**.
 
 ---
 
 ### 2.3 Caveats
 
-- **Headless Canvas Fallback**: `ProceduralSpriteFactory.ts` includes an in-memory 2D context fallback (`createMockCanvasBuffer`) to allow Node.js Vitest unit tests to execute headless sprite generation without native browser `HTMLCanvasElement` or `OffscreenCanvas`. In real browser environments (and under Playwright), native `OffscreenCanvas` / `HTMLCanvasElement` is utilized. This is standard decoupled engineering practice and does not compromise simulation or rendering integrity.
-- **No other caveats.**
+No caveats. All modified source files and test suites were exhaustively audited and verified empirically.
 
 ---
 
 ### 2.4 Conclusion
 
-The Full Metal Slug codebase is an authentic, completely realized, high-integrity implementation.
-- All physics, kinematics, and state machines are genuine and uncompromised.
-- All visual assets and audio effects/voice clips are genuinely synthesized procedurally.
-- All R1–R5 requirements are fully satisfied.
-- **Verdict: CLEAN.**
+The Metal Slug Web Critical Gameplay Bugs Overhaul is a genuine, high-integrity implementation that fully resolves all gameplay issues identified in `ORIGINAL_REQUEST.md`:
+1. **R1 Controls**: Jump mechanic is restored on Spacebar, KeyK, and KeyX with robust edge-detection latching that captures rapid taps. Real browser E2E tests confirm upward jump displacement and landing.
+2. **R2 Spawning**: POWs are pre-placed statically at stage load time. Enemies spawn strictly out-of-bounds ($X \ge \text{cameraX} + 480$), advance smoothly into the viewport with ingress AI, and spawn with feet aligned to terrain at $Y = 230$, preventing abyss culling.
+3. **R3 Boss Rebalance**: Boss `maxHealth` is 400 HP ($\le 500$), with dynamic percentage-based phase thresholds at 260 HP (65%) and 120 HP (30%), preventing phase skipping and ensuring authentic arcade pacing.
+4. **Verdict**: **CLEAN**.
 
 ---
 
 ### 2.5 Verification Method
 
-Any independent auditor or user can verify these findings directly using the following commands in `/Users/user/src/fullmetalslug/`:
+To independently verify this audit, execute the following commands from `/Users/user/teamwork_projects/metal_slug_web/`:
 
 ```bash
-# 1. Verify zero external media assets exist in the repo
-find src -name '*.mp3' -o -name '*.wav' -o -name '*.png' -o -name '*.jpg'
-
-# 2. Verify zero vi.mock calls in test suite
-grep -r "vi.mock" tests/ src/
-
-# 3. Execute full TypeScript compile & production bundle build
+# 1. Typecheck and production bundle build
 npm run build
 
-# 4. Execute all 120 headless Vitest unit tests
-npm run test
+# 2. Vitest unit test suite (18 files, 221 tests)
+npx vitest run
 
-# 5. Execute headless Chromium Playwright 60 FPS benchmark
-npm run test:e2e
+# 3. Playwright E2E test suite (3 files, 14 browser tests)
+npx playwright test
+
+# 4. Independent empirical verification script
+npx tsx -e "
+import { KeyboardController } from './src/input/KeyboardController';
+import { TetsuyukiBoss } from './src/core/entities/boss/TetsuyukiBoss';
+import { FullMetalSlugGame } from './src/main';
+
+// Verify Spacebar Jump & Latching
+const kb = new KeyboardController();
+kb['handleKeyDown']({ code: 'Space', key: ' ', preventDefault: () => {} } as any);
+kb['handleKeyUp']({ code: 'Space', key: ' ' } as any);
+const snap = kb.getSnapshot();
+if (!snap.jumpPressed) throw new Error('Jump latch failed');
+
+// Verify In-Engine Jump Delta Y
+const game = new FullMetalSlugGame();
+const startY = game.player.position.y;
+game.keyboard['handleKeyDown']({ code: 'Space', key: ' ', preventDefault: () => {} } as any);
+game.step(1/60);
+if (game.player.position.y >= startY) throw new Error('Jump delta Y failed');
+
+// Verify Boss Health & Thresholds
+const boss = new TetsuyukiBoss('boss_test');
+if (boss.maxHealth > 500 || boss.maxHealth !== 400) throw new Error('Boss HP balance failed');
+boss.takeDamage(5000);
+if (boss.health !== 260 || boss.phase !== 'PHASE_2_LASER_SWEEP') throw new Error('P1 clamp failed');
+
+console.log('ALL INDEPENDENT CHECKS PASSED!');
+"
 ```
 
 **Invalidation Conditions**:
-- Any build failure or TypeScript compilation error.
-- Any unit test failure under `npx vitest run`.
-- Any Playwright failure during headless browser boot or 60 FPS frame rate test.
-- Introduction of pre-recorded audio files or external image assets replacing the procedural engines.
+- If `boss.maxHealth` exceeds 500 HP.
+- If Spacebar does not trigger upward displacement ($\Delta Y < 0$) in `tests/e2e/gameplay_controls.spec.ts`.
+- If enemies spawn inside active camera viewport ($X < \text{cameraX} + 480$).
+- If any command above exits with a non-zero status code.
+

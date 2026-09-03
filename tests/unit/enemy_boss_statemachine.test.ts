@@ -334,20 +334,20 @@ describe('Enemy & Boss State Machine Suite', () => {
       engine.tick();
     });
 
-    it('should start in PHASE_1_ARTILLERY with full health (1500 HP) and 2 turrets alive', () => {
-      expect(boss.health).toBe(1500);
-      expect(boss.maxHealth).toBe(1500);
+    it('should start in PHASE_1_ARTILLERY with full health (400 HP) and 2 turrets alive', () => {
+      expect(boss.health).toBe(400);
+      expect(boss.maxHealth).toBe(400);
       expect(boss.phase).toBe('PHASE_1_ARTILLERY');
       expect(boss.turretsAlive).toBe(2);
       expect(boss.weakPointExposed).toBe(false);
       expect(boss.isAlive).toBe(true);
     });
 
-    it('should transition to PHASE_2_LASER_SWEEP when health drops below 975 HP (65%)', () => {
-      // Deal 550 damage (1500 -> clamped at 975 HP threshold)
-      boss.takeDamage(550);
+    it('should transition to PHASE_2_LASER_SWEEP when health drops below 260 HP (65%)', () => {
+      // Deal 200 damage (400 -> clamped at 260 HP threshold)
+      boss.takeDamage(200);
 
-      expect(boss.health).toBe(975);
+      expect(boss.health).toBe(260);
       expect(boss.phase).toBe('PHASE_2_LASER_SWEEP');
       expect(boss.turretsAlive).toBe(1);
 
@@ -357,12 +357,12 @@ describe('Enemy & Boss State Machine Suite', () => {
       expect(boss.isHullBreached).toBe(true);
     });
 
-    it('should transition to PHASE_3_MELTDOWN when health drops below 450 HP (30%) and expose core weak point', () => {
+    it('should transition to PHASE_3_MELTDOWN when health drops below 120 HP (30%) and expose core weak point', () => {
       // Transition through phase 2 to phase 3
-      boss.takeDamage(550); // clamps at 975 HP (Phase 2)
-      boss.takeDamage(550); // 975 - 550 <= 450 -> clamps at 450 HP (Phase 3)
+      boss.takeDamage(200); // clamps at 260 HP (Phase 2)
+      boss.takeDamage(200); // 260 - 200 <= 120 -> clamps at 120 HP (Phase 3)
 
-      expect(boss.health).toBe(450);
+      expect(boss.health).toBe(120);
       expect(boss.phase).toBe('PHASE_3_MELTDOWN');
       expect(boss.turretsAlive).toBe(0);
       expect(boss.weakPointExposed).toBe(true);

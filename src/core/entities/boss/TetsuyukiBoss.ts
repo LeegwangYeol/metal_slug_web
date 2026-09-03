@@ -204,7 +204,7 @@ export class TetsuyukiBoss implements BossEntity, GameEntity {
   public position: Vector2D;
   public velocity: Vector2D = { x: 0, y: 0 };
   public health: number;
-  public maxHealth: number = 1500;
+  public maxHealth: number = 400;
   public phase: BossPhase = 'PHASE_1_ARTILLERY';
   public isAlive: boolean = true;
   public isMeleeVulnerable: boolean = false;
@@ -262,7 +262,7 @@ export class TetsuyukiBoss implements BossEntity, GameEntity {
   ) {
     this.id = id;
     this.position = { x: initialPosition.x, y: initialPosition.y };
-    this.maxHealth = config.customHp ?? 1500;
+    this.maxHealth = config.customHp ?? 400;
     this.health = this.maxHealth;
     this.phase = config.initialPhase ?? 'PHASE_1_ARTILLERY';
 
@@ -347,7 +347,7 @@ export class TetsuyukiBoss implements BossEntity, GameEntity {
 
   // =========================================================================
   // PHASE 1: Dual Heavy Artillery Cannon Barrage & Guided Homing Rocket Pods
-  // (100% -> 65% HP: 1500 -> 975 HP)
+  // (100% -> 65% HP: 400 -> 260 HP)
   // =========================================================================
   private updatePhase1(dt: number, engine?: GameEngine): void {
     this.weakPointExposed = false;
@@ -429,7 +429,7 @@ export class TetsuyukiBoss implements BossEntity, GameEntity {
 
   // =========================================================================
   // PHASE 2: Hull Breach, Thermal Laser Sweep, Rapid Gatling Turret
-  // (65% -> 30% HP: 975 -> 450 HP)
+  // (65% -> 30% HP: 260 -> 120 HP)
   // =========================================================================
   private updatePhase2(dt: number, engine?: GameEngine): void {
     this.isHullBreached = true;
@@ -500,7 +500,7 @@ export class TetsuyukiBoss implements BossEntity, GameEntity {
 
   // =========================================================================
   // PHASE 3: Emergency Thruster Meltdown, Exposed Weak Point, Fan Rockets
-  // (30% -> 0% HP: 450 -> 0 HP)
+  // (30% -> 0% HP: 120 -> 0 HP)
   // =========================================================================
   private updatePhase3(dt: number, engine?: GameEngine): void {
     this.weakPointExposed = true;
@@ -663,6 +663,10 @@ export class TetsuyukiBoss implements BossEntity, GameEntity {
 
   /**
    * Evaluates damage with multi-phase transitions and weak-point scaling.
+   * Dynamic thresholds:
+   * - Phase 1 -> Phase 2 at 65% maxHealth (e.g. 260 HP for 400 maxHealth).
+   * - Phase 2 -> Phase 3 at 30% maxHealth (e.g. 120 HP for 400 maxHealth).
+   * - Phase 3 -> Death at 0 HP.
    * Phase 3:
    * - Hits to exposed core take 1.5x damage.
    * - Hits to armored superstructure take 0.25x damage (75% armor reduction).
@@ -682,17 +686,20 @@ export class TetsuyukiBoss implements BossEntity, GameEntity {
       }
     }
 
+    const p1Threshold = Math.round(this.maxHealth * 0.65);
+    const p2Threshold = Math.round(this.maxHealth * 0.30);
+
     if (this.phase === 'PHASE_1_ARTILLERY') {
-      this.health = Math.max(975, this.health - effectiveDamage);
-      if (this.health <= 975) {
+      this.health = Math.max(p1Threshold, this.health - effectiveDamage);
+      if (this.health <= p1Threshold) {
         this.transitionToPhase2();
       }
       return;
     }
 
     if (this.phase === 'PHASE_2_LASER_SWEEP') {
-      this.health = Math.max(450, this.health - effectiveDamage);
-      if (this.health <= 450) {
+      this.health = Math.max(p2Threshold, this.health - effectiveDamage);
+      if (this.health <= p2Threshold) {
         this.transitionToPhase3();
       }
       return;

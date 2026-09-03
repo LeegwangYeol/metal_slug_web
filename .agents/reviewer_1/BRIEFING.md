@@ -1,59 +1,72 @@
-# BRIEFING — 2026-09-03T03:37:04Z
+# BRIEFING — 2026-09-03T08:51:30Z
 
 ## Mission
-Review Architecture, Simulation Core & Combat System (R1, R2, R5) for Metal Slug web game.
+Independent review of Code Quality, Architecture, and Contract Conformance for Metal Slug Web Critical Gameplay Bugs Overhaul.
 
 ## 🔒 My Identity
-- Archetype: reviewer_critic
+- Archetype: reviewer-critic
 - Roles: reviewer, critic
-- Working directory: /Users/user/src/fullmetalslug/.agents/reviewer_1
-- Original parent: 084b764e-0b87-4c6e-b6aa-67ece754bc64
-- Milestone: Final Review
-- Instance: 1 of 1
+- Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_1
+- Original parent: a2ad7268-5c33-444b-8b9c-8f3b306edacd
+- Milestone: Review
+- Instance: 1 of 2
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Check for integrity violations (hardcoded test results, facade logic, cheats)
-- Follow communication guideline: Files for delivery, Messages for coordination
+- Evidence-based review: verify claims, run build & tests, stress test
+- Detect integrity violations (hardcoded test bypasses, dummy implementations, shortcuts, fabricated verifications)
+- If integrity violations found, verdict MUST be REQUEST_CHANGES with Critical finding
 
 ## Current Parent
-- Conversation ID: 084b764e-0b87-4c6e-b6aa-67ece754bc64
-- Updated: 2026-09-03T03:48:00Z
+- Conversation ID: a2ad7268-5c33-444b-8b9c-8f3b306edacd
+- Updated: not yet
 
 ## Review Scope
-- **Files to review**: src/core/**, tests/**
-- **Interface contracts**: ORIGINAL_REQUEST.md, COLLABORATION.md, .agents/orchestrator/PROJECT.md, TEST_READY.md
-- **Review criteria**:
-  1. Pure simulation decoupling in `src/core/` (zero DOM, Window, Canvas)
-  2. Player Kinematics & 8-way Aiming (vectors, physics, crawl, crouch vs airborne downward shoot)
-  3. Melee vs Ranged Arbitration (knife scan box 38px, 3.0 HP slash, bullet suppression, vehicle immunity)
-  4. Weapons & Ammo System (handgun 4 max throttle, HMG 200 ammo sweep/spray/brass casings, Flame Shot expanding piercing/AOE, parabolic grenade bounce/blast, pistol fallback)
-  5. Hostage POW System (6-state progression, physical item crate drops, score bonuses)
-  6. Execution & Test Integrity (`npm run test` and `npm run test:e2e`)
+- **Files to review**:
+  - `src/input/KeyboardController.ts`
+  - `src/main.ts`
+  - `src/core/entities/enemies/SoldierEnemy.ts`
+  - `src/core/entities/boss/TetsuyukiBoss.ts`
+- **Interface contracts**:
+  - `/Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md`
+  - `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md`
+  - `/Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_gameplay/PROJECT.md`
+- **Worker Reports**:
+  - Worker 1: `.agents/worker_m1_controls/handoff.md`
+  - Worker 2: `.agents/worker_m2_spawning/handoff.md`
+  - Worker 3: `.agents/worker_m3_boss/handoff.md`
+  - Worker 4: `.agents/worker_m4_tests/handoff.md`
+- **Review criteria**: correctness, architecture, contract conformance, edge cases, anti-burst / physics stability
 
 ## Review Checklist
-- **Items reviewed**: src/core/math/Vector2D.ts, src/core/physics/AABB.ts, Platform.ts, SpatialGrid.ts, src/core/player/PlayerKinematics.ts, PlayerController.ts, src/core/weapons/WeaponTypes.ts, WeaponManager.ts, ProjectileManager.ts, Grenade.ts, src/core/entities/pow/PowEntity.ts, src/core/entities/enemies/MidBossVehicle.ts, src/core/entities/boss/TetsuyukiBoss.ts, src/core/engine/GameEngine.ts, StageManager.ts, tests/unit/**, tests/e2e/game_initialization.spec.ts
-- **Verdict**: REQUEST_CHANGES (Core R1/R2/R5 verified 100% compliant; but repository `npm run test` fails on 2 tests in challenger_boss_and_stability.test.ts due to TetsuyukiBoss burst damage phase-skipping defect)
-- **Unverified claims**: None. All core claims verified empirically.
+- **Items reviewed**:
+  - `src/input/KeyboardController.ts`: Verified Space/K/X jump, J/Z fire, L/C grenade, WASD/arrows, edge latching logic.
+  - `src/main.ts`: Verified enemy wave triggers (cameraX + 520), ground coordinate alignment (y = 192), static POWs in `initStaticPows()` at stage load, boss trigger customHp: 400.
+  - `src/core/entities/enemies/SoldierEnemy.ts`: Verified height = 38, spawn Y = 192 (feet at 230), ingress AI state transitions and forward movement.
+  - `src/core/entities/boss/TetsuyukiBoss.ts`: Verified default 400 maxHealth, dynamic 65% (260 HP) / 30% (120 HP) thresholds, anti-burst damage clamping.
+  - Test suites: `tests/unit/boss_rebalance.test.ts`, `tests/unit/spawning_contract.test.ts`, `tests/e2e/gameplay_controls.spec.ts`.
+- **Verdict**: APPROVE
+- **Unverified claims**: None. All worker claims independently checked against codebase and test execution.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Pure decoupling of simulation from DOM/Canvas: confirmed 100% decoupled (0 browser APIs).
-  - Melee distance boundary at 37.9px vs 38.0px vs 38.1px: confirmed knife triggers at <= 37.9px, suppressed at > 38.0px.
-  - Armored targets knife rejection: confirmed Mid-Boss and Tetsuyuki reject knife and trigger gunshots.
-  - Handgun 4 bullet throttle: confirmed 5th bullet suppressed until active bullet despawns.
-  - High burst damage against TetsuyukiBoss: confirmed defect where 2000 HP burst skips Phase 2 & 3 directly to DEATH_EXPLODING.
-- **Vulnerabilities found**:
-  - `TetsuyukiBoss.takeDamage()` does not clamp health at 975 HP (Phase 2 gate) and 450 HP (Phase 3 gate), allowing single-frame burst damage to skip phases.
-- **Untested angles**: None within R1, R2, R5 scope.
+  - Spacebar / rapid tap drop: Latching mechanism holds through tick consumption.
+  - Edge latching repeat key suppression: Tested and verified.
+  - Boss burst damage phase skipping: Tested with 5000 burst damage; clamped properly.
+  - Enemy floor clipping / abyss falling: Ground alignment (192 + 38 = 230) verified across 60 frames.
+  - Viewport spawning: Strictly >= cameraX + 520 verified across multiple camera coordinates.
+  - Static POW pre-placement vs pop-in: Verified 4 static POWs loaded at init, 0 POWs in runtime triggers.
+- **Vulnerabilities found**: None. Zero integrity violations detected.
+- **Untested angles**: None within milestone scope.
 
 ## Key Decisions Made
-- Confirmed zero integrity violations (no cheats, mocks, or facades in core).
-- Confirmed core R1, R2, R5 requirements are impeccably engineered.
-- Issued verdict REQUEST_CHANGES due to `npm run test` exit code 1 from TetsuyukiBoss damage-gating defect.
+- Confirmed full contract conformance and genuine implementations across all four milestone areas.
+- Build compiles cleanly (`npm run build`).
+- Vitest suite passes 100% (18 files, 221 tests).
+- Playwright E2E suite passes 100% (3 files, 14 tests).
 
 ## Artifact Index
-- /Users/user/src/fullmetalslug/.agents/reviewer_1/DISPATCH.md — Incoming prompt record
-- /Users/user/src/fullmetalslug/.agents/reviewer_1/BRIEFING.md — Working memory
-- /Users/user/src/fullmetalslug/.agents/reviewer_1/progress.md — Liveness heartbeat
-- /Users/user/src/fullmetalslug/.agents/reviewer_1/handoff.md — Final handoff review
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_1/DISPATCH.md` — Recorded dispatch message
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_1/BRIEFING.md` — Agent state and briefing
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_1/progress.md` — Heartbeat and progress tracking
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_1/handoff.md` — Final review report

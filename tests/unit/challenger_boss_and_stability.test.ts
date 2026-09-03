@@ -29,52 +29,52 @@ describe('CHALLENGER_2: Boss AI, Health Gating & Long-Run Stability Stress Suite
   // TASK 1: Tetsuyuki Boss Damage-Gating Stress Test
   // =========================================================================
   describe('Task 1: Tetsuyuki Boss Damage-Gating Adversarial Stress Test', () => {
-    it('ORACLE CONTRACT 1A: Phase 1 must clamp at 975 HP on 2000 HP burst and not skip to death', () => {
+    it('ORACLE CONTRACT 1A: Phase 1 must clamp at 260 HP on 2000 HP burst and not skip to death', () => {
       const boss = new TetsuyukiBoss('tetsuyuki_oracle_1a', vec2(360, 50), {
-        customHp: 1500,
+        customHp: 400,
         initialPhase: 'PHASE_1_ARTILLERY',
       });
       boss.takeDamage(2000);
 
       // Contract requirement from task specification:
-      // "verify that Phase 1 clamps at 975 HP, Phase 2 clamps at 450 HP,
+      // "verify that Phase 1 clamps at 260 HP, Phase 2 clamps at 120 HP,
       // and the boss does not skip directly to death without triggering the required phases."
-      expect(boss.health).toBe(975);
+      expect(boss.health).toBe(260);
       expect(boss.phase).toBe('PHASE_2_LASER_SWEEP');
     });
 
-    it('ORACLE CONTRACT 1B: Phase 2 must clamp at 450 HP on 2000 HP burst and not skip to death', () => {
+    it('ORACLE CONTRACT 1B: Phase 2 must clamp at 120 HP on 2000 HP burst and not skip to death', () => {
       const boss = new TetsuyukiBoss('tetsuyuki_oracle_1b', vec2(360, 50), {
-        customHp: 900,
+        customHp: 400,
         initialPhase: 'PHASE_2_LASER_SWEEP',
       });
       boss.takeDamage(2000);
 
-      expect(boss.health).toBe(450);
+      expect(boss.health).toBe(120);
       expect(boss.phase).toBe('PHASE_3_MELTDOWN');
     });
 
-    it('EMPIRICAL DIAGNOSTIC 1A: Verifies defect resolution — boss health clamps to 975 and enters PHASE_2_LASER_SWEEP', () => {
+    it('EMPIRICAL DIAGNOSTIC 1A: Verifies defect resolution — boss health clamps to 260 and enters PHASE_2_LASER_SWEEP', () => {
       const boss = new TetsuyukiBoss('tetsuyuki_diag_1a', vec2(360, 50), {
-        customHp: 1500,
+        customHp: 400,
         initialPhase: 'PHASE_1_ARTILLERY',
       });
       boss.takeDamage(2000);
 
       console.log(`[Diagnostic 1A] Post-2000 burst: health = ${boss.health}, phase = ${boss.phase}`);
-      expect(boss.health).toBe(975);
+      expect(boss.health).toBe(260);
       expect(boss.phase).toBe('PHASE_2_LASER_SWEEP');
     });
 
-    it('EMPIRICAL DIAGNOSTIC 1B: Verifies defect resolution — 1200 HP burst clamps at 975 and transitions to Phase 2', () => {
+    it('EMPIRICAL DIAGNOSTIC 1B: Verifies defect resolution — 1200 HP burst clamps at 260 and transitions to Phase 2', () => {
       const boss = new TetsuyukiBoss('tetsuyuki_diag_1b', vec2(360, 50), {
-        customHp: 1500,
+        customHp: 400,
         initialPhase: 'PHASE_1_ARTILLERY',
       });
       boss.takeDamage(1200);
 
       console.log(`[Diagnostic 1B] Post-1200 burst: health = ${boss.health}, phase = ${boss.phase}`);
-      expect(boss.health).toBe(975);
+      expect(boss.health).toBe(260);
       expect(boss.phase).toBe('PHASE_2_LASER_SWEEP');
     });
   });
@@ -198,7 +198,7 @@ describe('CHALLENGER_2: Boss AI, Health Gating & Long-Run Stability Stress Suite
 
       // 3. Add TetsuyukiBoss
       const boss = new TetsuyukiBoss('sim_boss', vec2(1200, 70), {
-        customHp: 1500,
+        customHp: 400,
       });
       simEngine.addEntity(boss);
 

@@ -1,12 +1,20 @@
-# Progress — challenger_2
+# Progress - Challenger 2
 
-Last visited: 2026-09-03T12:45:20+09:00
+**Last visited**: 2026-09-03T17:55:00+09:00
+**Current Status**: Empirical verification complete, writing handoff report
 
-- [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Read workspace background files (ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, TEST_READY.md)
-- [x] Examined existing codebase, test structure, and files
-- [x] Task 1: Tetsuyuki Boss damage-gating stress test executed — DISPROVED (Boss skips phases directly to death)
-- [x] Task 2: Mid-Boss technical add flood test executed — CONFIRMED (activeAdds strictly capped at 3)
-- [x] Task 3: 60-Second Headless Long-Run Simulation (3,600 ticks) executed — CONFIRMED (0 exceptions, 0 NaN/Inf, stable entity count, memory stable)
-- [x] Written independent test suite `tests/unit/challenger_boss_and_stability.test.ts`
-- [ ] Write handoff.md and report verdict to orchestrator
+## Tasks
+- [x] Initialize briefing and progress tracking
+- [x] Read authoritative requirements and worker handoffs
+- [x] Inspect implementation files (`SpawnSystem.ts`, `Boss.ts`, and test files)
+- [x] Create empirical test harness for Spawning Logic stress testing
+  - [x] Camera fast forward / high scrolling speed simulation (132 to 2000 px/s verified)
+  - [x] Soldier Y=192 terrain integrity over 1,200 ticks across all roles
+  - [x] Despawn / popping audit (1,800 frames idle, 0 pop-ins)
+- [x] Create empirical test harness for Boss Health State Machine stress testing
+  - [x] Massive burst damage (5,000 HP & 100,000 HP) phase skipping test
+  - [x] Zero, fractional, negative damage test
+  - [x] Phase transition event emission & lifecycle test (exactly once verified)
+- [x] Execute tests and document all findings with empirical evidence (20/20 test suites, 257/257 tests green; Playwright 14/14 green)
+- [x] Write final handoff report (`handoff.md`) with explicit verdict (APPROVE)
+- [ ] Send message to parent

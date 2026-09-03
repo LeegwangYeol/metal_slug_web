@@ -1,18 +1,29 @@
 # Progress — Reviewer 2
 
-Last visited: 2026-09-03T03:46:20Z
+Last visited: 2026-09-03T17:51:30+09:00
 
-## Status
+## Status: Gameplay Bugs Overhaul Review
 - [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Inspected Rebel Infantry AI (SoldierEnemy.ts - 4 roles: Rifleman, Knife Charger, Grenadier, Shield Trooper, all isMeleeVulnerable: true)
-- [x] Inspected Mid-Boss Iron Technical (MidBossVehicle.ts - tread kinematics, 360° turret angular clamp 1.8 rad/s, cannon/mortar, 3-add spawn cap, health gates 240 & 80 HP, isMeleeVulnerable: false)
-- [x] Inspected Stage 1 Tetsuyuki Boss (TetsuyukiBoss.ts - 3 phases: artillery/rockets, hull breach/laser sweep/gatling, thruster meltdown/reactor core 1.5x damage, 4-stage timed chain explosion 3.2s, isMeleeVulnerable: false)
-- [x] Inspected Procedural Pixel Art & Parallax (Palette.ts, ProceduralSpriteFactory.ts, ParallaxBackground.ts, Camera.ts, CanvasRenderer.ts)
-- [x] Inspected Web Audio API & Voice Synthesis (SoundEngine.ts, SpeechSynthesizer.ts, 5 voice clips)
-- [x] Inspected Full Game Assembly & HUD (main.ts, HUDOverlay.ts)
-- [x] Ran build verification (`npm run build`) — PASSED
-- [x] Ran Playwright E2E browser tests (`npx playwright test`) — PASSED (3/3 tests)
-- [x] Ran Vitest test suite (`npx vitest run`) — FAILED: 2 tests failed in `tests/unit/challenger_boss_and_stability.test.ts` (Tetsuyuki boss damage-gating failure)
-- [x] Identified 2 key findings (Major: Tetsuyuki Boss burst phase skip defect; Moderate: PlayerController melee damage parameter mismatch)
-- [x] Formulated explicit verdict: REQUEST_CHANGES
+- [x] Inspected worker handoffs (Worker 1, 2, 3, 4)
+- [x] Verified spawning behavior:
+  - POWs pre-placed statically ahead of player at stage load (`initStaticPows()` at x=320, 850, 1450, 1710)
+  - Enemies spawn strictly out-of-bounds at $X = \text{cameraX} + 520 \ge \text{cameraX} + 480$ with ingress movement
+  - Minion spawning Y set to 192, aligning feet ($192 + 38 = 230$) with ground platform top surface
+  - Random timer popping completely removed; 0 spawns over 600 idle frames
+- [x] Verified boss rebalancing:
+  - Boss maxHealth asserted $\le 500$ (rebalanced to 400 HP in `TetsuyukiBoss.ts` and `main.ts`)
+  - Dynamic percentage thresholds implemented: 65% ($260$ HP) for Phase 2, 30% ($120$ HP) for Phase 3
+  - Single-frame burst damage clamped to prevent phase skipping
+  - HUD scaling verified normalized: `bossHealth / bossMaxHealth` scales 0-180px bar
+- [x] Verified Playwright E2E browser tests:
+  - Checked `tests/e2e/gameplay_controls.spec.ts`
+  - Genuine Chromium `page.keyboard.press('Space')` tested; samples live canvas player position; mathematically asserts $\Delta Y < -20\text{px}$ and landing
+  - Verified ArrowRight and ArrowLeft displacement ($\Delta X > 15\text{px}$)
+- [x] Ran independent verification commands:
+  - `npm run build` — PASSED (0 errors, 31 modules)
+  - `npx playwright test` — PASSED (14/14 tests in 5.8s)
+  - `npx vitest run` — PASSED (221/221 tests in 1.36s across 18 files)
+- [x] Conducted adversarial stress testing and checked for integrity violations (0 violations)
+- [x] Formulated explicit verdict: APPROVE
 - [x] Writing handoff.md report
+

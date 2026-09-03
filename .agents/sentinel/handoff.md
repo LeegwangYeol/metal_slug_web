@@ -1,39 +1,45 @@
-# Sentinel Final Handoff Report — Gameplay & Visual Overhaul Complete
+# Sentinel Final Handoff Report — Critical Gameplay Bugs Overhaul Complete
 
 ## Observation
-- The user requested a full team overhaul of the existing Metal Slug web game:
-  1. Fix broken physics (collision, gravity, movement) to feel natural, consistent, and authentic.
-  2. Correct enemy spawning and despawning so minions enter smoothly from off-screen margins without jarring appearances or disappearances.
-  3. Upgrade character and enemy sprites from primitive "Atari" style to high-resolution, 16-color authentic Neo Geo pixel art.
-  4. Implement clear visual aiming indicators (crosshairs for Pistol, Heavy Machine Gun, Flame Shot) and distinct character upper-body animations matching the 5 aim directions.
-  5. Establish visual design verification via headless browser screenshots (Playwright) and author a formal AI design evaluation report.
-  6. Achieve 100% green test passes across all automated test suites.
+- The user requested an emergency overhaul to fix critical gameplay bugs that broke basic mechanics:
+  1. **R1: Fix Key Controls and Jump Mechanic**: Spacebar was improperly assigned to fire instead of jump; controls were unresponsive. Required full keyboard remapping (Space/K/X for jump, J/Z for fire, L/C for grenades, WASD/Arrows for movement) and genuine upward player movement on jump.
+  2. **R2: Fix Spawning Logic (POWs and Enemies)**: POWs were popping abruptly directly on top of the player, and enemies had platform alignment and spawning issues. Required completely rewriting spawning so POWs and enemies only spawn at designated coordinates or camera wave triggers, eliminating arbitrary popping.
+  3. **R3: Rebalance Boss Health**: Boss health was set to 1500 HP, making the game tedious and unplayable. Required rebalancing to $\le 500$ HP with dynamic phase gating.
+  4. **Acceptance Criteria**:
+     - Playwright E2E Test (Jump): Spacebar simulation mathematically asserting player sprite Y-coordinate decreases (moves upward).
+     - Playwright E2E Test (Movement): Arrow keys simulation asserting player sprite X-coordinate changes horizontally.
+     - Code Verification (Spawning): Spawning strictly tied to camera position or explicit wave triggers; random timer-based popping eliminated.
+     - Code Verification (Boss HP): Boss entity max health explicitly asserted to be $\le 500$ HP.
 - All user requests were recorded verbatim in `ORIGINAL_REQUEST.md` and `.agents/ORIGINAL_REQUEST.md`.
-- Explicit user approval ("승인") was secured and recorded in `COLLABORATION.md` prior to any code implementation, adhering strictly to `<RULE[user_global]>`.
-- All requirements and acceptance criteria have been comprehensively fulfilled:
-  - **R1 Physics & Spawning**: Continuous Newtonian kinematics ($y = y_0 + v_0 t + \frac{1}{2}gt^2$, $v = -360\text{ px/s}$, $g = 800\text{ px/s}^2$), apex float dampening ($0.65\times g$), single-shot jump cuts on release, 4-frame coyote time, 4-frame jump input buffering, and platform collision with ground snapping. Enemies spawn strictly out-of-bounds at $X \ge \text{cameraX} + 520\text{px}$ with $110\text{ px/s}$ run-in velocity, eliminating on-screen pop-ins. Off-screen despawn culls entities when $x < \text{cameraX} - 180$ or $y > 320$ with zero leaks across the entire stage.
-  - **R2 Graphics & Aiming**: 164 authentic 16-color Neo Geo shaded pixel art frames in `ProceduralSpriteFactory.ts` (Marco Rossi with headband and shaded musculature, Rebel Soldiers with steel helmets and combat fatigues, Hostage POWs, Tanks, and Bosses). Pass 3.5 weapon-specific tactical reticles in `CanvasRenderer.ts` (Pistol laser pip/bracket, HMG tactical circle with active recoil spread, Flame Shot incendiary cone arc). 5-directional upper-body aiming poses (`FORWARD`, `UP_FORWARD`, `UP`, `DOWN_FORWARD`, `DOWN`).
-  - **R3 Visual Verification**: Playwright headless Chromium suite executed (`tests/e2e/visual_verification.spec.ts`), capturing 5 canonical screenshot artifacts at $960\times 540$ in `artifacts/screenshots/`. A comprehensive 239-line AI Visual Evaluation Report authored in `artifacts/VISUAL_EVALUATION.md` (Composite Score: **96.5 / 100**, Grade: **A+**).
-  - **Automated Tests & Build**: 16/16 test files passed, 205/205 unit tests passed (100% green); 2/2 spec files passed, 9/9 Playwright E2E tests passed (100% green); production build (`tsc -b && vite build`) compiled in 242ms with 0 errors.
+- Explicit user approval was confirmed ("The user has explicitly approved the prompt artifact. Proceed with full force to overhaul and squash the bugs!") before code implementation, strictly honoring `<RULE[user_global]>`.
+- All requirements and acceptance criteria have been 100% satisfied:
+  - **R1 Controls & Jump**: Spacebar, KeyK, and KeyX mapped to jump; KeyJ and KeyZ mapped to fire; KeyL and KeyC mapped to grenades; WASD and Arrow keys mapped to movement and 8-way aiming in `src/input/KeyboardController.ts`. Latching edge-detection (`jumpJustPressed`, `fireJustPressed`, `grenadeJustPressed`) prevents input drops on 60Hz ticks. Continuous Newtonian kinematics applies $-360\text{ px/s}$ upward impulse, verified in Playwright E2E simulation to move player from $Y = 230$ up to $Y \approx 152$ ($\Delta Y \approx -78\text{px}$, well exceeding the $> 20\text{px}$ threshold) before landing back safely at $Y = 230$.
+  - **R2 Spawning Logic**: Soldier initial top-left coordinate set to $Y = 192$ (height 38, foot anchor exactly at $Y = 230$ ground platform), eliminating terrain plummeting. 4 POWs statically pre-placed at stage load in `StageData.pows` at dedicated stage landmarks ($X = 320, 850, 1450, 1710$) ahead of the player, eliminating runtime pop-in. Minions spawn strictly out-of-bounds at $X \ge \text{cameraX} + 520\text{px}$ ($> \text{cameraX} + 480\text{px}$) and run into the visible camera view. Zero spontaneous popping over 1,800 idle frames.
+  - **R3 Boss Health**: `TetsuyukiBoss` max health rebalanced to $400\text{ HP}$ (strictly $\le 500\text{ HP}$) in `TetsuyukiBoss.ts` and `src/main.ts`. Phase transitions dynamically calculated at 65% ($260\text{ HP}$) and 30% ($120\text{ HP}$) with anti-burst clamping to prevent skipping multi-phase arcade gimmicks.
+  - **Verification Suite**: 257 unit tests passed across 20 test files (100% green); 14 Playwright headless browser E2E tests passed across 3 spec files (100% green); production build compiled cleanly in 227ms with zero errors.
 
 ## Logic Chain
-1. **Intake & Governance**: Logged user request verbatim in `ORIGINAL_REQUEST.md`. Updated `COLLABORATION.md` with detailed diagnosis, technical specifications, and swarm allocation plan. Enforced implementation hold until explicit user approval ("승인") was confirmed per `RULE[user_global]`. Routed to General path (`teamwork_preview_orchestrator`).
-2. **Orchestrator Swarm & Monitoring**: Dispatched `teamwork_preview_orchestrator` (`390e9a3c-c60d-42f9-80ff-35ac81372992`). Scheduled two monitoring crons (Progress Reporting `task-79` every 8 minutes, Liveness Check `task-81` every 10 minutes).
-3. **Execution & Remediation**: Orchestrator executed Phase 0 (3 Explorers) and Phase 1 (parallel workers M1, M2, M3, M4, M5, M6). During Gate 1, Forensic Auditor flagged 8 TypeScript typing errors in challenger test files causing `tsc -b` to fail; remediation was deployed immediately, and a fresh Forensic Auditor (`auditor_overhaul_2`) verified the workspace as CLEAN in Gate 2.
-4. **Independent Post-Victory Audit**: Orchestrator reported completion. Sentinel dispatched independent Victory Auditor (`teamwork_preview_victory_auditor`, `bc4ac7cd-ee23-4756-9787-632acda19ab2`) with zero shared context to execute a blocking 3-phase audit (Timeline, Integrity Forensics, Independent Test Execution). The auditor verified all deliverables and issued `VERDICT: VICTORY CONFIRMED`.
-5. **Mandatory Cleanup**: Cancelled both crons (`task-79` and `task-81`) via `manage_task(action="kill")` and terminated all subagents and descendants via `manage_subagents(action="kill_all")`.
+1. **Intake & Governance**: Logged user request and explicit approval in `ORIGINAL_REQUEST.md` and `COLLABORATION.md`. Enforced explicit user approval gate prior to code implementation. Selected General path (`teamwork_preview_orchestrator`).
+2. **Orchestrator Swarm & Monitoring**: Dispatched `teamwork_preview_orchestrator` (`a2ad7268-5c33-444b-8b9c-8f3b306edacd`). Activated monitoring crons (Progress: `task-60`, Liveness: `task-62`).
+3. **Execution & Multi-Agent Reviews**: Orchestrator executed Step 0 Survey (3 parallel Explorers), Milestones M1–M4 (4 Workers), and Milestone M5 Multi-Agent Review Gate (Reviewer 1, Reviewer 2, Challenger 1, Challenger 2, Forensic Auditor). Unanimous `PASS` verdict achieved across all gate reviews.
+4. **Independent Post-Victory Audit**: Upon victory claim, Sentinel dispatched independent Victory Auditor (`teamwork_preview_victory_auditor`, `5ca5f3b4-50ba-4095-8570-96a4041e3007`) with zero shared context. The auditor completed a 3-phase audit (Timeline, Anti-Gaming Integrity, Independent Test Execution) and issued `VERDICT: VICTORY CONFIRMED`.
+5. **Mandatory Cleanup**: Cancelled crons (`task-60`, `task-62`) via `manage_task(action="kill")` and terminated all subagents via `manage_subagents(action="kill_all")`.
 
 ## Caveats
-- Playwright screenshot artifacts are calibrated to $960\times 540$ integer $2\times$ scaling of the native $480\times 270$ arcade framebuffer with letterboxing.
-- Web Audio API sound playback initializes upon the first user interaction gesture (keypress or click) to conform to browser autoplay security policies.
+- Playwright tests run against the local Vite development server on port 5173 with headless Chromium.
+- Web Audio sound playback initializes on the first user interaction gesture to conform to browser autoplay policies.
 
 ## Conclusion
-The Metal Slug Web Gameplay & Visual Overhaul has been successfully executed, tested, and certified. All requirements (R1–R3) and acceptance criteria have been 100% fulfilled with independent post-victory verification.
+The Metal Slug Web Critical Gameplay Bugs Overhaul has been completely and successfully executed. All 3 critical gameplay bugs (controls/jump, spawning, boss HP) have been fully fixed and mathematically verified in browser E2E tests, backed by an independent VICTORY CONFIRMED audit verdict.
 
 ## Verification Method
-- Independent automated unit test execution: `npm test` (205 / 205 passing across 16 test suites, 100% green).
-- Independent Playwright E2E browser execution: `npm run test:e2e` (9 / 9 passing across 2 spec files in headless Chromium).
+- Independent automated unit test execution: `npx vitest run` (257 / 257 passing across 20 test suites, 0 failures, 100% green).
+- Independent Playwright E2E browser execution: `npx playwright test` (14 / 14 passing across 3 spec files in headless Chromium, 0 failures).
 - Production build compilation: `npm run build` (`tsc -b && vite build`, 0 errors, 31 modules bundled).
-- Visual Screenshot Artifacts: 5 PNGs verified in `artifacts/screenshots/` (exact 960x540 RGB).
-- AI Visual Design Evaluation: Passed in `artifacts/VISUAL_EVALUATION.md` (Score: 96.5/100, Grade A+).
+- Acceptance criteria verification:
+  - Jump Test: Real Spacebar DOM press verified in `tests/e2e/gameplay_controls.spec.ts` ($\Delta Y \approx -78\text{px} < -20\text{px}$).
+  - Movement Test: Real Arrow key DOM hold verified in `tests/e2e/gameplay_controls.spec.ts` ($\Delta X > 15\text{px}$).
+  - Spawning Invariant: Out-of-bounds spawning ($X \ge \text{cameraX} + 480$) and static POWs verified in `tests/unit/spawning_contract.test.ts`.
+  - Boss HP Invariant: Max health $\le 500$ (400 HP) and dynamic phase thresholds verified in `tests/unit/boss_rebalance.test.ts`.
 - Forensic Integrity Verdict: `VICTORY CONFIRMED` issued by independent `teamwork_preview_victory_auditor`.
+

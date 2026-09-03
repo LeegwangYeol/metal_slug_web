@@ -1,13 +1,13 @@
-# BRIEFING — 2026-09-03T16:29:30+09:00
+# BRIEFING — 2026-09-03T17:24:30+09:00
 
 ## Mission
-Sentinel oversight for Metal Slug Web Gameplay & Visual Overhaul. Ensure verbatim user request capture, maintain Claude collaboration guide, enforce explicit user approval before implementation, route to General orchestrator, monitor swarm execution via crons, and perform independent victory audit upon completion.
+Sentinel oversight for Metal Slug Web Critical Gameplay Bugs Overhaul (R1 Controls & Jump, R2 Spawning, R3 Boss Health). Record user requests, maintain Claude collaboration, route to General orchestrator, monitor swarm execution via crons, and enforce independent victory audit upon completion.
 
 ## 🔒 My Identity
 - Archetype: sentinel
-- Working directory: /Users/user/src/fullmetalslug/.agents/sentinel
-- Orchestrator: 390e9a3c-c60d-42f9-80ff-35ac81372992 (completed & terminated)
-- Victory Auditor: bc4ac7cd-ee23-4756-9787-632acda19ab2 (completed & terminated)
+- Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/sentinel
+- Orchestrator: a2ad7268-5c33-444b-8b9c-8f3b306edacd (victory claimed)
+- Victory Auditor: 5ca5f3b4-50ba-4095-8570-96a4041e3007 (active audit)
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
@@ -16,16 +16,14 @@ Sentinel oversight for Metal Slug Web Gameplay & Visual Overhaul. Ensure verbati
 - Victory Audit is MANDATORY before reporting completion
 
 ## User Context
-- **Last user request**: The user has explicitly approved the plan ("승인"). Overhaul gameplay, physics, spawning, graphics, aiming indicators, and visual verification.
+- **Last user request**: 2026-09-03T08:22:19Z — Fix critical gameplay bugs: R1 Key controls/jump mechanic, R2 spawning logic (POWs and enemies), R3 boss health rebalance. Playwright E2E tests for jump (Y-coord) and movement (X-coord), code verification for spawning and boss HP <= 500.
+- **Approval status**: 2026-09-03T08:23:20Z — Explicit user approval granted ("The user has explicitly approved the prompt artifact. Proceed with full force to overhaul and squash the bugs!").
 - **Pending clarifications**: none
 - **Delivered results**:
-  - Overhaul plan documented, agreed upon, and approved in `COLLABORATION.md`.
-  - All 6 milestones (M1–M6) fully delivered and verified.
-  - 100% green test results across all test suites (205/205 unit tests, 9/9 Playwright E2E tests).
-  - Production build compiles cleanly in 242ms with 0 errors.
-  - All 5 Playwright visual screenshot artifacts captured at 960x540 in `artifacts/screenshots/`.
-  - Formal 239-line AI visual evaluation critique delivered in `artifacts/VISUAL_EVALUATION.md` (Score: 96.5/100, Grade: A+).
-  - Independent Victory Audit completed with verdict **VICTORY CONFIRMED**.
+  - `ORIGINAL_REQUEST.md` updated in root and `.agents/`.
+  - `COLLABORATION.md` updated with root cause analysis and technical specs.
+  - Project Orchestrator dispatched (`a2ad7268-5c33-444b-8b9c-8f3b306edacd`).
+  - Monitoring crons configured and active (Progress: task-60, Liveness: task-62).
 
 ## Project Status
 - **Phase**: complete
@@ -37,17 +35,16 @@ Sentinel oversight for Metal Slug Web Gameplay & Visual Overhaul. Ensure verbati
 - **Retry count**: 0
 
 ## Crons & Subagent Cleanup
-- **Cron 1 (task-79)**: Terminated
-- **Cron 2 (task-81)**: Terminated
+- **Cron 1 (task-60)**: Terminated
+- **Cron 2 (task-62)**: Terminated
 - **Subagents**: All killed cleanly via `kill_all`
 
 ## Artifact Index
-- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` — Authoritative verbatim user request
-- `/Users/user/src/fullmetalslug/.agents/ORIGINAL_REQUEST.md` — Agent copy of verbatim user request
-- `/Users/user/src/fullmetalslug/COLLABORATION.md` — Claude collaboration and overhaul specification guide
-- `/Users/user/src/fullmetalslug/artifacts/screenshots/` — 5 canonical 960x540 visual verification screenshots
-- `/Users/user/src/fullmetalslug/artifacts/VISUAL_EVALUATION.md` — Formal AI visual design critique report
-- `/Users/user/src/fullmetalslug/.agents/sentinel/BRIEFING.md` — Sentinel working memory and state
-- `/Users/user/src/fullmetalslug/.agents/sentinel/handoff.md` — Sentinel final handoff report
-- `/Users/user/src/fullmetalslug/.agents/orchestrator/handoff.md` — Project orchestrator final handoff
-- `/Users/user/src/fullmetalslug/.agents/victory_auditor/handoff.md` — Independent Victory Auditor handoff report
+- `/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md` — Authoritative verbatim user request
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md` — Agent copy of verbatim user request
+- `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md` — Claude collaboration and overhaul specification guide
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/sentinel/BRIEFING.md` — Sentinel working memory and state
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/sentinel/handoff.md` — Sentinel final handoff report
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_gameplay/handoff.md` — Project orchestrator final handoff
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/victory_auditor_gameplay/handoff.md` — Independent Victory Auditor handoff report
+

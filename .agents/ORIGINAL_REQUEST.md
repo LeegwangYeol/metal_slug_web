@@ -65,3 +65,33 @@ You MUST use a headless browser (e.g., Chrome DevTools or Playwright) to take sc
 ## 2026-09-03T06:13:54Z
 
 The user has explicitly approved the plan. Please proceed with the code implementation and dispatch the orchestrator swarm. (User message: "승인")
+
+## 2026-09-03T08:22:19Z
+
+Use a very large team of agents. Completely overhaul and fix the critical gameplay bugs in the Metal Slug web game. The previous implementation severely broke basic mechanics despite passing tests.
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Fix Key Controls and Jump Mechanic
+The jump mechanic is currently completely missing or broken, and key controls are unresponsive or terrible. Re-implement and map the keyboard controls correctly so that the player can move, jump, and shoot smoothly.
+
+### R2. Fix Spawning Logic (POWs and Enemies)
+POWs currently spawn out of nowhere, and enemies do not appear properly. Completely rewrite the spawning system so that enemies and POWs only spawn at designated coordinates or wave triggers, not randomly popping into the screen.
+
+### R3. Rebalance Boss Health
+The boss health is currently set way too high, making it unplayable. Rebalance the boss HP to a reasonable level for a web game stage.
+
+## Acceptance Criteria
+
+### E2E Gameplay Verification (No Fake Tests)
+- [ ] Playwright E2E Test (Jump): A headless browser test MUST simulate pressing the jump key (e.g., Spacebar) and mathematically assert that the player sprite's Y-coordinate actually changes (moves upward).
+- [ ] Playwright E2E Test (Movement): A headless browser test MUST simulate pressing the left/right arrow keys and assert that the player's X-coordinate changes accordingly.
+- [ ] Code Verification (Spawning): Spawning logic must be strictly tied to camera position or explicit wave triggers. Random timer-based popping must be removed.
+- [ ] Code Verification (Boss HP): The Boss entity's max health must be explicitly asserted in a test to be <= 500 (or a similarly reasonable threshold).
+
+## 2026-09-03T08:23:20Z
+
+The user has explicitly approved the prompt artifact. Proceed with full force to overhaul and squash the bugs!

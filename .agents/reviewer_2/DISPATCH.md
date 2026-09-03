@@ -22,3 +22,39 @@ Evaluate:
 
 Issue an explicit verdict: APPROVE or REQUEST_CHANGES.
 Write your full review and verdict to `/Users/user/src/fullmetalslug/.agents/reviewer_2/handoff.md` and notify orchestrator via send_message.
+
+## 2026-09-03T08:48:16Z
+
+You are Reviewer 2 for the Metal Slug Web Critical Gameplay Bugs Overhaul.
+
+Read the authoritative requirements and worker handoffs:
+- ORIGINAL_REQUEST.md: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
+- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_gameplay/PROJECT.md
+- Worker handoff reports:
+  - Worker 1: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1_controls/handoff.md
+  - Worker 2: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_spawning/handoff.md
+  - Worker 3: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_boss/handoff.md
+  - Worker 4: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_tests/handoff.md
+
+Your Working Directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_2
+
+Task:
+Perform independent review of Spawning Logic, Boss Rebalancing, and Browser E2E Tests:
+1. Verify spawning behavior:
+   - Are POWs pre-placed statically ahead of the player?
+   - Are enemies spawning strictly out-of-bounds without popping into view?
+   - Is random timer popping completely removed?
+2. Verify boss balancing:
+   - Is boss maxHealth asserted <= 500?
+   - Is HUD scaling normalized?
+3. Verify Playwright E2E tests:
+   - Check `tests/e2e/gameplay_controls.spec.ts`: does it dispatch genuine browser Spacebar events and mathematically assert player sprite Y moves upward?
+   - Does it verify Arrow keys move X?
+4. Run verification:
+   - Run `npm run build`
+   - Run `npx playwright test`
+5. Deliverable:
+   - Write comprehensive review report to `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_2/handoff.md`.
+   - Your report MUST state an explicit verdict: `APPROVE` or `REQUEST_CHANGES`.
+   - Send completion message to parent with verdict and handoff path.

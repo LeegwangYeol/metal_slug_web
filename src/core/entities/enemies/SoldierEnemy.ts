@@ -252,7 +252,19 @@ export class SoldierEnemy implements EnemyEntity {
     const isOffscreenRight = config.cameraX !== undefined && this.position.x > config.cameraX + 460;
     const isOffscreenLeft = config.cameraX !== undefined && this.position.x < config.cameraX - 20;
 
-    if (config.isIngress || isOffscreenRight || isOffscreenLeft) {
+    // Mid-boss reinforcement adds enter smoothly from off-screen right (X >= 1220)
+    if (this.id.startsWith('midboss_add_')) {
+      const spawnX = Math.max(config.cameraX !== undefined ? config.cameraX + 520 : 1220, 1220);
+      this.position.x = spawnX;
+      this.position.y = 192;
+      this.bounds.x = this.position.x;
+      this.bounds.y = this.position.y;
+      this.facing = -1;
+      this.velocity.x = -110;
+      this.isIngress = true;
+      this.ingressCameraX = config.cameraX ?? 720;
+      this.state = 'INGRESS';
+    } else if (config.isIngress || isOffscreenRight || isOffscreenLeft) {
       this.isIngress = true;
       this.ingressCameraX = config.cameraX ?? (isOffscreenRight ? this.position.x - 520 : 0);
       this.facing = isOffscreenLeft ? 1 : -1;
@@ -369,18 +381,20 @@ export class SoldierEnemy implements EnemyEntity {
   private transitionToNormalRoleAI(): void {
     switch (this.role) {
       case 'RIFLE':
-        this.patrolMinX = this.position.x - 100;
-        this.patrolMaxX = this.position.x + 50;
+        this.patrolMinX = this.position.x - 120;
+        this.patrolMaxX = this.position.x + 20; // Keep within visible viewport, never retreat off-screen!
         this.velocity.x = this.facing * this.walkSpeed;
         this.transitionTo('PATROL');
         break;
       case 'KNIFE':
-        this.velocity.x = 0;
+        // Smoothly advance toward player instead of freezing dead at screen edge
+        this.velocity.x = this.facing * 70;
         this.transitionTo('IDLE');
         break;
       case 'GRENADE':
-        this.velocity.x = 0;
-        this.transitionTo('IDLE');
+        // Smoothly advance toward optimal standoff range
+        this.velocity.x = this.facing * 50;
+        this.transitionTo('SEEK_STANDOFF');
         break;
       case 'SHIELD':
         this.velocity.x = this.facing * 45;
@@ -571,14 +585,20 @@ export class SoldierEnemy implements EnemyEntity {
     switch (this.state) {
       case 'IDLE':
       case 'PATROL': {
-        this.velocity.x = 0;
         if (target && target.isAlive !== false) {
           const dist = Math.abs(target.position.x - this.position.x);
           if (dist <= 180) {
             this.facing = target.position.x >= this.position.x ? 1 : -1;
             this.velocity.x = this.facing * 170;
             this.transitionTo('SPRINT');
+          } else {
+            // Smoothly advance toward player instead of freezing
+            this.facing = target.position.x >= this.position.x ? 1 : -1;
+            this.velocity.x = this.facing * 70;
           }
+        } else {
+          // In absence of target, advance forward in facing direction
+          this.velocity.x = this.facing * 70;
         }
         break;
       }
@@ -657,7 +677,8 @@ export class SoldierEnemy implements EnemyEntity {
             }
           }
         } else {
-          this.velocity.x = 0;
+          // Advance forward in current facing direction
+          this.velocity.x = this.facing * 50;
         }
         break;
       }

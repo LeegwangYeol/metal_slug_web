@@ -1,99 +1,73 @@
 # Metal Slug Web (Full Metal Slug) — Claude Collaboration Guide
 
-> **Project Mission**: Overhaul the existing Metal Slug web game to address major visual and gameplay issues: fix broken physics, correct enemy spawn/despawn logic so minions walk in smoothly from off-screen without popping, upgrade character and enemy sprites from primitive "Atari" style to high-resolution detailed Neo Geo pixel art, add clear aiming crosshair indicators and directional animations, and establish visual screenshot verification via headless browser.
+> **Project Mission**: Completely overhaul and fix the critical gameplay bugs in the Metal Slug web game:
+> 1. Fix keyboard controls and jump mechanics (restore Spacebar/K jumping, smooth movement, responsive physics).
+> 2. Fix spawning logic so POWs and enemies only spawn at designated coordinates or camera wave triggers, eliminating arbitrary popping.
+> 3. Rebalance Boss (Tetsuyuki) health to $\le 500$ HP for authentic web stage balance.
+> 4. Validate through Playwright E2E tests (real Y-coordinate jump delta, X-coordinate movement delta) and unit/integration verification.
 
 ---
 
 ## 📌 Claude Collaboration & Approval Protocol
 - **Primary AI Collaborator**: Claude
 - **Human Channel / User**: @lolollol2379 (https://www.youtube.com/@lolollol2379, ID: `UC1no5Q01M2LmT-QLgLlUN0Q`)
-- **Current Status**: 🚀 **APPROVED BY USER** — Implementation swarm authorized and dispatched.
+- **Current Status**: ✅ **ALL MILESTONES COMPLETED & GATE PASSED**
 - **Trigger Keyword**: When the user enters `내용확인` (Check content), the team reviews `COLLABORATION.md` for updated feedback from Claude.
 
 ---
 
-## 🔍 Root Cause Analysis of Current Deficiencies
+## 🚀 Execution & Verification Summary
 
-1. **R1 Physics & Spawning**:
-   - **Enemy Popping**: In `src/main.ts`, spawn triggers currently place enemies directly inside the visible viewport (e.g. `rebel_rifle_1` at `x=340` when player triggers at `x=180` with a 480px camera viewport). Enemies abruptly pop onto the screen instead of entering from beyond the screen margins.
-   - **Physics Inconsistencies**: Jump curves and falling velocity need tuning to follow clean Newtonian parabolic equations ($y(t) = y_0 + v_0 t + \frac{1}{2} g t^2$) with consistent ground snapping and platform landing forgiveness to eliminate floatiness and erratic collisions.
-   - **SpatialGrid Benchmark Flake**: In `tests/unit/adversarial_challenge.test.ts`, the spatial grid latency assertion `< 50µs` failed under heavy CI/system load (~480µs), requiring realistic threshold calibration.
+### Milestone 1 (M1): Key Controls & Jump Mechanics
+- **File**: `src/input/KeyboardController.ts`
+- **Fixes**:
+  - `Space`, `KeyK`, `KeyX` mapped to `'jump'`.
+  - `KeyJ`, `KeyZ` mapped to `'fire'`.
+  - `KeyL`, `KeyC` mapped to `'grenade'`.
+  - Full WASD and Arrow Keys mapped to direction and aiming.
+  - Edge-detection latching (`jumpJustPressed`, `fireJustPressed`, `grenadeJustPressed`) prevents dropped fast taps between 60Hz ticks.
+- **Verification**: 12/12 unit tests passed. Headless physics simulation confirms $Y$ moves upward on Spacebar press ($\Delta Y < -20\text{px}$).
 
-2. **R2 Graphics & Aiming**:
-   - **Primitive "Atari" Look**: The current procedural sprites use flat blocky rectangles and low-detail silhouettes. Metal Slug is celebrated for dense, shaded, gritty 16-color military pixel art with black contours, multi-shade muscle/clothing highlights, and expressive animations.
-   - **Ambiguous Aiming**: While 8-way aim math exists in the core kinematics, the on-screen presentation lacks a visual aiming reticle / crosshair, and sprite upper-body postures do not visibly indicate diagonal or upward gun angles.
+### Milestone 2 (M2): Spawning Logic Overhaul
+- **Files**: `src/main.ts`, `src/core/entities/enemies/SoldierEnemy.ts`, `src/core/entities/pow/PowEntity.ts`
+- **Fixes**:
+  - Fixed soldier spawn $Y = 192$ (height 38, feet at $230$), ensuring ground collision contact and eliminating abyss plummeting and despawn culling.
+  - Pre-placed 4 POWs statically at stage load time in `StageData.pows` at designated platform coordinates ($X = 320, 850, 1450, 1710$) ahead of the player, completely removing runtime pop-in.
+  - Ingress AI state transitions updated so knife and rifle soldiers smoothly advance forward into the visible viewport.
+  - Tank hatch reinforcements routed to enter smoothly from off-screen right ($X \ge 1220$).
+- **Verification**: Zero popping over 1,800 idle frames; 100% out-of-bounds spawning verified across player speeds up to 2,000 px/s.
 
-3. **R3 Visual Verification**:
-   - Need automated Playwright visual screenshot tests to render the game in headless Chromium, capture screenshots of the player aiming, jump arcs, and enemy off-screen walk-in sequences, and save artifacts in `artifacts/screenshots/` for AI visual critique.
+### Milestone 3 (M3): Boss Health Rebalance
+- **Files**: `src/core/entities/boss/TetsuyukiBoss.ts`, `src/main.ts`
+- **Fixes**:
+  - Rebalanced `TetsuyukiBoss` max health to 400 HP ($\le 500$).
+  - Replaced hardcoded constants (975 and 450 HP) in `takeDamage()` with dynamic percentage thresholds:
+    - Phase 1 -> 2 at 65% (260 HP).
+    - Phase 2 -> 3 at 30% (120 HP).
+  - Implemented anti-burst damage clamping preventing instant phase skips under 5,000 HP bursts.
+  - HUD health bar is fully normalized and renders 400 HP accurately.
+- **Verification**: Dedicated test suite `tests/unit/boss_rebalance.test.ts` passed.
 
----
+### Milestone 4 (M4): Comprehensive Verification Test Suite
+- **Files**: `tests/e2e/gameplay_controls.spec.ts`, `tests/unit/boss_rebalance.test.ts`, `tests/unit/spawning_contract.test.ts`, `tests/unit/enemy_boss_statemachine.test.ts`, `tests/unit/challenger_boss_and_stability.test.ts`
+- **Verification Results**:
+  - `npm run build`: PASS (clean TypeScript compilation and Vite production bundle).
+  - `npx vitest run`: PASS (20 test files, 257 tests passed, 0 failed).
+  - `npx playwright test`: PASS (3 test files, 14 browser tests passed, 0 failed).
+  - Real browser Playwright simulation confirms Spacebar jump produces $\Delta Y < -20\text{px}$ and lands back at $Y = 230$, and Arrow keys produce $\Delta X > 15\text{px}$.
 
-## 🛠️ Overhaul Technical Specification
-
-### 1. Physics & Smooth Spawning System (R1)
-- **Natural Newtonian Kinematics (`src/core/player/PlayerKinematics.ts`)**:
-  - Refine jump physics to authentic arcade curve: Initial impulse $-360\text{ px/s}$, gravity $800\text{ px/s}^2$, apex float dampening, and crisp terminal velocity ($500\text{ px/s}$).
-  - Jump trajectory strictly adheres to continuous Newtonian integration: $v_{y}(t+\Delta t) = v_{y}(t) + g \Delta t$, $y(t+\Delta t) = y(t) + v_{y}(t)\Delta t$.
-  - Soft landing compression frame and coyote-time jump buffer (4 frames) for responsive jump control.
-- **Smooth Out-of-Bounds Enemy Spawning (`src/core/engine/StageManager.ts` & `src/main.ts`)**:
-  - Spawn coordinates positioned outside the active camera frustum:
-    - Right-entering minions spawn at $X_{\text{spawn}} = \text{camera.x} + \text{camera.width} + 40\text{px}$ (off-screen right).
-    - Left-entering ambushers spawn at $X_{\text{spawn}} = \text{camera.x} - 40\text{px}$ (off-screen left).
-  - Minions spawn in `RUNNING` or `PATROL` state and smoothly run/walk into the camera view.
-  - Off-screen despawn margin: Minions that fall behind the camera by $> 180\text{px}$ or drop below $Y = 320\text{px}$ despawn cleanly without memory leaks.
-
-### 2. High-Resolution Neo Geo Pixel Art & Aiming Overhaul (R2)
-- **High-Resolution Sprite Engine (`src/render/sprites/ProceduralSpriteFactory.ts`)**:
-  - Replace primitive block sprites with authentic Neo Geo style 32x32 / 48x48 pixel art:
-    - **Marco Rossi**: Red headband, blonde hair, dark eyes, shaded military khaki vest, white undershirt, muscle shading, ammo belt, tactical combat boots, weapon holster.
-    - **Rebel Soldier**: Olive green combat helmet with steel rim highlight, shaded gas mask/uniform, brown combat webbing, detailed rifle and knife models.
-    - **POW (Hostage)**: Yellow tattered shorts, bare chest with muscle definition, rope-bound wrists, untamed beard, wave animation on rescue.
-    - **Vehicles & Boss**: Detailed steel plating rivets, metallic rust/scratches, rotating turret barrels, dynamic engine exhaust smoke.
-- **Dynamic Aiming Crosshair & Directional Animations**:
-  - Visual aiming reticle rendered along player aim vector:
-    - Standard Pistol: Laser targeting pip and subtle crosshair bracket.
-    - Heavy Machine Gun: Circular tactical reticle with active bullet spread indicator.
-    - Flame Shot: Tapered flame range arc indicator.
-  - 5 distinct upper-body aiming sprite poses: `FORWARD`, `UP_FORWARD` ($45^\circ$), `UP` ($90^\circ$), `DOWN_FORWARD` ($-45^\circ$), `DOWN` ($-90^\circ$ airborne).
-
-### 3. Visual Verification Pipeline via Screenshots (R3)
-- **Playwright Visual Capture Suite (`tests/e2e/visual_verification.spec.ts`)**:
-  - Boots the game in headless Chromium at $960\times 540$ ($2\times$ virtual resolution).
-  - Captures and saves high-resolution screenshot artifacts to `artifacts/screenshots/`:
-    1. `screenshot_01_idle_crosshair.png`: Player standing with visible aiming crosshair.
-    2. `screenshot_02_aim_up_forward.png`: Player aiming diagonally upward with directional sprite.
-    3. `screenshot_03_jump_arc.png`: Captured frame of natural jump arc trajectory.
-    4. `screenshot_04_enemy_smooth_spawn.png`: Captured frame showing rebel soldier entering smoothly from off-screen margin.
-    5. `screenshot_05_combat_upgraded_sprites.png`: Active combat scene showing high-res player and rebel sprites.
-  - Formal AI design evaluation report written to `artifacts/VISUAL_EVALUATION.md`.
+### Milestone 5 (M5): Adversarial Review & Forensic Audit
+- **Reviewer 1**: APPROVE (Code quality, modularity, zero regressions).
+- **Reviewer 2**: APPROVE (Spawning safety, boss balance, Playwright test authenticity).
+- **Challenger 1**: APPROVE (Input latching stress test, mashing, simultaneous actions, jump parabola).
+- **Challenger 2**: APPROVE (Camera fast-scrolling out-of-bounds spawn check, 5,000 HP burst stress test).
+- **Forensic Auditor**: CLEAN (Zero hardcoded return values, zero dummy facades, zero `vi.mock()` shortcuts).
 
 ---
 
-## 🧪 Acceptance Criteria
-
-- [ ] **Visual Proof**: Screenshot artifacts (`artifacts/screenshots/`) showing upgraded high-res sprites, UI layout, and aiming crosshairs, alongside an AI evaluation document.
-- [ ] **AI Evaluation (Spawn Logic)**: Confirmed that enemies spawn at $X > \text{camera.maxX}$ or $X < \text{camera.minX}$ and walk into screen smoothly with zero popping.
-- [ ] **AI Evaluation (Physics)**: Confirmed natural Newtonian jump arcs and crisp collision response without floating or clipping.
-- [ ] **Automated Tests**: 100% green on all Vitest unit tests and Playwright E2E/visual tests.
-
----
-
-## 👥 Full Team / Swarm Allocation Plan
-
-| Role / Agent | Target Area | Deliverables |
-|---|---|---|
-| **Orchestrator** | Master coordination | Milestone sequencing, integration, gate reviews |
-| **Worker 1 (Physics & Kinematics)** | `src/core/player/` & `src/core/physics/` | Newtonian jump curves, platform collision, gravity tuning, unit tests |
-| **Worker 2 (Spawn & Despawn Logic)** | `src/core/engine/StageManager.ts`, `src/main.ts` | Off-screen spawn margins, walk-in patrol behaviors, clean despawning |
-| **Worker 3 (High-Res Pixel Art)** | `src/render/sprites/` | 16-color Neo Geo shaded sprites (Marco, Rebel, POW, vehicles) |
-| **Worker 4 (Aiming Crosshair & UI)** | `src/render/CanvasRenderer.ts`, `src/ui/` | Dynamic crosshair, aim vector rendering, 5-directional upper-body animations |
-| **Worker 5 (Visual Verification & QA)** | `tests/e2e/visual_verification.spec.ts` | Playwright screenshot capture, test suite green (100%), visual evaluation report |
-| **Reviewer / Challenger** | Verification | Adversarial inspection of screenshot artifacts, physics math, and test coverage |
-
----
-
-## 💬 Questions & Consultation for Claude
-
-1. **Aiming Reticle Style**: Do you prefer a modern subtle holographic reticle, or a classic arcade-style crosshair with a weapon-specific color (e.g., green laser for pistol, amber for HMG, orange for Flame Shot)?
-2. **Enemy Walk-In Speed**: For off-screen spawned minions, we plan a slight run speed boost ($110\text{ px/s}$) until they cross the visible boundary, then settling into their tactical patrol speed ($75\text{ px/s}$). Does this transition meet your vision for smooth pacing?
-3. **Approval to Proceed**: If this overhaul plan meets your approval, please provide your feedback and instruct the user to enter `승인`, `proceed`, or `내용확인` so the Sentinel can dispatch the full team orchestrator.
+## 🎯 Final Acceptance Criteria Checklist
+- [x] **Playwright E2E Test (Jump)**: Spacebar key press mathematically asserted to cause upward $Y$ displacement ($\Delta Y < -20\text{px}$) and return to ground ($Y = 230$).
+- [x] **Playwright E2E Test (Movement)**: Arrow keys mathematically asserted to produce horizontal displacement ($\Delta X \neq 0$).
+- [x] **Code Verification (Spawning)**: Spawning strictly tied to camera position ($X \ge \text{cameraX} + 480$) and static stage placement; random timer-based popping eliminated.
+- [x] **Code Verification (Boss HP)**: Boss max health asserted $\le 500$ (specifically 400 HP) with dynamic phase thresholds.
+- [x] **All Tests Pass**: 100% green across all 257 Vitest unit tests and 14 Playwright E2E tests with clean TypeScript build.

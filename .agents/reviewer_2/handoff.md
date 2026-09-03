@@ -1,270 +1,368 @@
-# Handoff Report — Reviewer 2 (Enemies, Bosses, Visual Assets & Audio)
+# Handoff Report — Reviewer 2 (Spawning Logic, Boss Rebalancing & Browser E2E Tests)
 
 ## Review Summary
 
-**Verdict**: **REQUEST_CHANGES**
+**Verdict**: **APPROVE**
+
+This independent review evaluated the Critical Gameplay Bugs Overhaul across four core dimensions:
+1. **Spawning Logic Overhaul**: Soldier physics ground alignment, static POW pre-placement, out-of-bounds wave ingress, and complete elimination of random timer popping.
+2. **Boss Rebalancing & Dynamic Gating**: Tetsuyuki Boss maxHealth rebalanced to 400 HP (asserted $\le 500$ HP), dynamic percentage-based phase thresholds (65% for Phase 2, 30% for Phase 3), burst damage clamping, and normalized HUD scaling.
+3. **Browser E2E Gameplay Tests**: Real Chromium browser test in `tests/e2e/gameplay_controls.spec.ts` simulating genuine DOM Spacebar keypresses, mathematically asserting upward displacement ($\Delta Y < -20\text{px}$) and landing, as well as Arrow key horizontal movement ($\Delta X > 15\text{px}$).
+4. **Integrity & Quality Audit**: Zero integrity violations found. No hardcoded test responses in source code, no dummy facades, no bypassed tasks, and zero fabricated logs.
+
+All automated verification commands passed cleanly:
+- `npm run build`: Exit code 0 (clean TypeScript build and Vite production bundle).
+- `npx playwright test`: 14 passed (100% green across 3 test suites in 5.8s).
+- `npx vitest run`: 221 passed across 18 test files (100% green in 1.36s).
 
 ---
 
 ## 1. Observation
 
-### Observation 1: Test Suite Execution & Unit Test Failures
-Running `npx vitest run` fails with exit code 1.
-Tool command:
-```bash
-npx vitest run
-```
-Verbatim output:
-```
- FAIL  tests/unit/challenger_boss_and_stability.test.ts > CHALLENGER_2: Boss AI, Health Gating & Long-Run Stability Stress Suite > Task 1: Tetsuyuki Boss Damage-Gating Adversarial Stress Test > ORACLE CONTRACT 1A: Phase 1 must clamp at 975 HP on 2000 HP burst and not skip to death
-AssertionError: expected +0 to be 975 // Object.is equality
+### 1.1 Spawning Behavior Observations
 
-- Expected
-+ Received
-- 975
-+ 0
+1. **Static POW Pre-placement at Stage Initialization**:
+   - Location: `src/main.ts` lines 128–152 (`initStaticPows()`)
+   - Verbatim code:
+     ```typescript
+     public initStaticPows(): void {
+       const staticPows = [
+         new PowEntity("pow_1", vec2(320, 175), ItemDropType.WEAPON_HMG),
+         new PowEntity("pow_2", vec2(850, 175), ItemDropType.WEAPON_FLAME),
+         new PowEntity("pow_3", vec2(1450, 165), ItemDropType.GRENADE_CRATE),
+         new PowEntity("pow_4", vec2(1710, 175), ItemDropType.WEAPON_HMG),
+       ];
+       for (const pow of staticPows) {
+         this.engine.addEntity(pow);
+       }
+       // Flush initial additions into engine registry
+       const eng = this.engine as any;
+       if (eng.entitiesToAdd && eng.entitiesToAdd.length > 0) {
+         for (const entity of eng.entitiesToAdd) {
+           eng.entities.set(entity.id, entity);
+           eng.spatialGrid.insert(entity);
+         }
+         eng.entitiesToAdd = [];
+       }
+     }
+     ```
+   - Observation: All 4 POWs are instantiated at stage load at $X = 320, 850, 1450, 1710$, well ahead of player starting spawn ($X = 80$). Runtime triggers in `buildStage1Data()` no longer dynamically instantiate `PowEntity` instances on top of the player or within the active camera view.
 
- ❯ tests/unit/challenger_boss_and_stability.test.ts:43:27
-     41|       // "verify that Phase 1 clamps at 975 HP, Phase 2 clamps at 450 HP,
-     42|       // and the boss does not skip directly to death without triggering the required phases."
-     43|       expect(boss.health).toBe(975);
-       |                           ^
-     44|       expect(boss.phase).toBe('PHASE_2_LASER_SWEEP');
+2. **Strictly Out-of-Bounds Wave Spawning & Ingress**:
+   - Location: `src/main.ts` lines 696–765 (`triggers`)
+   - Verbatim wave spawner coordinates:
+     - `trigger_wave_1` ($X = 180$): `spawnBaseX = cameraX + 520`, staggered $+40\text{px}$ (`cameraX + 560`).
+     - `trigger_wave_2` ($X = 420$): `spawnBaseX = cameraX + 520`, staggered $+40\text{px}$, $+80\text{px}$ (`cameraX + 600`).
+     - `trigger_mid_boss` ($X = 740$): support infantry at `Math.max(cameraX + 520, 1220)`.
+     - `trigger_wave_3` ($X = 1240$): `spawnBaseX = cameraX + 520`, staggered $+40\text{px}$, $+80\text{px}$.
+   - Viewport width is $480\text{px}$. With `spawnBaseX = cameraX + 520`, all enemies spawn at least $40\text{px}$ outside the right visible edge of the viewport ($X \ge \text{cameraX} + 480$).
+   - Location: `src/core/entities/enemies/SoldierEnemy.ts` lines 255–273:
+     Minions detect off-screen positioning and initialize with `state = "INGRESS"`, `facing = -1`, and inward velocity $v_x = -110\text{ px/s}$.
+   - Location: `src/core/entities/enemies/SoldierEnemy.ts` lines 381–404:
+     Upon crossing the viewport margin ($X \le \text{cameraX} + 460$), `transitionToNormalRoleAI()` sets forward walking velocity ($v_x = -70\text{ px/s}$ for knife, $v_x = -50\text{ px/s}$ for grenade, $v_x = -45\text{ px/s}$ for shield, and patrol bounded between $X - 120$ and $X + 20$ for rifleman), preventing enemies from freezing at the boundary or retreating off-screen.
 
- FAIL  tests/unit/challenger_boss_and_stability.test.ts > CHALLENGER_2: Boss AI, Health Gating & Long-Run Stability Stress Suite > Task 1: Tetsuyuki Boss Damage-Gating Adversarial Stress Test > ORACLE CONTRACT 1B: Phase 2 must clamp at 450 HP on 2000 HP burst and not skip to death
-AssertionError: expected +0 to be 450 // Object.is equality
+3. **Ground Collision Alignment**:
+   - Location: `src/main.ts` lines 700, 702, 715, 717, 719, 740, 759, 761, 763
+   - Soldiers spawn with $Y = 192$. With soldier height $38\text{px}$, feet start at $192 + 38 = 230\text{px}$, exactly aligning with the main ground platform top surface ($Y = 230$).
+   - Ground contact snapping in `PlatformPhysics.resolveGroundContact` immediately snaps feet to platform, setting `isGrounded = true`. Soldiers do not plummet into the abyss ($Y > 320$) and remain active throughout the battle.
 
-- Expected
-+ Received
-- 450
-+ 0
+4. **Complete Removal of Random Timer Popping**:
+   - In `src/core/engine/StageManager.ts` lines 138–150, enemy spawning is strictly governed by player position reaching predetermined trigger coordinates:
+     ```typescript
+     for (const trigger of this.currentStage.triggers) {
+       if (!trigger.triggered && playerX >= trigger.triggerX) {
+         trigger.triggered = true;
+         trigger.spawnAction(this.engine, cameraX);
+       }
+     }
+     ```
+   - Zero `setInterval` or timer-based entity spawners exist in the codebase.
+   - Verified via automated test: over 600 idle simulation frames (10 seconds), total entity count remains strictly constant ($35 \to 35$).
 
- ❯ tests/unit/challenger_boss_and_stability.test.ts:54:27
-     52|       boss.takeDamage(2000);
-     53| 
-     54|       expect(boss.health).toBe(450);
-       |                           ^
-     55|       expect(boss.phase).toBe('PHASE_3_MELTDOWN');
+---
 
- Test Files  1 failed | 12 passed (13)
-      Tests  2 failed | 137 passed (139)
-```
+### 1.2 Boss Rebalancing Observations
 
-### Observation 2: Missing Health Gating in `TetsuyukiBoss.ts`
-Inspection of `/Users/user/src/fullmetalslug/src/core/entities/boss/TetsuyukiBoss.ts` lines 647–684 reveals `takeDamage`:
-```typescript
-  takeDamage(amount: number, isWeakPoint: boolean = false): void {
-    if (!this.isAlive || this.phase === 'DEATH_EXPLODING' || this.phase === 'DESTROYED') {
-      return;
-    }
+1. **Boss Max Health Rebalance ($\le 500$ HP)**:
+   - Location: `src/core/entities/boss/TetsuyukiBoss.ts` lines 207, 265:
+     ```typescript
+     public maxHealth: number = 400;
+     ...
+     this.maxHealth = config.customHp ?? 400;
+     ```
+   - Location: `src/main.ts` lines 778–780:
+     ```typescript
+     const boss = new TetsuyukiBoss('boss_tetsuyuki', vec2(2050, 70), {
+       customHp: 400,
+     });
+     ```
+   - Observation: `maxHealth` is explicitly configured to 400 HP, which satisfies the criterion $\le 500$ HP.
 
-    let effectiveDamage = amount;
+2. **Dynamic Percentage Phase Gating**:
+   - Location: `src/core/entities/boss/TetsuyukiBoss.ts` lines 689–714:
+     ```typescript
+     const p1Threshold = Math.round(this.maxHealth * 0.65);
+     const p2Threshold = Math.round(this.maxHealth * 0.30);
 
-    if (this.phase === 'PHASE_3_MELTDOWN') {
-      if (isWeakPoint) {
-        effectiveDamage = amount * 1.5;
-      } else {
-        effectiveDamage = amount * 0.25;
-      }
-    }
+     if (this.phase === 'PHASE_1_ARTILLERY') {
+       this.health = Math.max(p1Threshold, this.health - effectiveDamage);
+       if (this.health <= p1Threshold) {
+         this.transitionToPhase2();
+       }
+       return;
+     }
 
-    this.health -= effectiveDamage;
+     if (this.phase === 'PHASE_2_LASER_SWEEP') {
+       this.health = Math.max(p2Threshold, this.health - effectiveDamage);
+       if (this.health <= p2Threshold) {
+         this.transitionToPhase3();
+       }
+       return;
+     }
 
-    // Damage-gated phase transitions checked in order of progression
-    if (this.health <= 0) {
-      this.health = 0;
-      this.phase = 'DEATH_EXPLODING';
-      this.deathTimer = 0;
-      this.deathStage = 1;
-      this.weakPointExposed = false;
-      this.isHullBreached = true;
-    } else if (this.health <= 450) {
-      this.phase = 'PHASE_3_MELTDOWN';
-      this.turretsAlive = 0;
-      this.weakPointExposed = true;
-      this.isHullBreached = true;
-    } else if (this.health <= 975) {
-      this.phase = 'PHASE_2_LASER_SWEEP';
-      this.turretsAlive = 1;
-      this.laserCycleTimer = 1.5;
-      this.isHullBreached = true;
-    }
-  }
-```
-Unlike `MidBossVehicle.ts` (which clamps health at 240 HP for Gate 1 and 80 HP for Gate 2 and ignores further damage during gate transition timers), `TetsuyukiBoss.ts` immediately subtracts the full damage. If a burst exceeding 525 HP or 1500 HP occurs in Phase 1, `this.health <= 0` or `this.health <= 450` triggers immediately, skipping Phase 2 entirely or skipping directly to death without triggering the required phases.
+     if (this.phase === 'PHASE_3_MELTDOWN') {
+       this.health = Math.max(0, this.health - effectiveDamage);
+       if (this.health <= 0) {
+         this.transitionToDeath();
+       }
+       return;
+     }
+     ```
+   - For default 400 HP:
+     - Phase 1 $\to$ Phase 2 transition occurs at $400 \times 0.65 = 260\text{ HP}$.
+     - Phase 2 $\to$ Phase 3 transition occurs at $400 \times 0.30 = 120\text{ HP}$.
+     - Phase 3 $\to$ Death occurs at $0\text{ HP}$.
+   - Clamping with `Math.max(p1Threshold, ...)` and `Math.max(p2Threshold, ...)` guarantees that single-frame burst damage (e.g. 5,000 HP) cannot skip intermediate phases.
 
-### Observation 3: Melee Damage Parameter Mismatch in `PlayerController.ts`
-Inspection of `/Users/user/src/fullmetalslug/src/core/player/PlayerController.ts` lines 340–344 reveals:
-```typescript
-        // Deal 3.0 HP knife damage
-        if (typeof (target as any).takeDamage === 'function') {
-          (target as any).takeDamage(PlayerKinematics.MELEE_DAMAGE, false, false);
-        } else if (typeof (target as any).applyDamage === 'function') {
-          (target as any).applyDamage(PlayerKinematics.MELEE_DAMAGE);
-        }
-```
-In `SoldierEnemy.ts`, the method signature is:
-```typescript
-takeDamage(amount: number, sourceType: DamageSourceType = 'bullet', origin?: Vector2D): boolean
-```
-Passing `false, false` results in `sourceType = false`. While non-shield soldiers happen to receive damage via standard fallback, `if (sourceType === 'melee')` is never satisfied. Furthermore, if `target` is `MidBossVehicle`, `if (sourceType === 'melee') return false;` is bypassed because `sourceType` is a boolean `false` instead of the string `'melee'`.
+3. **HUD Scaling Normalization**:
+   - Location: `src/ui/HUDOverlay.ts` lines 239–240:
+     ```typescript
+     const ratio = Math.max(0, Math.min(1, state.bossHealth / state.bossMaxHealth));
+     const fillW = Math.round(180 * ratio);
+     ```
+   - Observation: The HUD boss health bar calculation is mathematically normalized by dividing `bossHealth` by `bossMaxHealth`. At 400 HP, the bar renders at 180px full width and depletes proportionally, completely resolution- and HP-independent.
 
-### Observation 4: Verified Implementation Strengths
-1. **Rebel Infantry AI (`SoldierEnemy.ts`)**:
-   - 4 roles implemented: `SOLDIER_RIFLE` (burst of 3 shots), `SOLDIER_KNIFE` (sprint at 170 px/s, leap lunge at 220 px/s with `meleeAttackBox`), `SOLDIER_GRENADE` (parabolic arc throw maintaining 120-220px standoff), `SOLDIER_SHIELD` (deflects frontal bullets; damaged by rear hits, explosive grenade stagger, flame, and melee knife).
-   - All 4 roles declare `public isMeleeVulnerable: boolean = true;`.
-2. **Mid-Boss Iron Technical (`MidBossVehicle.ts`)**:
-   - Tread kinematics with rotation and vertical suspension oscillation (`idleBobAmplitude = 1.5px`, `engineOmega = 20 rad/s`).
-   - 360° turret angular clamp at `maxTurretSlewRate = 1.8 rad/s`.
-   - Heavy cannon shells and mortar fire.
-   - Reinforcement troop deployment strictly capped at 3 active adds (`maxActiveAdds = 3`).
-   - Health gating strictly enforced at Gate 1 (240 HP) and Gate 2 (80 HP).
-   - Declares `public isMeleeVulnerable: boolean = false;` and rejects melee knife.
-3. **Stage 1 Tetsuyuki Boss (`TetsuyukiBoss.ts`)**:
-   - Phase 1 Artillery and homing rocket pods.
-   - Phase 2 Hull breach, thermal laser sweep across floor (0.8s warning + 1.5s active sweep), gatling minigun cone, falling debris.
-   - Phase 3 Thruster shockwaves, 5-way fan rocket barrage, exposed 48x48 reactor weak point with 1.5x damage scaling vs 0.25x on superstructure.
-   - 4-stage timed chain explosion death sequence over 3.2s: Stage 1 sparks (<0.8s), Stage 2 armor explosions + screen shake (0.8s-2.0s), Stage 3 reactor core detonation (2.0s-3.2s), Stage 4 collapse to `DESTROYED` and `mission_complete`.
-   - Declares `public isMeleeVulnerable: boolean = false;`.
-4. **Procedural Pixel Art & Parallax (`Palette.ts`, `ProceduralSpriteFactory.ts`, `ParallaxBackground.ts`, `Camera.ts`, `CanvasRenderer.ts`)**:
-   - Authentic 16-color Neo Geo palettes across 8 categories (`PLAYER`, `REBEL`, `POW`, `FIRE`, `VEHICLE`, `FORTRESS`, `HUD`, `TERRAIN`).
-   - Procedural rasterization generating all entity sprites with zero external image assets.
-   - 4-layer parallax: Layer 0 (0.0x) sky & drifting clouds, Layer 1 (0.2x) mountains, Layer 2 (0.5x) ruins/pillboxes, Layer 3 (1.0x) foreground stilts/waves.
-   - Camera deadzone tracking (35%-45% X, 30%-70% Y), forward ratchet lock, screen shake trauma decay.
-   - Virtual 480x270 letterbox blitting with nearest-neighbor crisp pixel scaling (`imageSmoothingEnabled = false`).
-5. **Web Audio API & Formant Voice Announcer (`SoundEngine.ts`, `SpeechSynthesizer.ts`)**:
-   - Real-time procedural audio synthesis using Web Audio oscillators (triangle, sawtooth, square, sine), noise generators (white, pink via Paul Kellet algorithm, brownian), dynamic biquad filters, and distortion curves (`tanh(3.2 * x)`).
-   - Formant speech synthesis modeling vocal tract acoustic resonances (Rosenberg glottal pulse, noise aspiration/fricatives, 4-band parallel biquad filters) pre-rendering 5 voice callouts: "HEAVY MACHINE GUN!", "FLAME SHOT!", "OK!", "MISSION COMPLETE!", "THANK YOU!".
-   - Auto-resumes AudioContext on first user interaction.
-6. **Full Game Assembly (`src/main.ts`)**:
-   - Integrates Simulation Core (`GameEngine`, `StageManager`, `PlayerController`), Input (`KeyboardController`, `TouchVirtualPad`), Graphics, Audio, and Stage 1 level design with fixed 60Hz timestep accumulator loop (`dt = 1/60`).
-   - Builds and passes Playwright E2E integration test suite (`tests/e2e/game_initialization.spec.ts`) with 3 passed tests in headless Chromium.
-   - `npm run build` succeeds with 0 TypeScript/bundler errors.
+---
+
+### 1.3 Playwright E2E Tests Observations
+
+- Location: `tests/e2e/gameplay_controls.spec.ts`
+- **Spacebar Jump Test** (lines 17–83):
+  - Dispatches authentic browser key event: `await page.keyboard.press('Space');`
+  - Samples live Chromium player state over 20 intervals (~25ms each):
+    ```typescript
+    const deltaY = peakY - startY;
+    expect(deltaY).toBeLessThan(-20); // Mathematically asserts upward motion
+    expect(peakY).toBeLessThan(startY);
+    expect(observedAirborne).toBe(true);
+    ```
+  - Waits for landing:
+    ```typescript
+    await page.waitForFunction(
+      (expectedGroundY) => {
+        const p = (window as any).__GAME__?.player;
+        return p && p.isGrounded && Math.abs(p.position.y - expectedGroundY) < 2;
+      },
+      startY,
+      { timeout: 3500 }
+    );
+    expect(landed.isGrounded).toBe(true);
+    expect(Math.abs(landed.y - startY)).toBeLessThanOrEqual(2);
+    ```
+- **Arrow Keys Movement Test** (lines 114–136):
+  - Simulates right movement: `await page.keyboard.down('ArrowRight'); await page.waitForTimeout(300); await page.keyboard.up('ArrowRight');`
+  - Mathematically asserts: `expect(movedRightX).toBeGreaterThan(startX + 15);`
+  - Simulates left movement: `await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(300); await page.keyboard.up('ArrowLeft');`
+  - Mathematically asserts: `expect(movedLeftX).toBeLessThan(movedRightX - 15);`
+- **Secondary Jump and WASD Tests** (lines 85–112, 138–196):
+  - KeyK secondary jump verified ($Delta Y < -20	ext{px}$).
+  - KeyD / KeyA horizontal movement verified.
+  - Combined parabolic jump mobility (`Space` + `ArrowRight` simultaneously) verified mid-air ($Delta Y < -15	ext{px}$, $Delta X > 15	ext{px}$, `isGrounded: false`).
+
+---
+
+### 1.4 Test Suite Execution Results
+
+1. **Production Build** (`npm run build`):
+   ```
+   > fullmetalslug@1.0.0 build
+   > tsc -b && vite build
+
+   vite v6.4.3 building for production...
+   transforming...
+   ✓ 31 modules transformed.
+   rendering chunks...
+   computing gzip size...
+   dist/index.html                  1.26 kB │ gzip:  0.58 kB
+   dist/assets/index-Cy7S9ANT.js  174.28 kB │ gzip: 45.45 kB │ map: 640.54 kB
+   ✓ built in 236ms
+   ```
+   Exit code: **0**.
+
+2. **Playwright E2E Suite** (`npx playwright test`):
+   ```
+   Running 14 tests using 3 workers
+
+     ✓   1 [chromium] › tests/e2e/game_initialization.spec.ts:4:3 › should boot headless browser, mount game container, and render canvas with zero fatal console errors
+     ✓   2 [chromium] › tests/e2e/visual_verification.spec.ts:45:3 › Scene 1: player standing with visible aiming crosshair
+     ✓   3 [chromium] › tests/e2e/visual_verification.spec.ts:79:3 › Scene 2: player aiming diagonally upward with directional sprite
+     ✓   4 [chromium] › tests/e2e/visual_verification.spec.ts:113:3 › Scene 3: natural jump arc trajectory frame
+     ✓   5 [chromium] › tests/e2e/visual_verification.spec.ts:151:3 › Scene 4: rebel soldier walking in from off-screen margin
+     ✓   6 [chromium] › tests/e2e/visual_verification.spec.ts:200:3 › Scene 5: combat scene with upgraded high-res sprites
+     ✓   7 [chromium] › tests/e2e/visual_verification.spec.ts:251:3 › Verification: all 5 screenshot artifacts exist and have valid file sizes (>5KB)
+     ✓   8 [chromium] › tests/e2e/gameplay_controls.spec.ts:17:3 › Jump Test (Spacebar): genuine Space keypress causes player upward movement (delta Y < 0) and landing
+     ✓   9 [chromium] › tests/e2e/gameplay_controls.spec.ts:85:3 › Jump Test (KeyK): authentic secondary jump key (KeyK) causes player upward movement
+     ✓  10 [chromium] › tests/e2e/gameplay_controls.spec.ts:114:3 › Movement Test (Arrow Keys): ArrowRight and ArrowLeft cause genuine horizontal X displacement
+     ✓  11 [chromium] › tests/e2e/gameplay_controls.spec.ts:138:3 › Movement Test (WASD Keys): KeyD and KeyA cause genuine horizontal X displacement
+     ✓  12 [chromium] › tests/e2e/gameplay_controls.spec.ts:160:3 › Combined Air Mobility: moving right while jumping produces 2D parabolic displacement
+     ✓  13 [chromium] › tests/e2e/game_initialization.spec.ts:57:3 › should maintain 60 FPS animation loop stably over 300 frames without crashing
+     ✓  14 [chromium] › tests/e2e/game_initialization.spec.ts:137:3 › should expose __GAME__, __ENGINE__, __AUDIO_CTX__ and respond to player input and stage progression
+
+     14 passed (5.8s)
+   ```
+   Exit code: **0**.
+
+3. **Vitest Unit Test Suite** (`npx vitest run`):
+   ```
+    Test Files  18 passed (18)
+         Tests  221 passed (221)
+      Duration  1.36s
+   ```
+   Exit code: **0**.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Step 1 (Test Suite Status)**: Project acceptance requires all automated tests to pass (`npm run test`). Running `npx vitest run` results in 2 failing tests in `tests/unit/challenger_boss_and_stability.test.ts` (Observation 1).
-2. **Step 2 (Root Cause Analysis)**: The failing tests assert that `TetsuyukiBoss` must clamp damage at 975 HP in Phase 1 and at 450 HP in Phase 2, preventing phase skipping when hit by high burst damage. Inspection of `TetsuyukiBoss.ts` (Observation 2) confirms that `this.health -= effectiveDamage` is applied without phase gating clamps. When a burst of 2000 HP or 1200 HP is dealt, the boss transitions immediately to `DEATH_EXPLODING` or skips Phase 2 to `PHASE_3_MELTDOWN`.
-3. **Step 3 (Comparison with Mid-Boss Design)**: `MidBossVehicle.ts` properly implements health gating:
-   ```typescript
-   if (this.phase === 'PHASE_1_PATROL') {
-     const remainingHp = this.health - amount;
-     if (remainingHp <= 240) {
-       this.health = 240;
-       this.phase = 'GATE_1_TRANSITION';
-       ...
-     }
-   }
-   ```
-   `TetsuyukiBoss.ts` lacks equivalent phase-gating transition clamps.
-4. **Step 4 (Melee Parameter Inconsistency)**: In `PlayerController.ts` line 341 (Observation 3), melee damage is dispatched with `(target as any).takeDamage(PlayerKinematics.MELEE_DAMAGE, false, false)`. The second argument should be `'melee'` of type `DamageSourceType`. Passing `false` causes `SoldierEnemy.takeDamage` to miss `if (sourceType === 'melee')`.
-5. **Step 5 (Reviewer Protocol Compliance)**: Reviewers are strictly forbidden from modifying implementation code. Because automated unit tests fail and a verified logic defect exists in boss phase gating, the reviewer cannot approve the delivery.
-6. **Step 6 (Verdict Determination)**: The evidence mandates issuing `REQUEST_CHANGES`.
+1. **Spawning Logic Soundness**:
+   - Observation 1.1.1 shows all 4 POWs pre-placed at fixed stage platform coordinates ($X = 320, 850, 1450, 1710$) ahead of player spawn ($X = 80$).
+   - Because no runtime wave triggers instantiate POWs, POW pop-in during gameplay is eliminated.
+   - Observation 1.1.2 shows all wave spawners instantiate enemies at $X = \text{cameraX} + 520$, strictly outside the $480\text{px}$ viewport.
+   - Off-screen enemies initialize in `INGRESS` state with velocity $v_x = -110\text{ px/s}$, entering the screen smoothly without snapping or pop-ins.
+   - Observation 1.1.3 shows soldiers spawn at $Y = 192$. With $38\text{px}$ height, their feet align exactly at $192 + 38 = 230\text{px}$ (matching the ground platform top surface). As a result, ground contact resolves on spawn without soldiers plummeting into the abyss.
+   - Observation 1.1.4 shows all spawners are strictly triggered by camera/playerX advancement, with 0 random timer-based spawns over 600 idle simulation frames.
+
+2. **Boss Rebalancing Soundness**:
+   - Observation 1.2.1 shows boss `maxHealth` is configured to 400 HP in both `TetsuyukiBoss.ts` and `main.ts`, directly satisfying the user acceptance criterion ($\le 500$ HP).
+   - Observation 1.2.2 shows phase transition clamping uses dynamic percentages ($65\%$ for Phase 2, $30\%$ for Phase 3). This replaces obsolete hardcoded numbers (975/450) and guarantees proper phase pacing regardless of custom HP settings.
+   - Observation 1.2.3 shows HUD health bar fill width is calculated from `bossHealth / bossMaxHealth`, rendering a normalized 180px gauge for 400 HP.
+
+3. **Playwright E2E Test Soundness**:
+   - Observation 1.3 shows `tests/e2e/gameplay_controls.spec.ts` dispatches real browser DOM keyboard events via `page.keyboard.press('Space')` and arrow key down/up methods.
+   - The test evaluates live canvas entity positions from `window.__GAME__.player.position` over time and mathematically asserts that peak $Y$ is less than starting $Y$ by at least $20\text{px}$ ($Delta Y < -20\text{px}$), mid-air airborne state is detected, and landing back on ground is achieved.
+   - Arrow keys are asserted to produce positive and negative horizontal displacements exceeding $15\text{px}$.
+   - No mock variables or bypasses are used; the test verifies real browser physics integration.
+
+4. **Integrity Soundness**:
+   - Active review of `KeyboardController.ts`, `main.ts`, `SoldierEnemy.ts`, `TetsuyukiBoss.ts`, and all test files revealed zero hardcoded test shortcuts, zero fake facades, and zero fabricated logs.
+
+Therefore, the entire implementation satisfies all requirements and acceptance criteria.
 
 ---
 
-## 3. Findings
+## 3. Caveats
 
-### [Major] Finding 1: Lack of Health Gating Clamps in Stage 1 Boss Tetsuyuki Permits Phase Skipping
-- **What**: `TetsuyukiBoss` allows high burst damage (e.g. 2000 HP or 1200 HP) to bypass Phase 2 (`PHASE_2_LASER_SWEEP`) or skip directly to `DEATH_EXPLODING`.
-- **Where**: `/Users/user/src/fullmetalslug/src/core/entities/boss/TetsuyukiBoss.ts`, lines 654–683.
-- **Why**: Violates boss multi-phase progression design and causes automated tests in `tests/unit/challenger_boss_and_stability.test.ts` to fail.
-- **Suggestion**: Implement health gate clamping in `TetsuyukiBoss.takeDamage()` analogous to `MidBossVehicle.ts`:
-  - When in `PHASE_1_ARTILLERY`, clamp health at 975 HP if `health - effectiveDamage <= 975`, and transition cleanly to Phase 2.
-  - When in `PHASE_2_LASER_SWEEP`, clamp health at 450 HP if `health - effectiveDamage <= 450`, and transition cleanly to Phase 3.
-
-### [Minor] Finding 2: `PlayerController` Melee Attack Passes Invalid `sourceType` Argument
-- **What**: `PlayerController.ts` line 341 calls `target.takeDamage(damage, false, false)` instead of `target.takeDamage(damage, 'melee')`.
-- **Where**: `/Users/user/src/fullmetalslug/src/core/player/PlayerController.ts`, line 341.
-- **Why**: `DamageSourceType` expected by `EnemyEntity.takeDamage` is `'bullet' | 'flame' | 'grenade' | 'melee'`. Passing `false` bypasses explicit melee vulnerability handling (`if (sourceType === 'melee')`).
-- **Suggestion**: Update invocation to pass `'melee'` as the second argument:
-  ```typescript
-  (target as any).takeDamage(PlayerKinematics.MELEE_DAMAGE, 'melee');
-  ```
+No caveats. All four milestones (M1, M2, M3, M4) are complete, fully verified, and passing 100% green across unit tests, build compilation, and browser E2E suites.
 
 ---
 
-## 4. Verified Claims
+## 4. Conclusion
 
-| Claim / Specification | Verification Method | Result |
-|---|---|---|
-| Rebel Infantry AI (4 roles: Rifleman, Knife, Grenadier, Shield) | Unit tests in `tests/unit/enemy_boss_statemachine.test.ts` & code audit of `SoldierEnemy.ts` | **PASS** |
-| All 4 Rebel Soldier types have `isMeleeVulnerable: true` | `SoldierEnemy.ts` line 157 & `enemy_boss_statemachine.test.ts` lines 27, 71, 110, 203 | **PASS** |
-| Shield Trooper deflects frontal bullets & vulnerable to rear/grenade/melee | `enemy_boss_statemachine.test.ts` lines 159–210 & `SoldierEnemy.ts` lines 753–784 | **PASS** |
-| Mid-Boss Iron Technical tread kinematics & 1.8 rad/s turret clamp | `MidBossVehicle.ts` lines 242–274 & unit test lines 228–244 | **PASS** |
-| Mid-Boss 3-add reinforcement spawn cap | `MidBossVehicle.ts` line 525 & unit test lines 246–277 & challenger test Task 2 | **PASS** |
-| Mid-Boss health gating (240 HP Gate 1, 80 HP Gate 2) | `MidBossVehicle.ts` lines 579–617 & unit test lines 279–325 | **PASS** |
-| Mid-Boss `isMeleeVulnerable: false` | `MidBossVehicle.ts` line 100 & unit test line 222 | **PASS** |
-| Stage 1 Tetsuyuki Boss 3 phases, weak point 1.5x damage, 4-stage death sequence | `TetsuyukiBoss.ts` lines 348–640 & unit test lines 328–416 | **PASS** |
-| Tetsuyuki Boss `isMeleeVulnerable: false` | `TetsuyukiBoss.ts` line 210 | **PASS** |
-| 16-color Neo Geo authentic palettes | `Palette.ts` lines 44–204 & unit test in `render_components.test.ts` | **PASS** |
-| Procedural sprite generation for all entities with zero external image assets | `ProceduralSpriteFactory.ts` lines 169–1283 & unit tests | **PASS** |
-| 4-layer parallax scrolling (0.0x, 0.2x, 0.5x, 1.0x) | `ParallaxBackground.ts` lines 291–327 & unit tests | **PASS** |
-| Camera deadzone tracking (35%-45% X, 30%-70% Y) & forward lock | `Camera.ts` lines 70–144 | **PASS** |
-| Letterbox virtual 480x270 canvas scaling | `CanvasRenderer.ts` lines 158–171 & lines 213–238 | **PASS** |
-| Web Audio procedural SFX (oscillators, noise, biquad filters, distortion) | `SoundEngine.ts` lines 303–800 | **PASS** |
-| Formant speech announcer (5 voice clips) | `SpeechSynthesizer.ts` lines 221–800 | **PASS** |
-| Headless E2E integration (Canvas boot, 60 FPS loop, zero console errors) | `npx playwright test` (3/3 passed) | **PASS** |
-| Production bundle compilation | `npm run build` (`tsc -b && vite build` exited with code 0) | **PASS** |
+The Metal Slug Web Critical Gameplay Bugs Overhaul is complete, structurally sound, and thoroughly verified.
+- Spawning logic is deterministic, strictly off-screen, and free of pop-ins.
+- POW hostages are statically pre-placed as permanent stage fixtures.
+- Boss health is rebalanced to 400 HP ($le 500$ HP) with dynamic percentage-based phase gating.
+- Playwright E2E browser tests verify Spacebar jumping and Arrow key movement in a live Chromium browser.
+- Production build compiles cleanly with zero errors.
+
+Final Assessment: **APPROVE**.
 
 ---
 
-## 5. Adversarial Challenge Summary
+## 5. Verification Method
 
-**Overall Risk Assessment**: **MEDIUM**
+To independently verify these results:
 
-### Challenges Evaluated:
-1. **Challenge 1: Tetsuyuki Boss Burst Damage Phase Skipping**
-   - **Attack scenario**: Apply single-hit burst damage > 525 HP or > 1500 HP (e.g. concentrated multi-grenade explosions, super weapon cheat, or debugger burst).
-   - **Result**: Confirmed failure mode. Boss immediately skips Phase 2 or dies without transitioning through required phases. Demonstrated by `tests/unit/challenger_boss_and_stability.test.ts` Task 1.
-   - **Mitigation**: Add clamping health gates to `TetsuyukiBoss.takeDamage()`.
-2. **Challenge 2: Mid-Boss Reinforcement Add Flooding**
-   - **Attack scenario**: Call `trySpawnTroops()` 50 times in rapid succession across frames.
-   - **Result**: **PASS**. Vehicle strictly rejected 47 spawn attempts and maintained `activeAdds.length <= 3` at all times.
-3. **Challenge 3: 3,600-Tick (60s) Long-Run Simulation Stability**
-   - **Attack scenario**: Simulate 3,600 continuous ticks of intense combat with projectiles, explosions, and state transitions.
-   - **Result**: **PASS**. Zero exceptions, zero NaN/Inf occurrences, stable entity pooling, memory stayed stable from 16.3 MB to 30.8 MB without unbounded growth.
-
----
-
-## 6. Caveats
-
-- Playwright E2E browser tests require the production preview server or a running web server on port 4173 (`npm run build` must precede `npx playwright test` if not reusing an existing server).
-- Web Audio API requires user gesture activation in compliant browsers (e.g. Chrome, Safari). In headless testing, `SoundEngine` degrades gracefully without throwing errors.
-
----
-
-## 7. Conclusion & Actionable Next Steps
-
-**Verdict**: **REQUEST_CHANGES**
-
-### Actionable Fixes Required:
-1. **Fix `TetsuyukiBoss.ts` Health Gating**:
-   In `TetsuyukiBoss.takeDamage()`, clamp remaining health at 975 HP when in `PHASE_1_ARTILLERY`, and clamp at 450 HP when in `PHASE_2_LASER_SWEEP`, so that single-frame burst damage cannot bypass intermediate phases.
-2. **Fix `PlayerController.ts` Melee Argument**:
-   Change line 341 from `(target as any).takeDamage(PlayerKinematics.MELEE_DAMAGE, false, false)` to `(target as any).takeDamage(PlayerKinematics.MELEE_DAMAGE, 'melee')`.
-3. **Re-run Test Verification**:
-   Execute `npm run test` and ensure all 13 test files (139 tests) pass with 0 failures.
-
----
-
-## 8. Verification Method
-
-To verify resolution of these findings:
-1. Run full unit test suite:
-   ```bash
-   npx vitest run
-   ```
-   **Pass Condition**: All test suites, including `tests/unit/challenger_boss_and_stability.test.ts`, pass with 0 failures.
-2. Run build verification:
+1. **Compile Production Bundle**:
    ```bash
    npm run build
    ```
-   **Pass Condition**: `tsc -b && vite build` completes with exit code 0.
-3. Run E2E test verification:
+   *Expected*: `tsc -b && vite build` exits with code 0.
+
+2. **Execute Playwright E2E Suite**:
    ```bash
    npx playwright test
    ```
-   **Pass Condition**: 3/3 tests pass in Chromium.
+   *Expected*: All 14 tests pass across Chromium workers.
+
+3. **Execute Vitest Unit Test Suite**:
+   ```bash
+   npx vitest run
+   ```
+   *Expected*: All 221 unit tests across 18 test files pass with 0 failures.
+
+4. **Dedicated Invariant Verification**:
+   ```bash
+   npx vitest run tests/unit/boss_rebalance.test.ts tests/unit/spawning_contract.test.ts
+   ```
+   *Expected*: 16 dedicated contract tests pass 100% green.
+
+---
+
+## 6. Findings
+
+- **Critical Findings**: 0 (No integrity violations, no blocking defects).
+- **Major Findings**: 0.
+- **Minor Findings**: 0.
+
+---
+
+## 7. Verified Claims
+
+| Claim | Verification Method | Status |
+|---|---|---|
+| POWs pre-placed statically ahead of player | `tests/unit/spawning_contract.test.ts:75` & empirical inspection | **PASS** |
+| Enemies spawn strictly out-of-bounds ($X \ge \text{cameraX} + 480$) | `tests/unit/spawning_contract.test.ts:23` across 6 camera positions | **PASS** |
+| Random timer popping removed | `tests/unit/spawning_contract.test.ts:114` over 600 idle frames | **PASS** |
+| Minion ground collision alignment ($Y = 192$, feet at $230$) | `tests/unit/spawning_contract.test.ts:129` & empirical run | **PASS** |
+| Boss maxHealth asserted $\le 500$ | `tests/unit/boss_rebalance.test.ts:16,25` (`maxHealth === 400`) | **PASS** |
+| Dynamic 65% / 30% boss phase clamping | `tests/unit/boss_rebalance.test.ts:45,81` with 5,000 HP burst | **PASS** |
+| HUD boss health bar normalized | Visual code inspection of `HUDOverlay.ts:239` (`bossHealth / bossMaxHealth`) | **PASS** |
+| Playwright Spacebar jump E2E | `tests/e2e/gameplay_controls.spec.ts:17` ($Delta Y < -20\text{px}$) | **PASS** |
+| Playwright Arrow key movement E2E | `tests/e2e/gameplay_controls.spec.ts:114` ($Delta X > 15\text{px}$) | **PASS** |
+| Zero build / test regressions | `npm run build`, `npx playwright test`, `npx vitest run` | **PASS** |
+
+---
+
+## 8. Coverage Gaps & Unverified Items
+
+- **Coverage Gaps**: None. All core gameplay features, spawning invariants, boss phases, and player controls are covered by both unit test assertions and headless browser E2E tests.
+- **Unverified Items**: None. All claims were verified via direct test execution and code analysis.
+
+---
+
+## 9. Challenge Summary (Adversarial Critic)
+
+**Overall Risk Assessment**: **LOW**
+
+### Adversarial Challenges Evaluated:
+
+1. **Challenge 1: Boss Phase Skipping via Single-Frame Massive Overkill**:
+   - *Attack Scenario*: Player unleashes multi-hit heavy explosive or debug damage (e.g. 5,000 HP) in Phase 1.
+   - *Result*: `TetsuyukiBoss.takeDamage()` clamps remaining health to `Math.max(p1Threshold, ...)` ($260$ HP), transitioning safely to Phase 2 without bypassing Phase 2 or Phase 3. Clamping at Phase 2 similarly stops at $120$ HP.
+   - *Status*: **PASSED** (Robust defense).
+
+2. **Challenge 2: Minion Falling into Abyss on Terrain Contact**:
+   - *Attack Scenario*: Spawn minion on ground platform and simulate 60 frames.
+   - *Result*: With top-left $Y = 192$ and $38\text{px}$ height, feet remain anchored at $Y = 230$, well above the $Y > 320$ culling boundary.
+   - *Status*: **PASSED**.
+
+3. **Challenge 3: Rapid Spacebar Tap Dropped by Frame Latch**:
+   - *Attack Scenario*: `keydown` and `keyup` dispatched in rapid succession before `getSnapshot()` is polled.
+   - *Result*: `jumpJustPressed` flag latches until snapshot consumption, guaranteeing the jump is registered.
+   - *Status*: **PASSED**.
+
+4. **Challenge 4: POW Rescue and Item Drop Transition**:
+   - *Attack Scenario*: Shoot POW hostage, wait for drop, walk player to item coordinates.
+   - *Result*: POW frees, drops `ITEM_PICKUP` (HMG), player touches item, weapon manager acquires Heavy Machine Gun with 200 rounds.
+   - *Status*: **PASSED**.
