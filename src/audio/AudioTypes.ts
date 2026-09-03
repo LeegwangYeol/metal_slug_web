@@ -11,7 +11,11 @@ export type SoundEffectType =
   | 'EXPLOSION'
   | 'KNIFE_SLASH'
   | 'BULLET_HIT'
-  | 'ITEM_PICKUP';
+  | 'ITEM_PICKUP'
+  | 'SOLDIER_DEATH_STANDARD'
+  | 'SOLDIER_DEATH_EXPLOSION'
+  | 'SOLDIER_DEATH_FIRE';
+
 
 export type VoiceClipType =
   | 'HEAVY_MACHINE_GUN'
@@ -89,4 +93,6 @@ export interface ISoundEngine {
   playKnifeSlash(): void;
   playBulletHit(isFlesh?: boolean): void;
   playItemPickup(): void;
+  playSoldierDeath(type?: 'standard' | 'explosion' | 'fire'): void;
 }
+

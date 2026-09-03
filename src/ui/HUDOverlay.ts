@@ -179,11 +179,12 @@ export class HUDOverlay {
     const ammoX = badgeX + 30;
     const ammoY = badgeY + 4;
 
-    if (weaponType === 'PISTOL' || !isFinite(ammo)) {
+    if (weaponType === 'PISTOL' || !isFinite(ammo) || ammo <= 0) {
       this.spriteFactory.drawSprite(ctx, 'hud_symbol_infinity', ammoX, ammoY + 1);
     } else {
       this.drawDigits(ctx, ammo, ammoX, ammoY, 3);
     }
+
   }
 
   private renderGrenades(ctx: CanvasContext2DLike, grenades: number): void {

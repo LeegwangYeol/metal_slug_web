@@ -17,6 +17,7 @@ import {
 import { HUDOverlay } from '../ui/HUDOverlay';
 import { Vector2D, vec2 } from '../core/math/Vector2D';
 import { AimAngle, PlayerKinematics, PlayerPosture } from '../core/player/PlayerKinematics';
+import { RenderCorpseState } from '../core/entities/enemies/DeathCorpseManager';
 
 export interface LetterboxBounds {
   scale: number;
@@ -52,6 +53,8 @@ export interface RenderEnemyState {
   turretAngle?: number;
   phase?: string;
   isDead?: boolean;
+  isParachuteActive?: boolean;
+  parachuteSwayAngle?: number;
 }
 
 export interface RenderBossState {
@@ -116,12 +119,14 @@ export interface RenderSceneState {
   platforms?: Platform[];
   player?: RenderPlayerState;
   enemies?: RenderEnemyState[];
+  corpses?: RenderCorpseState[];
   boss?: RenderBossState;
   pows?: RenderPowState[];
   projectiles?: RenderProjectileState[];
   explosions?: RenderExplosionState[];
   hud?: RenderHUDState;
 }
+
 
 export class CanvasRenderer {
   public static readonly VIRTUAL_WIDTH = 480;
@@ -423,6 +428,96 @@ export class CanvasRenderer {
           }
           this.spriteFactory.drawSprite(ctx, sKey, screen.x, screen.y, { flipX: flip });
         }
+
+        // Parachute Descent Rendering (Cords & Canopy)
+        if (enemy.isParachuteActive || enemy.state === 'PARACHUTE_DESCENT') {
+          const canopyY = screen.y - 56;
+          const shoulderY = screen.y - 26;
+
+          ctx.save();
+          ctx.strokeStyle = '#4A5A38';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(screen.x, shoulderY);
+          ctx.lineTo(screen.x - 18, canopyY);
+          ctx.moveTo(screen.x, shoulderY);
+          ctx.lineTo(screen.x - 7, canopyY);
+          ctx.moveTo(screen.x, shoulderY);
+          ctx.lineTo(screen.x + 7, canopyY);
+          ctx.moveTo(screen.x, shoulderY);
+          ctx.lineTo(screen.x + 18, canopyY);
+          ctx.stroke();
+          ctx.restore();
+
+          const tilt = enemy.parachuteSwayAngle ?? 0;
+          this.spriteFactory.drawSprite(ctx, 'parachute_canopy', screen.x, canopyY, {
+            rotation: tilt,
+          });
+        }
+
+      }
+    }
+
+    // 3.5. Render Decoupled Corpses & Casualty Animations (R2)
+    if (scene.corpses && scene.corpses.length > 0) {
+      for (const corpse of scene.corpses) {
+        const screen = camera.worldToScreen(corpse.x, corpse.y);
+        const flip = corpse.facing === -1;
+        const alpha = corpse.alpha !== undefined ? corpse.alpha : 1.0;
+
+        if (corpse.deathType === 'explosion') {
+          if (!corpse.isGrounded) {
+            // Mid-air tumbling soldier
+            this.spriteFactory.drawSprite(ctx, 'rebel_death_explosion_air', screen.x, screen.y, {
+              rotation: corpse.rotation,
+              flipX: flip,
+              alpha,
+            });
+            // Flying detached helmet
+            if (corpse.helmet) {
+              const hScreen = camera.worldToScreen(corpse.helmet.x, corpse.helmet.y);
+              this.spriteFactory.drawSprite(ctx, 'rebel_death_explosion_helmet', hScreen.x, hScreen.y, {
+                rotation: corpse.helmet.rotation,
+                alpha,
+              });
+            }
+          } else {
+            const landKey = corpse.frame === 0 ? 'rebel_death_explosion_land_0' : 'rebel_death_explosion_land_1';
+            this.spriteFactory.drawSprite(ctx, landKey, screen.x, screen.y, {
+              flipX: flip,
+              alpha,
+            });
+          }
+        } else if (corpse.deathType === 'fire') {
+          let burnKey = 'rebel_death_burn_thrash_0';
+          if (corpse.stage === 'thrash') {
+            burnKey = corpse.frame % 2 === 0 ? 'rebel_death_burn_thrash_0' : 'rebel_death_burn_thrash_1';
+          } else if (corpse.stage === 'charcoal') {
+            burnKey = 'rebel_death_burn_charcoal_0';
+          } else {
+            burnKey = corpse.frame === 0 ? 'rebel_death_burn_ash_0' : 'rebel_death_burn_ash_1';
+          }
+          this.spriteFactory.drawSprite(ctx, burnKey, screen.x, screen.y, {
+            flipX: flip,
+            alpha,
+          });
+        } else {
+          // Standard falling death
+          const f = Math.min(3, Math.max(0, corpse.frame ?? 0));
+          this.spriteFactory.drawSprite(ctx, `rebel_death_standard_${f}`, screen.x, screen.y, {
+            flipX: flip,
+            alpha,
+          });
+        }
+
+        // Render corpse particles (flames, smoke, impact dust)
+        if (corpse.particles && corpse.particles.length > 0) {
+          for (const p of corpse.particles) {
+            const pScreen = camera.worldToScreen(p.x, p.y);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(pScreen.x, pScreen.y, p.size, p.size);
+          }
+        }
       }
     }
 
@@ -436,6 +531,7 @@ export class CanvasRenderer {
       this.spriteFactory.drawSprite(ctx, spriteKey, screen.x, screen.y, { flipX: flip });
     }
   }
+
 
   // ==========================================
   // PASS 4: PROJECTILES & EXPLOSIONS

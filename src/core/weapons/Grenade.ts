@@ -201,7 +201,7 @@ export class Grenade implements GameEntity {
 
         // Apply damage to entity
         if (typeof (entity as any).takeDamage === 'function') {
-          (entity as any).takeDamage(damage, true); // true indicates explosive damage
+          (entity as any).takeDamage(damage, 'explosion', { x: this.position.x, y: this.position.y });
         } else if (typeof (entity as any).applyDamage === 'function') {
           (entity as any).applyDamage(damage);
         }

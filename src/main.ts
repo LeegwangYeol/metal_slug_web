@@ -41,12 +41,18 @@ import { PowEntity, PowState } from './core/entities/pow/PowEntity';
 import { ItemDropType } from './core/weapons/WeaponTypes';
 import { vec2 } from './core/math/Vector2D';
 import type { Vector2D } from './core/math/Vector2D';
+import { DeathCorpseManager } from './core/entities/enemies/DeathCorpseManager';
 
 export type { RenderPlayerState, Vector2D };
+
+export interface GameOptions {
+  spawnMode?: 'classic' | 'diverse';
+}
 
 export class FullMetalSlugGame {
   public readonly engine: GameEngine;
   public readonly stageManager: StageManager;
+  public readonly corpseManager: DeathCorpseManager;
   public readonly player: PlayerController;
   public readonly camera: Camera;
   public readonly parallax: ParallaxBackground;
@@ -77,10 +83,11 @@ export class FullMetalSlugGame {
   // Last input snapshot for renderer animation & crosshair state
   private lastInputSnapshot: PlayerInputSnapshot | null = null;
 
-  constructor(container?: HTMLElement) {
+  constructor(container?: HTMLElement, options: GameOptions = {}) {
     // 1. Simulation Core
     this.engine = new GameEngine();
     this.stageManager = new StageManager(this.engine);
+    this.corpseManager = new DeathCorpseManager(this.engine);
     this.player = new PlayerController(vec2(80, 230));
     this.engine.addEntity(this.player);
 
@@ -108,7 +115,7 @@ export class FullMetalSlugGame {
     this.setupAudioAndEventBus();
 
     // 6. Build Stage 1 Data & Populate
-    const stage1Data = this.buildStage1Data();
+    const stage1Data = this.buildStage1Data(options);
     this.stageManager.loadStage(stage1Data);
 
     // Pre-place POW hostages statically at stage load time ahead of player
@@ -119,6 +126,7 @@ export class FullMetalSlugGame {
       this.mount(container);
     }
   }
+
 
   /**
    * Pre-places POW hostages statically at stage load time ahead of the player,
@@ -263,6 +271,9 @@ export class FullMetalSlugGame {
     // 3. Advance Headless Physics Simulation (Entities & Collisions)
     this.engine.tick(dt);
 
+    // 3.5. Advance Decoupled Corpse Simulation
+    this.corpseManager.update(dt);
+
     // 4. Update Camera Tracking Player
     this.camera.update(this.player.position.x, this.player.position.y - 10, dt);
 
@@ -339,6 +350,10 @@ export class FullMetalSlugGame {
           state: soldier.state,
           health: soldier.health,
           maxHealth: soldier.maxHealth,
+          isParachuteActive: soldier.isParachuteActive,
+          parachuteSwayAngle: soldier.isParachuteActive
+            ? Math.max(-0.25, Math.min(0.25, soldier.velocity.x * 0.004))
+            : undefined,
         });
       } else if (ent.type === 'MID_BOSS_VEHICLE') {
         const mb = ent as MidBossVehicle;
@@ -457,6 +472,7 @@ export class FullMetalSlugGame {
       platforms: this.stageManager.getPlatforms(),
       player: playerRenderState,
       enemies: enemyStates,
+      corpses: this.corpseManager.getRenderStates(),
       boss: bossState,
       pows: powStates,
       projectiles: projectileStates,
@@ -464,6 +480,7 @@ export class FullMetalSlugGame {
       hud: hudState,
     };
   }
+
 
   private resolvePlayerRenderState(): 'idle' | 'run' | 'jump' | 'crouch' | 'aim' | 'knife' | 'fire' | 'death' {
     if (!this.player.isAlive || this.player.actionState === PlayerActionState.DEAD) {
@@ -620,8 +637,23 @@ export class FullMetalSlugGame {
     bus.on('grenade_exploded', (data: { blastCenter?: { x: number; y: number } }) => {
       if (data?.blastCenter) {
         addExplosion(data.blastCenter.x, data.blastCenter.y, 'large');
+        const p = this.player;
+        if (p.isAlive && (!p.invulnerabilityTimer || p.invulnerabilityTimer <= 0)) {
+          const dx = p.position.x - data.blastCenter.x;
+          const dy = p.position.y - data.blastCenter.y;
+          if (Math.hypot(dx, dy) <= 50) {
+            p.takeDamage(1.0);
+          }
+        }
       }
     });
+
+    // Soldier Casualty Death SFX
+    bus.on('enemy_death', (data: { deathType?: string }) => {
+      const type = (data?.deathType as 'standard' | 'explosion' | 'fire') || 'standard';
+      this.soundEngine.playSoldierDeath(type);
+    });
+
 
     // Screen Shake
     bus.on('screen_shake', (data: { amplitude: number; durationFrames?: number }) => {
@@ -650,7 +682,7 @@ export class FullMetalSlugGame {
   // STAGE 1 LEVEL POPULATION
   // =========================================================================
 
-  private buildStage1Data(): StageData {
+  public buildStage1Data(options: GameOptions = {}): StageData {
     const STAGE_WIDTH = 2400;
     const STAGE_HEIGHT = 270;
 
@@ -687,7 +719,7 @@ export class FullMetalSlugGame {
     ];
 
     // 2. Scripted Triggers: Patrol Waves, Mid-Boss & Boss (POWs pre-placed statically)
-    const triggers = [
+    const triggers: any[] = [
       // Trigger Wave 1: First skirmish
       {
         id: 'trigger_wave_1',
@@ -787,6 +819,102 @@ export class FullMetalSlugGame {
       },
     ];
 
+    // Diverse Enemy Spawning Extensions (R1)
+    if (options.spawnMode === 'diverse') {
+      triggers.push(
+        {
+          id: 'trigger_parachute_wave_1',
+          triggerX: 280,
+          triggered: false,
+          spawnAction: (eng: GameEngine, cameraX: number = 0) => {
+            const spawnX = cameraX + 360;
+            const paratrooper = SoldierEnemy.createParatrooper(
+              'rebel_paratrooper_1',
+              'SOLDIER_RIFLE',
+              vec2(spawnX, 15),
+              {
+                anchorX: spawnX,
+                descentSpeed: 52,
+                swayAmplitude: 20,
+                swayFrequency: 2.8,
+                targetGroundY: 230,
+                cameraX,
+              }
+            );
+            eng.addEntity(paratrooper);
+          },
+        },
+        {
+          id: 'trigger_bunker_ambush',
+          triggerX: 580,
+          triggered: false,
+          spawnAction: (eng: GameEngine, cameraX: number = 0) => {
+            const ambushSoldier = SoldierEnemy.createAmbushSoldier(
+              'rebel_ambush_1',
+              'SOLDIER_KNIFE',
+              vec2(cameraX + 460, 140),
+              vec2(-140, -220),
+              { cameraX, facing: -1 }
+            );
+            eng.addEntity(ambushSoldier);
+          },
+        },
+        {
+          id: 'trigger_parachute_wave_2',
+          triggerX: 1360,
+          triggered: false,
+          spawnAction: (eng: GameEngine, cameraX: number = 0) => {
+            const spawnX1 = cameraX + 320;
+            const spawnX2 = cameraX + 440;
+            const p1 = SoldierEnemy.createParatrooper(
+              'rebel_paratrooper_2',
+              'SOLDIER_GRENADE',
+              vec2(spawnX1, 10),
+              {
+                anchorX: spawnX1,
+                descentSpeed: 48,
+                swayAmplitude: 16,
+                swayFrequency: 3.2,
+                targetGroundY: 230,
+                cameraX,
+              }
+            );
+            const p2 = SoldierEnemy.createParatrooper(
+              'rebel_paratrooper_3',
+              'SOLDIER_RIFLE',
+              vec2(spawnX2, 30),
+              {
+                anchorX: spawnX2,
+                descentSpeed: 54,
+                swayAmplitude: 22,
+                swayFrequency: 2.5,
+                swayPhase: Math.PI / 2,
+                targetGroundY: 230,
+                cameraX,
+              }
+            );
+            eng.addEntity(p1);
+            eng.addEntity(p2);
+          },
+        },
+        {
+          id: 'trigger_bridge_ambush',
+          triggerX: 1560,
+          triggered: false,
+          spawnAction: (eng: GameEngine, cameraX: number = 0) => {
+            const ambushSoldier = SoldierEnemy.createAmbushSoldier(
+              'rebel_ambush_2',
+              'SOLDIER_KNIFE',
+              vec2(cameraX + 450, 120),
+              vec2(-120, -210),
+              { cameraX, facing: -1 }
+            );
+            eng.addEntity(ambushSoldier);
+          },
+        }
+      );
+    }
+
     return {
       id: 'stage_1',
       name: 'Mission 1: Beachhead Redoubt',
@@ -796,6 +924,25 @@ export class FullMetalSlugGame {
       platforms,
       triggers,
     };
+  }
+
+  /**
+   * Deterministic test hook for E2E and visual regression artifact capture.
+   */
+  public triggerEnemyDeathForTest(
+    deathType: 'standard' | 'explosion' | 'fire',
+    position: Vector2D = { x: 200, y: 192 },
+    facing: 1 | -1 = -1
+  ): void {
+    this.corpseManager.spawnCorpse({
+      id: `test_corpse_${Date.now()}_${Math.random()}`,
+      position,
+      velocity: { x: 0, y: 0 },
+      facing,
+      deathType,
+      role: 'RIFLE',
+      type: 'SOLDIER_RIFLE',
+    });
   }
 }
 
@@ -809,13 +956,14 @@ function bootstrap(): FullMetalSlugGame | null {
   const container = document.getElementById('game-container');
   if (!container) return null;
 
-  const game = new FullMetalSlugGame(container);
+  const game = new FullMetalSlugGame(container, { spawnMode: 'diverse' });
 
   // Expose for Playwright E2E and debug automation
   if (typeof window !== 'undefined') {
     (window as any).__GAME__ = game;
     (window as any).__ENGINE__ = game.engine;
     (window as any).__AUDIO_CTX__ = game.soundEngine.ctx;
+    (window as any).__CORPSE_MANAGER__ = game.corpseManager;
   }
 
   // Start 60 FPS animation loop
@@ -835,3 +983,4 @@ if (typeof window !== 'undefined') {
     bootstrap();
   }
 }
+

@@ -95,3 +95,32 @@ The boss health is currently set way too high, making it unplayable. Rebalance t
 ## 2026-09-03T08:23:20Z
 
 The user has explicitly approved the prompt artifact. Proceed with full force to overhaul and squash the bugs!
+
+## 2026-09-03T15:08:20Z
+
+Use a very large team of agents. Enhance the enemy spawning system and death animations to make the game feel dynamic and polished, and proactively hunt down and fix any remaining bugs in the Metal Slug web game. 
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Diverse Enemy Spawning
+Minions should not just walk in from the edge of the screen. Implement diverse spawn origins (e.g., dropping from the sky via parachute, jumping out of background structures or trenches) to make enemy encounters dynamic and surprising but natural.
+
+### R2. Varied Death Animations
+Implement multiple distinct death animations for enemies based on how they are killed. At a minimum, include: a standard falling death, being blown away by an explosion/grenade, and burning to death from a flamethrower.
+
+### R3. Proactive Bug Hunt & Polish
+The agent team must proactively playtest the game, hunt down any remaining unpolished mechanics, glitches, or bugs, and fix them on their own discretion without requiring further user input.
+
+## Acceptance Criteria
+
+### Visual & Gameplay Verification
+- [ ] Visual Proof: The team produces Playwright screenshot artifacts demonstrating at least 3 different enemy death animations (standard, explosion blowback, burning).
+- [ ] E2E Code Verification: Automated tests must verify that enemies spawn using diverse behaviors (e.g., starting with a high Y coordinate for falling, or specific trigger coordinates) rather than a simple off-screen X-coordinate check.
+- [ ] Bug Hunt Report: The team must produce a Markdown report detailing the specific bugs, glitches, or polish issues they discovered and resolved during their autonomous playtesting.
+
+## 2026-09-03T15:12:41Z
+
+The user has explicitly approved the plan. Please proceed with the implementation and bug hunting. (User message: "승인")

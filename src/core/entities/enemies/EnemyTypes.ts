@@ -20,7 +20,45 @@ export type SoldierRole = 'RIFLE' | 'KNIFE' | 'GRENADE' | 'SHIELD';
 /**
  * Damage types supported by the simulation combat engine.
  */
-export type DamageSourceType = 'bullet' | 'flame' | 'grenade' | 'melee';
+export type DamageSourceType =
+  | 'bullet'
+  | 'flame'
+  | 'fire'
+  | 'grenade'
+  | 'explosion'
+  | 'melee';
+
+/**
+ * Varied death animation classifications based on damage source.
+ */
+export type EnemyDeathType = 'standard' | 'explosion' | 'fire';
+
+/**
+ * Minion spawn behavior types for diverse entrance mechanics.
+ */
+export type SoldierSpawnBehavior = 'INGRESS_WALK' | 'PARACHUTE_DROP' | 'STRUCTURE_AMBUSH';
+
+/**
+ * Configuration parameters for airborne parachute descent.
+ */
+export interface ParachuteConfig {
+  descentSpeed?: number;    // Terminal descent velocity (default: 50 px/s, range: 40-60)
+  swayAmplitude?: number;   // Horizontal sway amplitude (default: 18 px)
+  swayFrequency?: number;   // Angular frequency (default: 3.0 rad/s)
+  swayPhase?: number;       // Initial phase offset in radians (default: 0)
+  anchorX?: number;         // Equilibrium X coordinate for sinusoidal oscillation
+  targetGroundY?: number;   // Ground collision line (default: 230)
+}
+
+/**
+ * Configuration parameters for trench/structure ambush leap ingress.
+ */
+export interface AmbushConfig {
+  leapVelocityX: number;    // Horizontal leap speed (e.g., -130 px/s)
+  leapVelocityY: number;    // Upward launch impulse (e.g., -220 px/s)
+  ambushOriginX?: number;
+  ambushOriginY?: number;
+}
 
 /**
  * Combat damage event structure.
@@ -32,6 +70,22 @@ export interface DamageEvent {
   direction?: Vector2D;
   isWeakPoint?: boolean;
 }
+
+/**
+ * Enemy casualty event dispatched when health reaches 0.
+ * Used by decoupled DeathCorpseManager for authentic visual death simulation.
+ */
+export interface EnemyDeathEvent {
+  id: string;
+  type: EnemyType;
+  role: SoldierRole;
+  position: Vector2D;
+  velocity: Vector2D;
+  facing: 1 | -1;
+  deathType: EnemyDeathType;
+  origin?: Vector2D;
+}
+
 
 /**
  * Core interface for enemy entities adhering to the decoupled simulation architecture.

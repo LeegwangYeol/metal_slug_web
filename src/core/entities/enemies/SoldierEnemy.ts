@@ -8,7 +8,12 @@ import {
   SoldierRole,
   DamageSourceType,
   TargetPlayer,
+  SoldierSpawnBehavior,
+  ParachuteConfig,
+  AmbushConfig,
+  EnemyDeathType,
 } from './EnemyTypes';
+
 
 /**
  * Enemy bullet projectile fired by riflemen and gun turrets.
@@ -37,6 +42,30 @@ export class EnemyBullet implements GameEntity {
     this.position.y += this.velocity.y * dt;
     this.bounds.x = this.position.x;
     this.bounds.y = this.position.y;
+
+    // Check collision against player
+    if (engine) {
+      const player = engine.getEntity('player') as any;
+      if (
+        player &&
+        player.isAlive &&
+        typeof player.takeDamage === 'function' &&
+        (!player.invulnerabilityTimer || player.invulnerabilityTimer <= 0)
+      ) {
+        const pb = player.bounds;
+        if (
+          this.bounds.x < pb.x + pb.width &&
+          this.bounds.x + this.bounds.width > pb.x &&
+          this.bounds.y < pb.y + pb.height &&
+          this.bounds.y + this.bounds.height > pb.y
+        ) {
+          player.takeDamage(this.damage);
+          this.isAlive = false;
+          engine.removeEntity(this.id);
+          return;
+        }
+      }
+    }
 
     this.lifetime -= dt;
     if (this.lifetime <= 0) {
@@ -124,6 +153,27 @@ export class EnemyGrenade implements GameEntity {
         radius: this.blastRadius,
         damage: this.damage,
       });
+
+      // Apply explosive damage to player if within blast radius
+      const player = engine.getEntity('player') as any;
+      if (
+        player &&
+        player.isAlive &&
+        typeof player.takeDamage === 'function' &&
+        (!player.invulnerabilityTimer || player.invulnerabilityTimer <= 0)
+      ) {
+        const pCenter = {
+          x: player.bounds.x + player.bounds.width / 2,
+          y: player.bounds.y + player.bounds.height / 2,
+        };
+        const dx = this.position.x - pCenter.x;
+        const dy = this.position.y - pCenter.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= this.blastRadius) {
+          player.takeDamage(this.damage);
+        }
+      }
+
       engine.removeEntity(this.id);
     }
   }
@@ -136,7 +186,13 @@ export interface SoldierConfig {
   walkSpeed?: number;
   cameraX?: number;
   isIngress?: boolean;
+  spawnBehavior?: SoldierSpawnBehavior;
+  spawnType?: 'ingress' | 'parachute' | 'ambush_leap' | string;
+  parachuteConfig?: ParachuteConfig;
+  ambushConfig?: AmbushConfig;
+  facing?: 1 | -1;
 }
+
 
 /**
  * Rebel Infantry AI implementing 4 distinct roles:
@@ -161,6 +217,16 @@ export class SoldierEnemy implements EnemyEntity {
   public state: string = 'IDLE';
   public isIngress: boolean = false;
   private ingressCameraX: number = 0;
+
+  // Diverse Spawning & Kinematics
+  public spawnBehavior: SoldierSpawnBehavior = 'INGRESS_WALK';
+  public parachuteConfig?: ParachuteConfig;
+  public ambushConfig?: AmbushConfig;
+  public isParachuteActive: boolean = false;
+  public deathType: EnemyDeathType = 'standard';
+  public lastDamageOrigin?: Vector2D;
+  private parachuteTime: number = 0;
+  private engineRef?: GameEngine;
 
   // Dimensions & bounds
   public readonly width: number = 24;
@@ -211,6 +277,10 @@ export class SoldierEnemy implements EnemyEntity {
     this.velocity = { x: 0, y: 0 };
     this.bounds = createAABB(this.position.x, this.position.y, this.width, this.height);
 
+    if (config.facing !== undefined) {
+      this.facing = config.facing;
+    }
+
     this.patrolMinX = config.patrolMinX ?? (this.position.x - 120);
     this.patrolMaxX = config.patrolMaxX ?? (this.position.x + 120);
     if (config.walkSpeed !== undefined) {
@@ -247,29 +317,73 @@ export class SoldierEnemy implements EnemyEntity {
         throw new Error(`Unsupported soldier enemy type: ${type}`);
     }
 
-    // Support smooth ingress: when spawned off-screen, minions move inward with a run-in velocity
-    // (vx = -110 px/s) until reaching the visible screen boundary margin (x <= cameraX + 460).
-    const isOffscreenRight = config.cameraX !== undefined && this.position.x > config.cameraX + 460;
-    const isOffscreenLeft = config.cameraX !== undefined && this.position.x < config.cameraX - 20;
+    // Diverse Spawning Behaviors
+    const isParachute =
+      config.spawnBehavior === 'PARACHUTE_DROP' ||
+      config.spawnType === 'parachute' ||
+      (this.position.y < 50 && config.spawnBehavior !== 'INGRESS_WALK' && config.spawnType !== 'ingress');
 
-    // Mid-boss reinforcement adds enter smoothly from off-screen right (X >= 1220)
-    if (this.id.startsWith('midboss_add_')) {
-      const spawnX = Math.max(config.cameraX !== undefined ? config.cameraX + 520 : 1220, 1220);
-      this.position.x = spawnX;
-      this.position.y = 192;
-      this.bounds.x = this.position.x;
-      this.bounds.y = this.position.y;
-      this.facing = -1;
-      this.velocity.x = -110;
-      this.isIngress = true;
-      this.ingressCameraX = config.cameraX ?? 720;
-      this.state = 'INGRESS';
-    } else if (config.isIngress || isOffscreenRight || isOffscreenLeft) {
-      this.isIngress = true;
-      this.ingressCameraX = config.cameraX ?? (isOffscreenRight ? this.position.x - 520 : 0);
-      this.facing = isOffscreenLeft ? 1 : -1;
-      this.velocity.x = this.facing * 110;
-      this.state = 'INGRESS';
+    const isAmbush =
+      config.spawnBehavior === 'STRUCTURE_AMBUSH' ||
+      config.spawnType === 'ambush_leap';
+
+    if (isParachute) {
+      this.spawnBehavior = 'PARACHUTE_DROP';
+      this.state = 'PARACHUTE_DESCENT';
+      this.isParachuteActive = true;
+      this.isGrounded = false;
+      const descentSpeed = Math.max(40, Math.min(60, config.parachuteConfig?.descentSpeed ?? 50));
+      this.velocity.x = 0;
+      this.velocity.y = descentSpeed;
+      this.parachuteConfig = {
+        anchorX: this.position.x,
+        descentSpeed,
+        swayAmplitude: config.parachuteConfig?.swayAmplitude ?? 18,
+        swayFrequency: config.parachuteConfig?.swayFrequency ?? 3.0,
+        swayPhase: config.parachuteConfig?.swayPhase ?? 0,
+        targetGroundY: config.parachuteConfig?.targetGroundY ?? 230,
+        ...config.parachuteConfig,
+      };
+    } else if (isAmbush) {
+      this.spawnBehavior = 'STRUCTURE_AMBUSH';
+      this.state = 'AMBUSH_LEAP';
+      this.isGrounded = false;
+      const leapVx = config.ambushConfig?.leapVelocityX ?? (this.facing * -130);
+      const leapVy = config.ambushConfig?.leapVelocityY ?? -220;
+      this.velocity.x = leapVx;
+      this.velocity.y = leapVy;
+      this.facing = this.velocity.x >= 0 ? 1 : -1;
+      this.ambushConfig = {
+        leapVelocityX: leapVx,
+        leapVelocityY: leapVy,
+        ...config.ambushConfig,
+      };
+    } else {
+      // Support smooth ingress: when spawned off-screen, minions move inward with a run-in velocity
+      // (vx = -110 px/s) until reaching the visible screen boundary margin (x <= cameraX + 460).
+      const isOffscreenRight = config.cameraX !== undefined && this.position.x > config.cameraX + 460;
+      const isOffscreenLeft = config.cameraX !== undefined && this.position.x < config.cameraX - 20;
+
+      // Mid-boss reinforcement adds enter smoothly from off-screen right (X >= 1220, Y = 192)
+      if (this.id.startsWith('midboss_add_')) {
+        const spawnX = Math.max(initialPosition.x, config.cameraX !== undefined ? config.cameraX + 520 : 1220, 1220);
+        this.position.x = spawnX;
+        this.position.y = 192;
+        this.bounds.x = this.position.x;
+        this.bounds.y = this.position.y;
+
+        this.facing = -1;
+        this.velocity.x = -110;
+        this.isIngress = true;
+        this.ingressCameraX = config.cameraX ?? 720;
+        this.state = 'INGRESS';
+      } else if (config.isIngress || isOffscreenRight || isOffscreenLeft) {
+        this.isIngress = true;
+        this.ingressCameraX = config.cameraX ?? (isOffscreenRight ? this.position.x - 520 : 0);
+        this.facing = isOffscreenLeft ? 1 : -1;
+        this.velocity.x = this.facing * 110;
+        this.state = 'INGRESS';
+      }
     }
   }
 
@@ -290,6 +404,39 @@ export class SoldierEnemy implements EnemyEntity {
     return new SoldierEnemy(id, 'SOLDIER_SHIELD', pos, config);
   }
 
+  static createParatrooper(
+    id: string,
+    type: EnemyType,
+    pos: Vector2D,
+    config?: ParachuteConfig & Partial<SoldierConfig>
+  ): SoldierEnemy {
+    return new SoldierEnemy(id, type, pos, {
+      ...config,
+      spawnBehavior: 'PARACHUTE_DROP',
+      spawnType: 'parachute',
+      parachuteConfig: { anchorX: pos.x, ...config },
+    });
+  }
+
+  static createAmbushSoldier(
+    id: string,
+    type: EnemyType,
+    pos: Vector2D,
+    leapVelocity: Vector2D,
+    config?: Partial<SoldierConfig>
+  ): SoldierEnemy {
+    return new SoldierEnemy(id, type, pos, {
+      ...config,
+      spawnBehavior: 'STRUCTURE_AMBUSH',
+      spawnType: 'ambush_leap',
+      ambushConfig: {
+        leapVelocityX: leapVelocity.x,
+        leapVelocityY: leapVelocity.y,
+      },
+    });
+  }
+
+
   setTargetPlayer(target: TargetPlayer | null): void {
     this.targetPlayer = target;
   }
@@ -300,6 +447,10 @@ export class SoldierEnemy implements EnemyEntity {
 
   update(dt: number, engine?: GameEngine): void {
     if (!this.isAlive) return;
+
+    if (engine) {
+      this.engineRef = engine;
+    }
 
     this.stateTimer += dt;
 
@@ -315,8 +466,16 @@ export class SoldierEnemy implements EnemyEntity {
       }
     }
 
-    // 2. State machine execution: smooth ingress or role-specific AI
-    if (this.state === 'INGRESS') {
+    // 2. State machine execution: diverse spawning or role-specific AI
+    if (this.state === 'PARACHUTE_DESCENT') {
+      this.updateParachuteAI(dt, engine);
+    } else if (this.state === 'PARACHUTE_LANDING') {
+      this.updateParachuteLandingAI(dt);
+    } else if (this.state === 'AMBUSH_LEAP') {
+      this.updateAmbushLeapAI(dt, engine);
+    } else if (this.state === 'LAND_RECOVERY') {
+      this.updateLandRecoveryAI(dt);
+    } else if (this.state === 'INGRESS') {
       this.updateIngressAI(dt, engine);
     } else {
       switch (this.role) {
@@ -332,6 +491,28 @@ export class SoldierEnemy implements EnemyEntity {
         case 'SHIELD':
           this.updateShieldTrooperAI(dt, engine);
           break;
+      }
+    }
+
+    // Check melee attack collision with player (Bug-03 fix)
+    if (this.isAttackingMelee && this.meleeAttackBox && engine) {
+      const player = engine.getEntity('player') as any;
+      if (
+        player &&
+        player.isAlive &&
+        typeof player.takeDamage === 'function' &&
+        (!player.invulnerabilityTimer || player.invulnerabilityTimer <= 0)
+      ) {
+        const mb = this.meleeAttackBox;
+        const pb = player.bounds;
+        if (
+          mb.x < pb.x + pb.width &&
+          mb.x + mb.width > pb.x &&
+          mb.y < pb.y + pb.height &&
+          mb.y + mb.height > pb.y
+        ) {
+          player.takeDamage(1.0);
+        }
       }
     }
 
@@ -404,6 +585,13 @@ export class SoldierEnemy implements EnemyEntity {
   }
 
   private applyPhysics(dt: number, engine?: GameEngine): void {
+    // Parachute descent bypasses standard gravity due to aerodynamic canopy drag
+    if (this.state === 'PARACHUTE_DESCENT') {
+      this.bounds.x = this.position.x;
+      this.bounds.y = this.position.y;
+      return;
+    }
+
     const prevFootY = this.position.y + this.height;
 
     // Apply gravity if not grounded
@@ -440,6 +628,69 @@ export class SoldierEnemy implements EnemyEntity {
       this.isGrounded = true;
     }
   }
+
+  private updateParachuteAI(dt: number, engine?: GameEngine): void {
+    this.parachuteTime += dt;
+    const cfg = this.parachuteConfig ?? {};
+    const descentSpeed = Math.max(40, Math.min(60, cfg.descentSpeed ?? 50));
+    const amplitude = cfg.swayAmplitude ?? 18;
+    const freq = cfg.swayFrequency ?? 3.0;
+    const phase = cfg.swayPhase ?? 0;
+    const anchorX = cfg.anchorX ?? this.position.x;
+    const targetGroundY = cfg.targetGroundY ?? 230;
+
+    // Harmonic horizontal sway integration
+    this.position.x = anchorX + amplitude * Math.sin(freq * this.parachuteTime + phase);
+    this.velocity.x = amplitude * freq * Math.cos(freq * this.parachuteTime + phase);
+    this.velocity.y = descentSpeed;
+    this.position.y += this.velocity.y * dt;
+
+    // Touchdown check: feet reach ground (y + height >= targetGroundY)
+    if (this.position.y + this.height >= targetGroundY) {
+      this.position.y = targetGroundY - this.height;
+      this.velocity.x = 0;
+      this.velocity.y = 0;
+      this.isGrounded = true;
+      this.isParachuteActive = false;
+      this.transitionTo('PARACHUTE_LANDING');
+
+      if (engine) {
+        engine.eventBus.emit('enemy_parachute_landed', {
+          id: this.id,
+          position: { x: this.position.x, y: this.position.y },
+        });
+      }
+    }
+  }
+
+  private updateParachuteLandingAI(_dt: number): void {
+    this.velocity.x = 0;
+    this.velocity.y = 0;
+    if (this.stateTimer >= 0.25) {
+      if (this.targetPlayer) {
+        this.facing = this.targetPlayer.position.x >= this.position.x ? 1 : -1;
+      }
+      this.transitionToNormalRoleAI();
+    }
+  }
+
+  private updateAmbushLeapAI(_dt: number, _engine?: GameEngine): void {
+    if (this.isGrounded && this.stateTimer > 0.08) {
+      this.velocity.x = 0;
+      this.transitionTo('LAND_RECOVERY');
+    }
+  }
+
+  private updateLandRecoveryAI(_dt: number): void {
+    this.velocity.x = 0;
+    if (this.stateTimer >= 0.15) {
+      if (this.targetPlayer) {
+        this.facing = this.targetPlayer.position.x >= this.position.x ? 1 : -1;
+      }
+      this.transitionToNormalRoleAI();
+    }
+  }
+
 
   // ==========================================
   // 1. SOLDIER_RIFLE: Patrol, Sight, Burst Fire
@@ -832,68 +1083,106 @@ export class SoldierEnemy implements EnemyEntity {
   }
 
   /**
-   * Evaluates damage reception with directional shield logic and melee vulnerability.
+   * Evaluates damage reception with directional shield logic, damage normalization, and melee vulnerability.
    * All 4 soldiers are melee vulnerable.
    * Shield trooper deflects frontal bullets, but is vulnerable to rear attacks, melee knife, and explosives.
    */
   takeDamage(
     amount: number,
-    sourceType: DamageSourceType = 'bullet',
-    origin?: Vector2D
+    sourceType: DamageSourceType | boolean = 'bullet',
+    origin?: Vector2D | boolean
   ): boolean {
     if (!this.isAlive) return false;
 
-    // Melee attack: All soldiers are vulnerable to melee knife!
-    if (sourceType === 'melee') {
+    // 1. Normalize damage source type across all historical and current caller signatures
+    let resolvedSource: DamageSourceType = 'bullet';
+    if (sourceType === true || sourceType === 'grenade' || sourceType === 'explosion') {
+      resolvedSource = 'explosion';
+    } else if (sourceType === 'flame' || sourceType === 'fire' || origin === true) {
+      resolvedSource = 'fire';
+    } else if (sourceType === 'melee') {
+      resolvedSource = 'melee';
+    } else {
+      resolvedSource = 'bullet';
+    }
+
+    const damageOrigin: Vector2D | undefined =
+      typeof origin === 'object' && origin !== null && 'x' in origin ? origin : undefined;
+    this.lastDamageOrigin = damageOrigin;
+
+    // 2. Melee attack: All soldiers are vulnerable to melee knife!
+    if (resolvedSource === 'melee') {
       this.health -= amount;
-      this.checkDeath(sourceType);
+      this.checkDeath(resolvedSource);
       return true;
     }
 
-    // Shield trooper special directional defense
+    // 3. Shield trooper special directional defense
     if (this.role === 'SHIELD') {
-      const isFrontal = origin
-        ? (origin.x - this.position.x) * this.facing > 0
+      const isFrontal = damageOrigin
+        ? (damageOrigin.x - this.position.x) * this.facing > 0
         : true;
 
       if (isFrontal) {
-        if (sourceType === 'bullet') {
+        if (resolvedSource === 'bullet') {
           // If in vulnerable window (EXPOSED_THRUST or STAGGER), takes bullet damage
           if (this.state === 'EXPOSED_THRUST' || this.state === 'STAGGER') {
             this.health -= amount;
-            this.checkDeath(sourceType);
+            this.checkDeath(resolvedSource);
             return true;
           } else {
             // Frontal bullet deflected!
             return false;
           }
-        } else if (sourceType === 'grenade') {
+        } else if (resolvedSource === 'explosion') {
           // Explosives damage and stagger shield trooper
           this.health -= amount;
           this.transitionTo('STAGGER');
-          this.checkDeath(sourceType);
+          this.checkDeath(resolvedSource);
           return true;
-        } else if (sourceType === 'flame') {
+        } else if (resolvedSource === 'fire') {
           // Flame pierces and damages
           this.health -= amount;
-          this.checkDeath(sourceType);
+          this.checkDeath(resolvedSource);
           return true;
         }
       }
     }
 
-    // Standard damage reception (flanking, non-shield, rear hits)
+    // 4. Standard damage reception (flanking, non-shield, rear hits)
     this.health -= amount;
-    this.checkDeath(sourceType);
+    this.checkDeath(resolvedSource);
     return true;
   }
 
-  private checkDeath(_sourceType: DamageSourceType): void {
+  private checkDeath(sourceType: DamageSourceType): void {
     if (this.health <= 0) {
       this.health = 0;
       this.isAlive = false;
       this.state = 'DEAD';
       this.velocity = { x: 0, y: 0 };
+
+      // Determine death animation classification
+      if (sourceType === 'fire' || sourceType === 'flame') {
+        this.deathType = 'fire';
+      } else if (sourceType === 'explosion' || sourceType === 'grenade') {
+        this.deathType = 'explosion';
+      } else {
+        this.deathType = 'standard';
+      }
+
+      if (this.engineRef) {
+        this.engineRef.eventBus.emit('enemy_death', {
+          id: this.id,
+          type: this.type,
+          role: this.role,
+          position: { x: this.position.x, y: this.position.y },
+          velocity: { x: this.velocity.x, y: this.velocity.y },
+          facing: this.facing,
+          deathType: this.deathType,
+          origin: this.lastDamageOrigin,
+        });
+      }
     }
   }
 
@@ -902,3 +1191,4 @@ export class SoldierEnemy implements EnemyEntity {
     this.stateTimer = 0;
   }
 }
+

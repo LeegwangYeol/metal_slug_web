@@ -172,9 +172,11 @@ export class BulletProjectile implements GameEntity {
 
   private dealDamageTo(entity: GameEntity, engine: GameEngine): void {
     const isFire = this.weaponType === 'FLAME_SHOT';
+    const sourceType = isFire ? 'flame' : 'bullet';
+    const origin = { x: this.position.x, y: this.position.y };
 
     if (typeof (entity as any).takeDamage === 'function') {
-      (entity as any).takeDamage(this.damage, false, isFire);
+      (entity as any).takeDamage(this.damage, sourceType, origin);
     } else if (typeof (entity as any).applyDamage === 'function') {
       (entity as any).applyDamage(this.damage);
     }
@@ -409,7 +411,7 @@ export class ProjectileManager {
               candidate.type.includes('BOSS'))
           ) {
             if (typeof (candidate as any).takeDamage === 'function') {
-              (candidate as any).takeDamage(fire.damage, false, true);
+              (candidate as any).takeDamage(fire.damage, 'flame', { x: fire.position.x, y: fire.position.y });
             } else if (typeof (candidate as any).applyDamage === 'function') {
               (candidate as any).applyDamage(fire.damage);
             }

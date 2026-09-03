@@ -270,8 +270,18 @@ export class SoundEngine implements ISoundEngine {
       case 'ITEM_PICKUP':
         this.playItemPickup();
         break;
+      case 'SOLDIER_DEATH_STANDARD':
+        this.playSoldierDeath('standard');
+        break;
+      case 'SOLDIER_DEATH_EXPLOSION':
+        this.playSoldierDeath('explosion');
+        break;
+      case 'SOLDIER_DEATH_FIRE':
+        this.playSoldierDeath('fire');
+        break;
     }
   }
+
 
   public playVoice(clip: VoiceClipType): void {
     if (this.isMutedState) return;
@@ -841,4 +851,85 @@ export class SoundEngine implements ISoundEngine {
       this.registerVoiceNode(gain, note.time + noteDuration);
     }
   }
+
+  /**
+   * 10. Soldier Casualty Grunt / Agony Scream / Crackle.
+   */
+  public playSoldierDeath(type: 'standard' | 'explosion' | 'fire' = 'standard'): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+
+    if (type === 'explosion') {
+      // High-pitched rebel scream: "Aaaargh!" pitch descending from 580Hz down to 220Hz
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(580, t);
+      osc.frequency.exponentialRampToValueAtTime(220, t + 0.4);
+
+      gain.gain.setValueAtTime(0.75, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.42);
+      this.registerVoiceNode(gain, 0.42);
+    } else if (type === 'fire') {
+      // Screaming thrash with crackling flame noise
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(650, t);
+      osc.frequency.linearRampToValueAtTime(720, t + 0.15);
+      osc.frequency.exponentialRampToValueAtTime(300, t + 0.5);
+
+      gain.gain.setValueAtTime(0.65, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.52);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.52);
+      this.registerVoiceNode(gain, 0.52);
+
+      // Crackle burst
+      if (this.whiteNoiseBuffer) {
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = this.whiteNoiseBuffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(2200, t);
+        filter.Q.setValueAtTime(3.5, t);
+
+        const nGain = this.ctx.createGain();
+        nGain.gain.setValueAtTime(0.4, t);
+        nGain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+
+        noise.connect(filter);
+        filter.connect(nGain);
+        nGain.connect(this.sfxGain);
+        noise.start(t);
+        noise.stop(t + 0.45);
+        this.registerVoiceNode(nGain, 0.45);
+      }
+    } else {
+      // Standard grunt / groan: 280Hz down to 140Hz
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(280, t);
+      osc.frequency.exponentialRampToValueAtTime(130, t + 0.28);
+
+      gain.gain.setValueAtTime(0.7, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.3);
+      this.registerVoiceNode(gain, 0.3);
+    }
+  }
 }
+

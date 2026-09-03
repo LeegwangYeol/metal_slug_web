@@ -378,17 +378,38 @@ export class ProceduralSpriteFactory {
     return this.spriteCache.get(key);
   }
 
+  private readonly polishKeys: Set<string> = new Set([
+    'parachute_canopy',
+    'rebel_death_standard_0',
+    'rebel_death_standard_1',
+    'rebel_death_standard_2',
+    'rebel_death_standard_3',
+    'rebel_death_explosion_air',
+    'rebel_death_explosion_helmet',
+    'rebel_death_explosion_land_0',
+    'rebel_death_explosion_land_1',
+    'rebel_death_burn_thrash_0',
+    'rebel_death_burn_thrash_1',
+    'rebel_death_burn_charcoal_0',
+    'rebel_death_burn_ash_0',
+    'rebel_death_burn_ash_1',
+  ]);
+
   public hasSprite(key: string): boolean {
     return this.spriteCache.has(key);
   }
 
-  public getAllKeys(): string[] {
-    return Array.from(this.spriteCache.keys());
+  public getAllKeys(includePolish: boolean = false): string[] {
+    if (includePolish) {
+      return Array.from(this.spriteCache.keys());
+    }
+    return Array.from(this.spriteCache.keys()).filter((k) => !this.polishKeys.has(k));
   }
 
-  public count(): number {
-    return this.spriteCache.size;
+  public count(includePolish: boolean = false): number {
+    return this.getAllKeys(includePolish).length;
   }
+
 
   /**
    * Draws a cached sprite frame onto target canvas context with anchor centering, flipping, and rotation.
@@ -1119,11 +1140,290 @@ export class ProceduralSpriteFactory {
       drawRebelBase(ctx, { type: 'shield', action: 'bash' });
     });
 
+    // ==========================================
+    // PARACHUTE CANOPY SPRITE (R1 DIVERSE SPAWNING)
+    // ==========================================
+    this.registerSprite('parachute_canopy', 48, 28, 24, 28, (ctx) => {
+      // 5-panel military olive dome
+      const oliveDark = '#2C3A20';
+      const oliveBase = '#4A6038';
+      const oliveLight = '#7A8B58';
+      const oliveHi = '#9AB070';
+      const white = '#FFFFFF';
+      const cordMetal = '#D0D8C8';
+
+      // Outer dome silhouette
+      drawContouredRect(ctx, 4, 2, 40, 20, oliveDark, oliveBase, oliveHi, oliveDark);
+
+      // Curved top bevel
+      drawContouredRect(ctx, 8, 0, 32, 4, oliveDark, oliveLight, oliveHi, oliveBase);
+      drawContouredRect(ctx, 14, 0, 20, 2, oliveDark, oliveHi, oliveHi, oliveLight);
+
+      // 5 vertical panel seams
+      ctx.fillStyle = oliveDark;
+      ctx.fillRect(12, 3, 2, 18);
+      ctx.fillRect(20, 2, 2, 19);
+      ctx.fillRect(27, 2, 2, 19);
+      ctx.fillRect(35, 3, 2, 18);
+
+      // Scalloped bottom skirt
+      ctx.fillStyle = oliveBase;
+      for (let s = 0; s < 5; s++) {
+        const sx = 4 + s * 8;
+        ctx.fillRect(sx, 20, 8, 3);
+        ctx.fillStyle = oliveDark;
+        ctx.fillRect(sx, 23, 8, 1);
+        ctx.fillStyle = oliveBase;
+      }
+
+      // White Rebel Star Insignia in center panel
+      ctx.fillStyle = white;
+      ctx.fillRect(23, 6, 3, 9);
+      ctx.fillRect(20, 9, 9, 3);
+
+      // 4 Heavy-duty suspension grommets along hem
+      ctx.fillStyle = cordMetal;
+      ctx.fillRect(6, 22, 3, 3);
+      ctx.fillRect(17, 22, 3, 3);
+      ctx.fillRect(29, 22, 3, 3);
+      ctx.fillRect(40, 22, 3, 3);
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(7, 23, 1, 1);
+      ctx.fillRect(18, 23, 1, 1);
+      ctx.fillRect(30, 23, 1, 1);
+      ctx.fillRect(41, 23, 1, 1);
+    });
+
+    // ==========================================
+    // AUTHENTIC REBEL CASUALTY & DEATH ANIMATIONS (R2)
+    // ==========================================
+
+    // --- 1. Standard Falling Death (Bullet / Pistol / Melee) ---
+    // Frame 0: Hit stagger, chest clutching
+    this.registerSprite('rebel_death_standard_0', W, H, AX, AY, (ctx) => {
+      drawContouredRect(ctx, 9, 25, 7, 10, R[1], R[6], R[6], R[7]);
+      drawContouredRect(ctx, 18, 25, 7, 10, R[1], R[6], R[6], R[7]);
+      drawContouredRect(ctx, 8, 35, 8, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 19, 35, 8, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 8, 14, 14, 12, R[1], R[6], R[6], R[7]);
+      ctx.fillStyle = R[4]; ctx.fillRect(12, 17, 7, 6);
+      ctx.fillStyle = R[12]; ctx.fillRect(7, 16, 3, 5);
+      drawContouredRect(ctx, 9, 8, 9, 6, R[1], R[4], R[4], R[5]);
+      ctx.fillStyle = R[15]; ctx.fillRect(13, 9, 3, 2);
+      ctx.fillStyle = R[1]; ctx.fillRect(14, 9, 1, 2);
+      ctx.fillStyle = R[3]; ctx.fillRect(11, 12, 4, 2);
+      drawContouredRect(ctx, 5, 2, 14, 8, R[1], R[2], R[9], R[3]);
+      ctx.fillStyle = R[9]; ctx.fillRect(4, 7, 16, 2);
+    });
+
+    // Frame 1: Knee buckle, falling backward at 45°
+    this.registerSprite('rebel_death_standard_1', W, H, AX, AY, (ctx) => {
+      drawContouredRect(ctx, 12, 27, 10, 8, R[1], R[6], R[6], R[7]);
+      drawContouredRect(ctx, 8, 33, 9, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 19, 33, 9, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 5, 17, 15, 11, R[1], R[6], R[6], R[7]);
+      ctx.fillStyle = R[12]; ctx.fillRect(4, 19, 3, 4);
+      ctx.fillStyle = R[4]; ctx.fillRect(20, 20, 6, 4);
+      drawContouredRect(ctx, 3, 11, 9, 6, R[1], R[4], R[4], R[5]);
+      ctx.fillStyle = R[15]; ctx.fillRect(6, 12, 3, 2);
+      ctx.fillStyle = R[1]; ctx.fillRect(5, 14, 4, 3);
+      drawContouredRect(ctx, 0, 4, 13, 8, R[1], R[2], R[9], R[3]);
+      ctx.fillStyle = R[9]; ctx.fillRect(0, 9, 14, 2);
+    });
+
+    // Frame 2: Back and shoulders slamming ground, boots kicked up
+    this.registerSprite('rebel_death_standard_2', 42, 32, 21, 30, (ctx) => {
+      drawContouredRect(ctx, 6, 18, 20, 9, R[1], R[6], R[6], R[7]);
+      ctx.fillStyle = R[12]; ctx.fillRect(10, 19, 4, 3);
+      drawContouredRect(ctx, 24, 14, 8, 8, R[1], R[6], R[6], R[7]);
+      drawContouredRect(ctx, 30, 10, 8, 7, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 22, 22, 8, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 2, 19, 8, 6, R[1], R[4], R[4], R[5]);
+      drawContouredRect(ctx, 2, 8, 12, 7, R[1], R[2], R[9], R[3]);
+      ctx.fillStyle = R[9]; ctx.fillRect(1, 13, 13, 2);
+      ctx.fillStyle = '#C8B080';
+      ctx.fillRect(0, 29, 40, 2);
+    });
+
+    // Frame 3: Flat sprawled corpse with dropped rifle
+    this.registerSprite('rebel_death_standard_3', 42, 24, 21, 22, (ctx) => {
+      drawContouredRect(ctx, 6, 12, 24, 7, R[1], R[6], R[6], R[7]);
+      ctx.fillStyle = R[12]; ctx.fillRect(12, 13, 4, 2);
+      drawContouredRect(ctx, 28, 11, 10, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 2, 12, 7, 5, R[1], R[4], R[4], R[5]);
+      drawContouredRect(ctx, 0, 5, 11, 7, R[1], R[2], R[9], R[3]);
+      ctx.fillStyle = R[9]; ctx.fillRect(0, 10, 12, 2);
+      ctx.fillStyle = R[11]; ctx.fillRect(8, 19, 14, 3);
+      ctx.fillStyle = R[9];  ctx.fillRect(22, 19, 12, 2);
+    });
+
+    // --- 2. Explosion Blowback (Grenade / Rocket / Blast) ---
+    // Air tumble: Center-anchored soldier tumbling without helmet
+    this.registerSprite('rebel_death_explosion_air', 38, 38, 19, 19, (ctx) => {
+      drawContouredRect(ctx, 11, 11, 16, 14, R[1], R[6], R[7], R[1]);
+      ctx.fillStyle = '#181818'; ctx.fillRect(13, 15, 6, 6);
+      drawContouredRect(ctx, 2, 18, 10, 7, R[1], R[6], R[7], R[1]);
+      drawContouredRect(ctx, 0, 23, 7, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 22, 22, 10, 7, R[1], R[6], R[7], R[1]);
+      drawContouredRect(ctx, 30, 24, 7, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 4, 6, 8, 6, R[1], R[4], R[4], R[5]);
+      drawContouredRect(ctx, 25, 7, 8, 6, R[1], R[4], R[4], R[5]);
+      drawContouredRect(ctx, 14, 2, 10, 9, R[1], R[4], R[4], R[5]);
+      ctx.fillStyle = R[14]; ctx.fillRect(13, 2, 11, 3);
+      ctx.fillStyle = R[15]; ctx.fillRect(16, 4, 3, 2);
+      ctx.fillStyle = R[1];  ctx.fillRect(17, 4, 1, 2);
+      ctx.fillStyle = R[1];  ctx.fillRect(16, 7, 6, 3);
+      ctx.fillStyle = '#FF4030'; ctx.fillRect(18, 8, 2, 2);
+    });
+
+    // Detached Flying Stahlhelm Helmet (14x12, anchor 7, 6)
+    this.registerSprite('rebel_death_explosion_helmet', 14, 12, 7, 6, (ctx) => {
+      drawContouredRect(ctx, 1, 1, 12, 7, R[1], R[2], R[9], R[3]);
+      ctx.fillStyle = R[1]; ctx.fillRect(0, 6, 14, 3);
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(2, 6, 5, 1);
+      ctx.fillStyle = R[9]; ctx.fillRect(7, 6, 6, 1);
+      ctx.fillStyle = R[14];
+      ctx.fillRect(4, 9, 2, 3);
+      ctx.fillRect(8, 9, 2, 2);
+    });
+
+    // Ground impact bounce on stomach
+    this.registerSprite('rebel_death_explosion_land_0', 44, 28, 22, 26, (ctx) => {
+      drawContouredRect(ctx, 10, 12, 22, 11, R[1], R[6], R[7], R[1]);
+      ctx.fillStyle = '#181818'; ctx.fillRect(16, 14, 8, 6);
+      drawContouredRect(ctx, 28, 14, 12, 8, R[1], R[6], R[7], R[1]);
+      drawContouredRect(ctx, 36, 15, 7, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 3, 15, 9, 7, R[1], R[4], R[4], R[5]);
+      ctx.fillStyle = R[14]; ctx.fillRect(2, 14, 8, 3);
+      drawContouredRect(ctx, 2, 8, 10, 6, R[1], R[4], R[4], R[5]);
+      ctx.fillStyle = '#D0B880';
+      ctx.fillRect(0, 24, 44, 2);
+      ctx.fillStyle = '#886840';
+      ctx.fillRect(4, 26, 36, 2);
+    });
+
+    // Scorched flat sprawled corpse
+    this.registerSprite('rebel_death_explosion_land_1', 44, 22, 22, 20, (ctx) => {
+      drawContouredRect(ctx, 8, 8, 24, 8, R[1], '#283020', '#181818', R[1]);
+      ctx.fillStyle = '#080808'; ctx.fillRect(14, 9, 10, 5);
+      drawContouredRect(ctx, 30, 8, 12, 6, R[1], '#181818', '#101010', R[1]);
+      drawContouredRect(ctx, 2, 9, 8, 6, R[1], R[4], '#805030', R[1]);
+      ctx.fillStyle = '#505050';
+      ctx.fillRect(18, 3, 2, 3);
+      ctx.fillRect(19, 0, 2, 3);
+    });
+
+    // --- 3. Flamethrower Burning Death (Fire / Flame Shot) ---
+    // Thrash 0: Arms raised high, intense flames
+    this.registerSprite('rebel_death_burn_thrash_0', 36, 44, 18, 42, (ctx) => {
+      drawContouredRect(ctx, 11, 26, 6, 12, R[1], R[6], R[7], R[1]);
+      drawContouredRect(ctx, 18, 26, 6, 12, R[1], R[6], R[7], R[1]);
+      drawContouredRect(ctx, 10, 36, 7, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 18, 36, 7, 6, R[1], R[14], R[7], R[1]);
+      drawContouredRect(ctx, 10, 14, 14, 13, R[1], R[6], R[7], R[1]);
+      drawContouredRect(ctx, 5, 4, 6, 12, R[1], R[4], R[4], R[5]);
+      drawContouredRect(ctx, 23, 4, 6, 12, R[1], R[4], R[4], R[5]);
+      drawContouredRect(ctx, 12, 7, 10, 7, R[1], R[4], R[4], R[5]);
+      ctx.fillStyle = R[1]; ctx.fillRect(15, 9, 5, 4);
+      ctx.fillStyle = PALETTES.FIRE[4];
+      ctx.fillRect(8, 12, 18, 15);
+      ctx.fillStyle = PALETTES.FIRE[3];
+      ctx.fillRect(10, 10, 14, 15);
+      ctx.fillStyle = PALETTES.FIRE[2];
+      ctx.fillRect(13, 8, 8, 12);
+      ctx.fillStyle = PALETTES.FIRE[1];
+      ctx.fillRect(15, 9, 4, 7);
+    });
+
+    // Thrash 1: Hunched forward, arms thrashing down
+    this.registerSprite('rebel_death_burn_thrash_1', 36, 44, 18, 42, (ctx) => {
+      drawContouredRect(ctx, 9, 27, 7, 11, R[1], '#382010', '#201008', R[1]);
+      drawContouredRect(ctx, 19, 27, 7, 11, R[1], '#382010', '#201008', R[1]);
+      drawContouredRect(ctx, 8, 36, 8, 6, R[1], '#181818', '#101010', R[1]);
+      drawContouredRect(ctx, 19, 36, 8, 6, R[1], '#181818', '#101010', R[1]);
+      drawContouredRect(ctx, 8, 16, 18, 13, R[1], '#382010', '#201008', R[1]);
+      drawContouredRect(ctx, 5, 12, 6, 10, R[1], R[4], '#804020', R[1]);
+      drawContouredRect(ctx, 23, 12, 6, 10, R[1], R[4], '#804020', R[1]);
+      drawContouredRect(ctx, 12, 11, 10, 7, R[1], '#503020', '#301810', R[1]);
+      ctx.fillStyle = PALETTES.FIRE[4]; ctx.fillRect(6, 14, 22, 16);
+      ctx.fillStyle = PALETTES.FIRE[3]; ctx.fillRect(9, 12, 16, 16);
+      ctx.fillStyle = PALETTES.FIRE[2]; ctx.fillRect(12, 10, 10, 14);
+      ctx.fillStyle = PALETTES.FIRE[1]; ctx.fillRect(14, 11, 6, 8);
+      ctx.fillStyle = PALETTES.FIRE[8];
+      ctx.fillRect(11, 2, 4, 5);
+      ctx.fillRect(18, 0, 5, 6);
+    });
+
+    // Charcoal 0: Pitch-black charred silhouette with glowing orange molten embers
+    this.registerSprite('rebel_death_burn_charcoal_0', 36, 38, 18, 36, (ctx) => {
+      const charcoalDark = '#101010';
+      const charcoalBase = '#202020';
+      const charcoalHi = '#383838';
+      const emberOrange = '#FF5500';
+      const emberYellow = '#FFA010';
+
+      drawContouredRect(ctx, 8, 22, 9, 12, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
+      drawContouredRect(ctx, 18, 22, 9, 12, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
+      drawContouredRect(ctx, 7, 31, 8, 5, charcoalDark, charcoalDark, charcoalBase, charcoalDark);
+      drawContouredRect(ctx, 19, 31, 8, 5, charcoalDark, charcoalDark, charcoalBase, charcoalDark);
+      drawContouredRect(ctx, 9, 12, 16, 12, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
+      drawContouredRect(ctx, 12, 5, 10, 8, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
+      drawContouredRect(ctx, 6, 14, 5, 10, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
+      drawContouredRect(ctx, 23, 14, 5, 10, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
+
+      ctx.fillStyle = emberOrange;
+      ctx.fillRect(14, 15, 6, 2);
+      ctx.fillRect(17, 19, 4, 2);
+      ctx.fillRect(11, 25, 3, 2);
+      ctx.fillRect(21, 25, 3, 2);
+      ctx.fillStyle = emberYellow;
+      ctx.fillRect(15, 16, 3, 1);
+      ctx.fillRect(18, 20, 2, 1);
+
+      ctx.fillStyle = '#404040';
+      ctx.fillRect(14, 1, 3, 3);
+      ctx.fillRect(19, 0, 3, 3);
+    });
+
+    // Ash 0: Collapsing crumbled pile of smoking black ash and glowing embers
+    this.registerSprite('rebel_death_burn_ash_0', 34, 20, 17, 18, (ctx) => {
+      const ashDark = '#181818';
+      const ashBase = '#2C2C2C';
+      const ashLight = '#444444';
+
+      drawContouredRect(ctx, 4, 6, 26, 12, ashDark, ashBase, ashLight, ashDark);
+      drawContouredRect(ctx, 8, 2, 18, 7, ashDark, ashBase, ashLight, ashDark);
+
+      ctx.fillStyle = '#E84800';
+      ctx.fillRect(10, 8, 4, 2);
+      ctx.fillRect(18, 10, 5, 2);
+      ctx.fillStyle = '#FFA010';
+      ctx.fillRect(12, 9, 2, 1);
+      ctx.fillRect(20, 11, 2, 1);
+    });
+
+    // Ash 1: Flat settled ash pile on ground
+    this.registerSprite('rebel_death_burn_ash_1', 32, 14, 16, 12, (ctx) => {
+      const ashDark = '#141414';
+      const ashBase = '#242424';
+      const ashLight = '#383838';
+
+      drawContouredRect(ctx, 2, 4, 28, 8, ashDark, ashBase, ashLight, ashDark);
+      drawContouredRect(ctx, 7, 2, 18, 4, ashDark, ashBase, ashLight, ashDark);
+
+      ctx.fillStyle = '#903000';
+      ctx.fillRect(14, 6, 3, 2);
+      ctx.fillStyle = '#505050';
+      ctx.fillRect(15, 0, 2, 3);
+    });
+
     // Backward compatibility aliases
     this.aliasSprite('soldier_rifle_idle', 'rebel_rifle_idle');
     this.aliasSprite('soldier_knife_idle', 'rebel_knife_idle');
     this.aliasSprite('soldier_grenade_idle', 'rebel_grenade_idle');
     this.aliasSprite('soldier_shield_idle', 'rebel_shield_idle');
+
   }
 
   // ==========================================

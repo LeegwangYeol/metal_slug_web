@@ -582,5 +582,15 @@ export class PlayerController implements GameEntity {
         (other as any).freeHostage();
       }
     }
+
+    // Enemy bullet collision (Bug-03 fix)
+    if (other.type === 'ENEMY_BULLET') {
+      if (this.invulnerabilityTimer <= 0) {
+        this.takeDamage((other as any).damage ?? 1.0);
+        (other as any).isAlive = false;
+        engine.removeEntity(other.id);
+      }
+    }
   }
 }
+
