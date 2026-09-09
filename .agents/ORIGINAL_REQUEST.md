@@ -124,3 +124,68 @@ The agent team must proactively playtest the game, hunt down any remaining unpol
 ## 2026-09-03T15:12:41Z
 
 The user has explicitly approved the plan. Please proceed with the implementation and bug hunting. (User message: "승인")
+
+## 2026-09-03T16:13:55Z
+
+Use a very large team of agents. Massively expand the Metal Slug web game by transplanting and implementing new boss encounters, dynamic crisis situations, ally NPCs, diverse items, and an ultimate move system. 
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Epic Bosses & Crisis Events
+Implement new, highly challenging boss encounters with multiple phases. Introduce "crisis situations" during these fights (e.g., screen-filling attacks, environmental hazards, or collapsing terrain) that force the player to react dynamically.
+
+### R2. Allies, Items, & Ultimate Moves
+Introduce ally NPCs that autonomously fight alongside the player. Add a diverse range of new items/power-ups. Implement a spectacular "Ultimate Move" mechanic (e.g., a screen-clearing bomb or massive vehicle strike) that the player can trigger in dire situations.
+
+### R3. Autonomous Scaling and Rigorous Testing
+Deploy 50+ agents to handle the massive scope of this expansion. The team must autonomously design, code, balance, and rigorously test all mechanics.
+
+## Acceptance Criteria
+
+### Visual & Gameplay Verification
+- [ ] Playwright E2E Test (Ultimate Move): A headless browser test MUST trigger the ultimate move and verify that it correctly clears or severely damages all enemies on screen.
+- [ ] Code Verification (Allies): Tests must assert that ally NPCs spawn correctly, acquire targets, and deal damage independently of the player.
+- [ ] Code Verification (Crisis Events): Boss tests must verify that specific HP thresholds trigger environment-altering crisis events (e.g., spawning hazards or changing active bounds).
+- [ ] Visual Proof: Playwright screenshots capturing the Ultimate Move execution and the new Boss/Crisis environments.
+
+## 2026-09-03T16:16:25Z
+
+The user has explicitly approved the plan. Please proceed with the implementation, 50+ agent swarm execution, and verification. (User message: "승인")
+
+## 2026-09-08T02:16:18Z
+
+승인 (User has provided explicit approval to resume work. Please continue from M2 and finish M3.)
+
+## 2026-09-09T13:38:06Z
+
+Use a very large team of agents. Finalize the massive expansion of the Metal Slug web game. Complete the M3 Ultimate Move system, polish all mechanics so the game flows smoothly, ensure 100% test pass rate, and push the final build to GitHub to trigger a Vercel deployment.
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Finalize M3 (Ultimate Move & Polish)
+Complete the implementation of the Ultimate Move (screen-clearing mechanic). Proactively playtest and polish the game so that physics, spawning, and combat flow smoothly without any glitches or "Atari" feel.
+
+### R2. Rigorous Verification & Git Deployment
+Ensure all Vitest and Playwright E2E tests are 100% green. Once verified, autonomously commit the code and push it to the `main` branch on GitHub (`origin/main`).
+
+### R3. Vercel Deployment Verification
+After pushing to GitHub, you MUST monitor or check the Vercel deployment logs/status (via Vercel CLI or API) to ensure the game is successfully deployed without build errors.
+
+## Acceptance Criteria
+
+### Verification & Deployment
+- [ ] Playwright E2E Test (Ultimate Move): A headless browser test MUST trigger the ultimate move and verify that it correctly clears or severely damages all enemies on screen.
+- [ ] 100% Green Tests: The test suite must pass perfectly without TypeScript compilation errors.
+- [ ] Git Push Verified: A `git status` or log confirms the code was pushed to `origin/main`.
+- [ ] Vercel Success Verified: A log or status check confirms the Vercel build succeeded.
+
+## 2026-09-09T13:38:27Z
+
+승인 (User has provided explicit blanket approval. The content and details are left to your autonomy. Please proceed immediately with finalizing M3, polishing, testing, pushing to Git, and verifying Vercel logs.)
+

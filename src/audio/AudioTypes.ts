@@ -14,7 +14,15 @@ export type SoundEffectType =
   | 'ITEM_PICKUP'
   | 'SOLDIER_DEATH_STANDARD'
   | 'SOLDIER_DEATH_EXPLOSION'
-  | 'SOLDIER_DEATH_FIRE';
+  | 'SOLDIER_DEATH_FIRE'
+  | 'ULTIMATE_SIREN'
+  | 'FLYOVER_ROAR'
+  | 'APOCALYPTIC_BLAST'
+  | 'HYDRAULIC_HISS'
+  | 'KI_BLAST'
+  | 'SHOTGUN'
+  | 'LASER'
+  | 'ROCKET_THRUST';
 
 
 export type VoiceClipType =
@@ -94,5 +102,13 @@ export interface ISoundEngine {
   playBulletHit(isFlesh?: boolean): void;
   playItemPickup(): void;
   playSoldierDeath(type?: 'standard' | 'explosion' | 'fire'): void;
+  playUltimateSiren(): void;
+  playFlyoverRoar(): void;
+  playApocalypticBlast(): void;
+  playHydraulicHiss?(): void;
+  playKiBlast?(): void;
+  playShotgun?(): void;
+  playLaser?(): void;
+  playRocketThrust?(): void;
 }
 

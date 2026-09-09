@@ -129,8 +129,14 @@ export class BulletProjectile implements GameEntity {
 
     const typeStr = other?.type ?? '';
 
-    // Ignore player or other friendly projectiles
-    if (typeStr === 'PLAYER' || typeStr === 'PROJECTILE' || typeStr === 'GRENADE') {
+    // Ignore player, friendly projectiles, and ally NPCs
+    if (
+      typeStr === 'PLAYER' ||
+      typeStr === 'PROJECTILE' ||
+      typeStr === 'GRENADE' ||
+      typeStr === 'ALLY_NPC' ||
+      typeStr === 'ALLY_PROJECTILE'
+    ) {
       return;
     }
 

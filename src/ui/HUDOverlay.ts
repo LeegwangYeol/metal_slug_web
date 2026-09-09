@@ -14,11 +14,12 @@
 
 import { CanvasContext2DLike, ProceduralSpriteFactory } from '../render/sprites/ProceduralSpriteFactory';
 import { PALETTES } from '../render/sprites/Palette';
+import { WeaponType } from '../core/weapons/WeaponTypes';
 
 export interface HUDOverlayState {
   score: number;
   lives: number;
-  weaponType: 'PISTOL' | 'HEAVY_MACHINE_GUN' | 'FLAME_SHOT';
+  weaponType: WeaponType;
   ammo: number; // Infinity or number
   grenades: number;
   hostagesRescued: number;
@@ -159,7 +160,7 @@ export class HUDOverlay {
 
   private renderWeaponAndAmmo(
     ctx: CanvasContext2DLike,
-    weaponType: 'PISTOL' | 'HEAVY_MACHINE_GUN' | 'FLAME_SHOT',
+    weaponType: WeaponType,
     ammo: number
   ): void {
     const badgeX = 180;

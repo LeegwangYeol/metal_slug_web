@@ -42,6 +42,18 @@ import { ItemDropType } from './core/weapons/WeaponTypes';
 import { vec2 } from './core/math/Vector2D';
 import type { Vector2D } from './core/math/Vector2D';
 import { DeathCorpseManager } from './core/entities/enemies/DeathCorpseManager';
+import { IronNokanaBoss } from './core/entities/boss/IronNokanaBoss';
+import { CrisisEventManager } from './core/entities/boss/CrisisEventManager';
+import { AllyNPC } from './core/entities/allies/AllyNPC';
+import { AllyManager } from './core/entities/allies/AllyManager';
+import { ItemPickupEntity } from './core/entities/items/ItemPickup';
+import {
+  ArtilleryTargetReticle,
+  ArtilleryShellHazard,
+  FallingDebrisHazard,
+  GroundFlameHazard,
+} from './core/entities/boss/EnvironmentalHazard';
+import { AllyKiBlast } from './core/entities/allies/AllyKiBlast';
 
 export type { RenderPlayerState, Vector2D };
 
@@ -239,6 +251,7 @@ export class FullMetalSlugGame {
    */
   public step(dt: number = FullMetalSlugGame.FIXED_TIMESTEP): void {
     this.elapsedTime += dt;
+    (this.engine as any).cameraX = this.camera.x;
 
     // 1. Process Combined Keyboard & Touch Inputs
     const kbSnap = this.keyboard.getSnapshot();
@@ -254,6 +267,7 @@ export class FullMetalSlugGame {
       shootPressed: kbSnap.shootPressed || touchSnap.shootPressed,
       shootHeld: kbSnap.shootHeld || touchSnap.shootHeld,
       grenadePressed: kbSnap.grenadePressed || touchSnap.grenadePressed,
+      ultimatePressed: kbSnap.ultimatePressed,
     };
 
     this.lastInputSnapshot = input;
@@ -478,6 +492,7 @@ export class FullMetalSlugGame {
       projectiles: projectileStates,
       explosions: this.activeExplosions,
       hud: hudState,
+      cinematicFX: this.player.ultimateManager?.getCinematicState(),
     };
   }
 
@@ -559,6 +574,18 @@ export class FullMetalSlugGame {
         case 'sfx_pow_freed':
         case 'sfx_pow_saved':
           this.soundEngine.playItemPickup();
+          break;
+        case 'sfx_air_raid_siren':
+        case 'sfx_ultimate_siren':
+          this.soundEngine.playUltimateSiren();
+          break;
+        case 'sfx_bomber_flyover':
+        case 'sfx_flyover_roar':
+          this.soundEngine.playFlyoverRoar();
+          break;
+        case 'sfx_heavy_detonation':
+        case 'sfx_apocalyptic_blast':
+          this.soundEngine.playApocalypticBlast();
           break;
       }
     });
@@ -964,6 +991,22 @@ function bootstrap(): FullMetalSlugGame | null {
     (window as any).__ENGINE__ = game.engine;
     (window as any).__AUDIO_CTX__ = game.soundEngine.ctx;
     (window as any).__CORPSE_MANAGER__ = game.corpseManager;
+    (window as any).__EXPANSION__ = {
+      IronNokanaBoss,
+      CrisisEventManager,
+      AllyNPC,
+      AllyManager,
+      AllyKiBlast,
+      ItemPickupEntity,
+      ItemDropType,
+      ArtilleryTargetReticle,
+      ArtilleryShellHazard,
+      FallingDebrisHazard,
+      GroundFlameHazard,
+      PowEntity,
+      PowState,
+      vec2,
+    };
   }
 
   // Start 60 FPS animation loop

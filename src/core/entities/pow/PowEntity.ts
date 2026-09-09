@@ -89,6 +89,7 @@ export class PowEntity implements GameEntity {
   public state: PowState = PowState.TIED_UP;
   public assignedDropType: ItemDropType;
   public facing: FacingDirection = 1;
+  public spawnsAlly: boolean = false;
 
   private stateTimer: number = 0; // seconds
   private hasSpawnedItem: boolean = false;
@@ -97,7 +98,8 @@ export class PowEntity implements GameEntity {
   constructor(
     id: string,
     startPosition: Vector2D,
-    scriptedDropType?: ItemDropType
+    scriptedDropType?: ItemDropType,
+    spawnsAlly: boolean = false
   ) {
     this.id = id;
     this.position = { x: startPosition.x, y: startPosition.y };
@@ -109,6 +111,7 @@ export class PowEntity implements GameEntity {
       PowEntity.TIED_HEIGHT
     );
     this.assignedDropType = scriptedDropType ?? PowEntity.selectWeightedDrop();
+    this.spawnsAlly = spawnsAlly;
   }
 
   /**
@@ -131,11 +134,18 @@ export class PowEntity implements GameEntity {
   /**
    * Called when player weapon bullet, knife slash, grenade blast, or player contact frees the POW.
    */
-  freeHostage(): void {
+  freeHostage(engine?: GameEngine): void {
     if (this.state !== PowState.TIED_UP) return;
 
     this.state = PowState.FREED;
     this.stateTimer = PowEntity.FREED_FRAMES * GameEngine.DEFAULT_TIMESTEP;
+
+    if (this.spawnsAlly && engine) {
+      engine.eventBus.emit('spawn_ally', {
+        position: { x: this.position.x, y: this.position.y },
+        powId: this.id,
+      });
+    }
   }
 
   update(dt: number, engine: GameEngine): void {
@@ -154,6 +164,13 @@ export class PowEntity implements GameEntity {
           this.stateTimer = PowEntity.SALUTE_FRAMES * GameEngine.DEFAULT_TIMESTEP;
           engine.eventBus.emit('play_voice', { voice: 'voice_thank_you' });
           engine.eventBus.emit('play_sound', { sound: 'sfx_pow_freed' });
+
+          if (this.spawnsAlly) {
+            engine.eventBus.emit('spawn_ally', {
+              position: { x: this.position.x, y: this.position.y },
+              powId: this.id,
+            });
+          }
         }
         break;
 
@@ -232,6 +249,13 @@ export class PowEntity implements GameEntity {
       player.score += PowEntity.SAVED_SCORE_BONUS;
     }
 
+    if (this.spawnsAlly) {
+      engine.eventBus.emit('spawn_ally', {
+        position: { x: this.position.x, y: this.position.y },
+        powId: this.id,
+      });
+    }
+
     engine.eventBus.emit('pow_saved', {
       powId: this.id,
       scoreAwarded: PowEntity.SAVED_SCORE_BONUS,
@@ -244,7 +268,7 @@ export class PowEntity implements GameEntity {
 
     // Contact with player frees the POW
     if (this.state === PowState.TIED_UP && other.type === 'PLAYER') {
-      this.freeHostage();
+      this.freeHostage(_engine);
     }
   }
 
@@ -261,3 +285,5 @@ export class PowEntity implements GameEntity {
     }
   }
 }
+
+export { PowEntity as PrisonerEntity };

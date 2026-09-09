@@ -1,64 +1,58 @@
-# Dispatch: Worker M2 (Smooth Out-of-Bounds Enemy Spawning & Despawning)
+## 2026-09-04T01:59:10Z
 
-## Mission
-Implement smooth out-of-bounds enemy spawning and clean off-screen despawning according to R1 requirements and Explorer 1's handoff specification.
+You are Worker M2.
+Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2/
+Your workspace root is: /Users/user/teamwork_projects/metal_slug_web/
 
-## Working Directory
-/Users/user/src/fullmetalslug/.agents/worker_m2
+MANDATORY FIRST STEP: Read the authoritative user request at:
+/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+Also read the scope document and Explorer M2 blueprint:
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen2/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2/handoff.md
 
-## Exclusive File Ownership
-- `src/core/engine/StageManager.ts`
-- `src/core/entities/enemies/SoldierEnemy.ts`
-- `src/main.ts` (spawn triggers & stage manager update loop)
+Exclusively Owned Files for Milestone 2:
+- src/core/entities/allies/AllyTypes.ts
+- src/core/entities/allies/AllyNPC.ts
+- src/core/entities/allies/AllyKiBlast.ts
+- src/core/entities/allies/AllyManager.ts
+- src/core/weapons/WeaponTypes.ts
+- src/core/weapons/ShotgunWeapon.ts
+- src/core/weapons/LaserGunWeapon.ts
+- src/core/weapons/RocketLauncherWeapon.ts
+- src/core/weapons/WeaponManager.ts
+- src/core/weapons/ProjectileManager.ts
+- src/core/entities/items/ItemPickup.ts
+- src/core/player/PlayerController.ts
+- tests/unit/allies_system.test.ts
+- tests/unit/diverse_weapons_items.test.ts
 
-## Input References
-- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` (MANDATORY: read first)
-- `/Users/user/src/fullmetalslug/COLLABORATION.md`
-- `/Users/user/src/fullmetalslug/PROJECT.md`
-- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_1/handoff.md`
-- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_1/survey_report.md`
-
-## Instructions
-1. In `src/core/engine/StageManager.ts`:
-   - Pass camera state / `cameraX` to `StageTrigger.spawnAction(engine, cameraX)`.
-   - Implement off-screen despawning: in `update(cameraX, playerX)`, scan active enemies; if an enemy drops behind the screen ($X < \text{cameraX} - 180\text{px}$) or falls below the stage ($Y > 320\text{px}$), despawn it cleanly from the engine and remove from tracking to prevent memory leaks and spatial grid clutter.
-2. In `src/core/entities/enemies/SoldierEnemy.ts`:
-   - Support smooth entrance behavior: when spawned off-screen, soldier enters with an initial inward velocity / run-in state ($v_x = -110\text{ px/s}$) until crossing into visible viewport bounds ($X \le \text{cameraX} + 460\text{px}$), then smoothly transitions to its tactical patrol / combat AI.
-3. In `src/main.ts`:
-   - Update wave spawn triggers (`trigger_wave_1`, `trigger_wave_2`, `trigger_wave_3`, etc.) so enemies NEVER spawn directly inside the visible viewport.
-   - Position right-entering minions out-of-bounds: $X_{\text{spawn}} = \text{cameraX} + \text{camera.viewportWidth} + 40\text{px} = \text{cameraX} + 520\text{px}$, with $+40\text{px}$ echelon staggering for multi-enemy squads.
-   - For elevated fortification sentries, ensure they are pre-placed on stage creation or triggered when platforms are still off-screen.
-   - Pass `this.camera.x` to `this.stageManager.update(this.camera.x, this.player.position.x)`.
-4. Run `npm test` using `run_command` and confirm all 145+ unit tests pass 100% green.
-5. Deliver `handoff.md` in your working directory with build & test output.
-
-## Integrity Warning
-DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
-
-## 2026-09-03T06:30:56Z
-
-You are worker_m2.
-Working directory: /Users/user/src/fullmetalslug/.agents/worker_m2
-Scope document: /Users/user/src/fullmetalslug/PROJECT.md
-Original user request: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
-Collaboration guide: /Users/user/src/fullmetalslug/COLLABORATION.md
-Dispatch instructions: /Users/user/src/fullmetalslug/.agents/worker_m2/DISPATCH.md
-
-Exclusive File Ownership:
-- src/core/engine/StageManager.ts
-- src/core/entities/enemies/SoldierEnemy.ts
-- src/main.ts (spawn triggers & stage manager update)
-
-Your task:
-1. In src/core/engine/StageManager.ts:
-   - Update StageTrigger interface and execution to pass camera parameters to spawnAction (engine, cameraX).
-   - Implement despawnOffscreenEntities(): in update(cameraX, playerX), scan active minions and cleanly despawn any minion that falls behind the camera (x < cameraX - 180) or drops below stage (y > 320), removing them from the engine to prevent memory leaks.
-2. In src/core/entities/enemies/SoldierEnemy.ts:
-   - Support smooth ingress: when spawned off-screen, minions move inward with a run-in velocity (vx = -110 px/s) until reaching the visible screen boundary margin (x <= cameraX + 460), then seamlessly transition to their normal patrol / combat AI state.
-3. In src/main.ts:
-   - Update all enemy wave triggers (trigger_wave_1, trigger_wave_2, trigger_wave_3, etc.) so that enemies NEVER pop onto the visible screen.
-   - Calculate right-entering spawn positions out-of-bounds: x = cameraX + camera.viewportWidth + 40 (i.e. cameraX + 520), staggered by +40px for multi-enemy squads.
-   - Pass camera.x to stageManager.update(this.camera.x, this.player.position.x).
-4. Run npm test to verify all tests pass 100% green.
-5. Deliver handoff.md in your working directory with test outputs. Send a message to orchestrator when done.
-
+Task Instructions:
+Implement the complete Milestone 2 feature set strictly according to the architecture blueprint in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2/handoff.md`:
+1. `src/core/weapons/WeaponTypes.ts`:
+   - Add SHOTGUN, LASER_GUN, ROCKET_LAUNCHER to `WeaponType` and `WEAPON_CONFIGS`.
+   - Add WEAPON_SHOTGUN, WEAPON_LASER, WEAPON_ROCKET, MEDKIT, SHIELD to `ItemDropType` and update `POW_LOOT_TABLE`.
+2. Dedicated Weapon Implementations:
+   - `src/core/weapons/ShotgunWeapon.ts`: 7-pellet fan spread (+-14 degrees), 680 px/s velocity, 2.0 damage per pellet, 0.18s lifetime, kinetic knockback impulse (160 px/s horizontal).
+   - `src/core/weapons/LaserGunWeapon.ts`: 1200 px/s continuous beam, piercing without termination, per-target 0.1s tick immunity map, 1.2 damage per tick.
+   - `src/core/weapons/RocketLauncherWeapon.ts`: Homing rocket (220 to 650 px/s acceleration, 3.5 rad/s steering toward nearest enemy), 48px explosive AOE blast (8.0 * (1 - d/48) damage falloff).
+3. Integration in `src/core/weapons/WeaponManager.ts` and `ProjectileManager.ts`:
+   - Wire up firing, ammo pools, and item pickups for new weapons.
+   - Guard against friendly fire on ALLY_NPC and ALLY_PROJECTILE.
+4. Items & Player Integration:
+   - `src/core/entities/items/ItemPickup.ts`: Standalone entity supporting floating/bouncing and all ItemDropTypes, maintaining backwards compatibility with PowEntity.ts.
+   - `src/core/player/PlayerController.ts`: Add `public shieldCharges: number = 0;`, implement 2-hit damage absorption in `takeDamage()`, handle Medkit (heal/lives) and Shield pickups.
+5. Autonomous Ally NPC System:
+   - `src/core/entities/allies/AllyTypes.ts`: States, configs, contracts.
+   - `src/core/entities/allies/AllyKiBlast.ts`: Friendly energy projectile (520 px/s, 3.5 damage, ignores player/ally).
+   - `src/core/entities/allies/AllyNPC.ts`: Autonomous Hyakutaro Ichimonji companion. Autonomous follow/locomotion, threat-weighted target acquisition within 380px radius without player input, 0.35s ki charge, ki blast firing, celebrate state.
+   - `src/core/entities/allies/AllyManager.ts`: Lifecycle management.
+6. Comprehensive Unit Tests:
+   - `tests/unit/diverse_weapons_items.test.ts`: Test Shotgun spread/knockback, Laser piercing/tick immunity, Rocket homing/blast AOE, Medkit heal/lives, Shield 2-hit absorption.
+   - `tests/unit/allies_system.test.ts`: Test autonomous state transitions, tethering locomotion, target acquisition with 0 player input, ki blast emission, damage resolution (3.5 damage), friendly fire safety.
+7. Verification:
+   - Run `npx tsc --noEmit` (must have 0 errors).
+   - Run `npx vitest run tests/unit/allies_system.test.ts tests/unit/diverse_weapons_items.test.ts`.
+   - Run `npx vitest run` (ensure all tests pass 100% green, 0 regressions).
+8. Write detailed handoff report to:
+   /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2/handoff.md
+9. Send completion message to parent with summary and artifact path.

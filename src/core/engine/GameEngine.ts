@@ -113,6 +113,15 @@ export class GameEngine {
     this.platforms.push(platform);
   }
 
+  removePlatform(platformId: string): boolean {
+    const idx = this.platforms.findIndex((p) => p.id === platformId);
+    if (idx !== -1) {
+      this.platforms.splice(idx, 1);
+      return true;
+    }
+    return false;
+  }
+
   getPlatforms(): Platform[] {
     return this.platforms;
   }

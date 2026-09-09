@@ -279,6 +279,30 @@ export class SoundEngine implements ISoundEngine {
       case 'SOLDIER_DEATH_FIRE':
         this.playSoldierDeath('fire');
         break;
+      case 'ULTIMATE_SIREN':
+        this.playUltimateSiren();
+        break;
+      case 'FLYOVER_ROAR':
+        this.playFlyoverRoar();
+        break;
+      case 'APOCALYPTIC_BLAST':
+        this.playApocalypticBlast();
+        break;
+      case 'HYDRAULIC_HISS':
+        this.playHydraulicHiss();
+        break;
+      case 'KI_BLAST':
+        this.playKiBlast();
+        break;
+      case 'SHOTGUN':
+        this.playShotgun();
+        break;
+      case 'LASER':
+        this.playLaser();
+        break;
+      case 'ROCKET_THRUST':
+        this.playRocketThrust();
+        break;
     }
   }
 
@@ -929,6 +953,330 @@ export class SoundEngine implements ISoundEngine {
       osc.start(t);
       osc.stop(t + 0.3);
       this.registerVoiceNode(gain, 0.3);
+    }
+  }
+
+  /**
+   * Ultimate Move SFX 1: Air-Raid Siren (Phase 1 Freeze)
+   * Dual oscillating tone with metallic bandpass horn resonance.
+   */
+  public playUltimateSiren(): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    const duration = 0.55;
+
+    // Dual detuned sawtooth oscillators
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+
+    // Pitch sweep: 480Hz -> 880Hz -> 480Hz
+    osc1.frequency.setValueAtTime(480, t);
+    osc1.frequency.linearRampToValueAtTime(880, t + 0.25);
+    osc1.frequency.linearRampToValueAtTime(480, t + duration);
+
+    osc2.frequency.setValueAtTime(484, t);
+    osc2.frequency.linearRampToValueAtTime(884, t + 0.25);
+    osc2.frequency.linearRampToValueAtTime(484, t + duration);
+
+    // Resonant horn filter
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(720, t);
+    filter.Q.setValueAtTime(3.0, t);
+
+    gain.gain.setValueAtTime(0.01, t);
+    gain.gain.linearRampToValueAtTime(0.82, t + 0.08);
+    gain.gain.setValueAtTime(0.82, t + 0.38);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc1.start(t);
+    osc2.start(t);
+    osc1.stop(t + duration);
+    osc2.stop(t + duration);
+    this.registerVoiceNode(gain, duration);
+  }
+
+  /**
+   * Ultimate Move SFX 2: Heavy Bomber Flyover Roar (Phase 2 Strike Pass)
+   * Swept Brownian noise + low turbine drone with Doppler pitch shift.
+   */
+  public playFlyoverRoar(): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    const duration = 0.75;
+
+    // Brownian Noise through Doppler Filter
+    if (this.brownNoiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      const lp = this.ctx.createBiquadFilter();
+      const noiseGain = this.ctx.createGain();
+
+      noise.buffer = this.brownNoiseBuffer;
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(220, t);
+      lp.frequency.exponentialRampToValueAtTime(700, t + 0.35); // Approach
+      lp.frequency.exponentialRampToValueAtTime(140, t + duration); // Recede
+
+      noiseGain.gain.setValueAtTime(0.05, t);
+      noiseGain.gain.linearRampToValueAtTime(0.9, t + 0.35);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      noise.connect(lp);
+      lp.connect(noiseGain);
+      noiseGain.connect(this.sfxGain);
+
+      noise.start(t);
+      noise.stop(t + duration);
+      this.registerVoiceNode(noiseGain, duration);
+    }
+
+    // Heavy Twin-Turbine Drone
+    const drone = this.ctx.createOscillator();
+    const droneGain = this.ctx.createGain();
+    drone.type = 'sawtooth';
+    drone.frequency.setValueAtTime(74, t);
+    drone.frequency.linearRampToValueAtTime(96, t + 0.35);
+    drone.frequency.linearRampToValueAtTime(58, t + duration);
+
+    droneGain.gain.setValueAtTime(0.01, t);
+    droneGain.gain.linearRampToValueAtTime(0.7, t + 0.35);
+    droneGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    drone.connect(droneGain);
+    droneGain.connect(this.sfxGain);
+
+    drone.start(t);
+    drone.stop(t + duration);
+    this.registerVoiceNode(droneGain, duration);
+  }
+
+  /**
+   * Ultimate Move SFX 3: Apocalyptic Detonation Shockwave (Phase 3 Detonation)
+   * Multi-stage cataclysmic blast: transient crack, pink noise roar, seismic sub-bass rumble.
+   */
+  public playApocalypticBlast(): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    const duration = 2.4;
+
+    // 1. Hypersonic Crack Transient
+    if (this.whiteNoiseBuffer) {
+      const crack = this.ctx.createBufferSource();
+      const bp = this.ctx.createBiquadFilter();
+      const cGain = this.ctx.createGain();
+
+      crack.buffer = this.whiteNoiseBuffer;
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(3200, t);
+      bp.frequency.exponentialRampToValueAtTime(500, t + 0.05);
+      bp.Q.setValueAtTime(3.5, t);
+
+      cGain.gain.setValueAtTime(1.0, t);
+      cGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+
+      crack.connect(bp);
+      bp.connect(cGain);
+      cGain.connect(this.sfxGain);
+
+      crack.start(t);
+      crack.stop(t + 0.06);
+      this.registerVoiceNode(cGain, 0.06);
+    }
+
+    // 2. Heavy Resonant Pink/Brown Explosion Body
+    if (this.pinkNoiseBuffer) {
+      const blast = this.ctx.createBufferSource();
+      const lp = this.ctx.createBiquadFilter();
+      const bGain = this.ctx.createGain();
+
+      blast.buffer = this.pinkNoiseBuffer;
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(4000, t);
+      lp.frequency.exponentialRampToValueAtTime(40, t + duration);
+      lp.Q.setValueAtTime(4.2, t);
+
+      bGain.gain.setValueAtTime(1.0, t);
+      bGain.gain.setValueAtTime(0.95, t + 0.15);
+      bGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      blast.connect(lp);
+      lp.connect(bGain);
+      bGain.connect(this.sfxGain);
+
+      blast.start(t);
+      blast.stop(t + duration);
+      this.registerVoiceNode(bGain, duration);
+    }
+
+    // 3. Ground-Shaking Seismic Sub-Bass (140Hz -> 20Hz)
+    const sub = this.ctx.createOscillator();
+    const shaper = this.ctx.createWaveShaper();
+    const subGain = this.ctx.createGain();
+
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(140, t);
+    sub.frequency.exponentialRampToValueAtTime(20, t + 1.2);
+
+    if (this.distortionCurve) {
+      shaper.curve = this.distortionCurve as any;
+    }
+
+    subGain.gain.setValueAtTime(1.0, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 1.35);
+
+    sub.connect(shaper);
+    shaper.connect(subGain);
+    subGain.connect(this.sfxGain);
+
+    sub.start(t);
+    sub.stop(t + 1.35);
+    this.registerVoiceNode(subGain, 1.35);
+  }
+
+  /**
+   * Expansion SFX: Hydraulic Hiss (Mechanical Boss & Vehicle limbs)
+   */
+  public playHydraulicHiss(): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    const duration = 0.22;
+
+    if (this.whiteNoiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      const bp = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      noise.buffer = this.whiteNoiseBuffer;
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(1600, t);
+      bp.frequency.exponentialRampToValueAtTime(650, t + duration);
+      bp.Q.setValueAtTime(2.5, t);
+
+      gain.gain.setValueAtTime(0.5, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      noise.connect(bp);
+      bp.connect(gain);
+      gain.connect(this.sfxGain);
+
+      noise.start(t);
+      noise.stop(t + duration);
+      this.registerVoiceNode(gain, duration);
+    }
+  }
+
+  /**
+   * Expansion SFX: Ki Blast (Hyakutaro Ichimonji Hadouken)
+   */
+  public playKiBlast(): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    const duration = 0.35;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1100, t);
+    osc.frequency.exponentialRampToValueAtTime(280, t + duration);
+
+    gain.gain.setValueAtTime(0.8, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + duration);
+    this.registerVoiceNode(gain, duration);
+  }
+
+  /**
+   * Expansion SFX: Shotgun Blast (Heavy kinetic punch)
+   */
+  public playShotgun(): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    const duration = 0.28;
+
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(240, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + duration);
+
+    oscGain.gain.setValueAtTime(0.9, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    osc.connect(oscGain);
+    oscGain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + duration);
+    this.registerVoiceNode(oscGain, duration);
+  }
+
+  /**
+   * Expansion SFX: Laser Continuous Beam Pulse
+   */
+  public playLaser(): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    const duration = 0.2;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(980, t);
+    osc.frequency.linearRampToValueAtTime(1850, t + duration);
+
+    gain.gain.setValueAtTime(0.4, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + duration);
+    this.registerVoiceNode(gain, duration);
+  }
+
+  /**
+   * Expansion SFX: Homing Rocket Thrust
+   */
+  public playRocketThrust(): void {
+    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
+    const t = this.ctx.currentTime;
+    const duration = 0.45;
+
+    if (this.brownNoiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      const lp = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      noise.buffer = this.brownNoiseBuffer;
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(120, t);
+      lp.frequency.exponentialRampToValueAtTime(380, t + duration);
+
+      gain.gain.setValueAtTime(0.6, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      noise.connect(lp);
+      lp.connect(gain);
+      gain.connect(this.sfxGain);
+
+      noise.start(t);
+      noise.stop(t + duration);
+      this.registerVoiceNode(gain, duration);
     }
   }
 }

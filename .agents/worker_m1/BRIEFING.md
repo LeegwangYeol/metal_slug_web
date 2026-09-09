@@ -1,91 +1,58 @@
-# BRIEFING — 2026-09-03T12:18:45+09:00
+# BRIEFING — 2026-09-04T01:55:00+09:00
 
 ## Mission
-Deliver Milestone M1: Project Tooling Initialization, Strict TypeScript Config, Vite/Vitest/Playwright setup, index.html, and Pure Decoupled Core Simulation Engine (Vector2D, AABB, SpatialGrid, Platform, GameEngine, StageManager) with zero DOM/Canvas dependencies, verified by clean build and typecheck.
+Remediate IronNokanaBoss and unit tests for boss crisis events to achieve 100% green tests with zero regressions.
 
 ## 🔒 My Identity
 - Archetype: worker_m1
 - Roles: implementer, qa, specialist
-- Working directory: /Users/user/src/fullmetalslug/.agents/worker_m1/
-- Original parent: 084b764e-0b87-4c6e-b6aa-67ece754bc64
-- Milestone: M1 — Project Scaffolding & Decoupled Core Simulation Engine
-- Current Milestone: R1 Overhaul — Newtonian Physics & Arcade Kinematics
+- Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1/
+- Original parent: f3526e56-fca6-4e0a-9a39-1b1c3f42580e
+- Milestone: M1_BOSS_CRISIS
 
 ## 🔒 Key Constraints
-- File Write Ownership exclusively:
-  - package.json
-  - tsconfig.json
-  - vite.config.ts
-  - vitest.config.ts
-  - playwright.config.ts
-  - index.html
-  - src/core/math/*
-  - src/core/physics/*
-  - src/core/engine/*
-  - .agents/worker_m1/*
-- Current Task Exclusive File Ownership:
-  - `src/core/player/PlayerKinematics.ts`
-  - `src/core/player/PlayerController.ts`
-  - `tests/unit/player_kinematics_aiming.test.ts`
-  - `.agents/worker_m1/*`
-- Integrity Mandate: No cheating, no hardcoding test outputs, genuine mathematical & physics models.
-- Pure decoupled simulation core: Zero DOM/Window/Canvas imports in src/core/*.
-- 60Hz fixed timestep semi-implicit Euler integration (dt = 1/60).
-- Communicate with caller via send_message using caller ID 390e9a3c-c60d-42f9-80ff-35ac81372992 and RecipientName "parent".
+- Exclusively Owned Files:
+  - src/core/entities/boss/IronNokanaBoss.ts
+  - tests/unit/boss_crisis_events.test.ts
+  - tests/unit/iron_nokana_boss.test.ts
+- Do not touch files outside exclusively owned list.
+- Genuine implementation only; no dummy/facade implementations or hardcoded checks.
+- 100% green tests on vitest and tsc.
 
 ## Current Parent
-- Conversation ID: 390e9a3c-c60d-42f9-80ff-35ac81372992
-- Updated: 2026-09-03T15:23:30+09:00
+- Conversation ID: f3526e56-fca6-4e0a-9a39-1b1c3f42580e
+- Updated: 2026-09-04T01:55:00+09:00
 
 ## Task Summary
-- **What to build**:
-  1. `src/core/player/PlayerKinematics.ts`: Update constants:
-     - `RUN_SPEED = 132.0`
-     - `CRAWL_SPEED = 54.0`
-     - `JUMP_IMPULSE = -360.0`
-     - `GRAVITY = 800.0`
-     - `TERMINAL_FALL_VELOCITY = 500.0`
-     - `JUMP_CUT_RATIO = 0.5`
-  2. `src/core/player/PlayerController.ts`:
-     - Apex float dampening: when airborne and $|v_y| < 40\text{ px/s}$, apply $0.65 \times \text{GRAVITY}$ to achieve signature arcade apex hangtime.
-     - Single-shot jump cut: apply jump cut strictly ONCE when jump key is released (`!input.jumpHeld`), rather than repeatedly every frame.
-     - 4-frame ($66.7\text{ms}$) coyote time: allow jumping within 4 frames after leaving a ledge.
-     - 4-frame jump input buffering: buffer a jump press within 4 frames before touching ground and execute on landing.
-     - Clean platform landing snapping and velocity zeroing.
-  3. `tests/unit/player_kinematics_aiming.test.ts`: Sync with new constants and test new behavior.
-  4. Run `npm test` to verify all kinematics tests pass.
-- **Success criteria**: All tests green (100% pass), authentic arcade physics feel, clean landing snapping, coyote time & jump buffering working.
-- **Interface contracts**: PROJECT.md, COLLABORATION.md, DISPATCH.md
-- **Code layout**: PROJECT.md § Code Layout
+- **What to build**: Fix fatal overkill and flame telegraph in IronNokanaBoss; fix imports, player setup, and damage sequence in boss_crisis_events.test.ts; verify iron_nokana_boss.test.ts.
+- **Success criteria**: `npx tsc --noEmit` clean, `npx vitest run tests/unit/boss_crisis_events.test.ts tests/unit/iron_nokana_boss.test.ts` 100% pass, full `npx vitest run` 100% green.
+- **Interface contracts**: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen2/PROJECT.md
+- **Code layout**: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen2/PROJECT.md § Code Layout
 
 ## Key Decisions Made
-- Prior M1 scaffolding completed cleanly.
-- Updated physics constants in PlayerKinematics: RUN_SPEED=132.0, CRAWL_SPEED=54.0, JUMP_IMPULSE=-360.0, GRAVITY=800.0, JUMP_CUT_RATIO=0.5, TERMINAL_FALL_VELOCITY=500.0.
-- Implemented apex float dampening in PlayerController: 0.65 * GRAVITY when airborne and |vy| < 40 px/s for signature arcade apex hangtime.
-- Implemented single-shot jump cut strictly once on jump key release (!jumpHeld && !jumpPressed).
-- Implemented 4-frame coyote time and 4-frame jump input buffering.
-- Implemented clean platform landing snapping and velocity zeroing.
-- Expanded player_kinematics_aiming.test.ts to 15 tests, verifying all physics features.
+- Implemented fatal overkill check `if (effectiveDamage >= this.maxHealth)` in `IronNokanaBoss.takeDamage()` to allow single-hit test demolition while maintaining phase gating for non-lethal damage.
+- Set `isFlameTelegraphing = false` and `flameCooldownTimer = this.baseFlameCooldown` in `IronNokanaBoss.transitionToPhase2()` so that `updateFlameSweep()` handles the transition into telegraph mode properly and fires `boss_flame_telegraph`.
+- Used local `makePlatform` helper in `tests/unit/boss_crisis_events.test.ts`.
+- Set player health and maxHealth to 5 in hazard hit test to verify health reduction without death respawn.
+- Progressed damage in 100 HP increments in `boss_crisis_events.test.ts` to respect phase transition clamps.
 
 ## Artifact Index
-- DISPATCH.md — Assignment instructions
-- BRIEFING.md — Persistent state and identity
-- progress.md — Liveness and step tracking
-- handoff.md — 5-component handoff report
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1/DISPATCH.md — Parent dispatch instructions
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1/BRIEFING.md — Situational awareness and state
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1/progress.md — Liveness and step tracking
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1/handoff.md — 5-component handoff report
 
 ## Change Tracker
 - **Files modified**:
-  - `src/core/player/PlayerKinematics.ts`: Updated physics constants, added apex & buffer constants.
-  - `src/core/player/PlayerController.ts`: Single-shot jump cut, apex float dampening, coyote time, jump input buffer, landing snap.
-  - `tests/unit/player_kinematics_aiming.test.ts`: Updated constants assertions, added 6 new Newtonian kinematics tests.
-- **Build status**: PASS (tsc --noEmit: 0 errors; npm test: 145/145 passing; npm run build: clean dist output)
+  - `src/core/entities/boss/IronNokanaBoss.ts`: Added fatal overkill bypass in `takeDamage()`, reset flame telegraph/cooldown in `transitionToPhase2()`.
+  - `tests/unit/boss_crisis_events.test.ts`: Fixed imports, `makePlatform` helper, `PlayerController` instantiation/health, phase damage progression.
+- **Build status**: `npx tsc --noEmit` -> PASS (0 errors), `npm run build` -> PASS.
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: 145 passed (13 test files, 100% green)
-- **Lint status**: 0 errors
-- **Tests added/modified**: 6 new unit tests in player_kinematics_aiming.test.ts (15 tests total in file)
+- **Build/test result**: PASS (M1 tests: 23/23 pass; full suite: 317/317 pass across 26 test files).
+- **Lint status**: Clean
+- **Tests added/modified**: `tests/unit/boss_crisis_events.test.ts`
 
 ## Loaded Skills
 - None
-

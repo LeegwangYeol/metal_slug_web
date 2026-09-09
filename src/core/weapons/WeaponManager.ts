@@ -3,6 +3,9 @@ import { GameEngine } from '../engine/GameEngine';
 import { WeaponType, WeaponState, WEAPON_CONFIGS, ItemDropType } from './WeaponTypes';
 import { ProjectileManager, BulletProjectile } from './ProjectileManager';
 import { FacingDirection } from '../player/PlayerKinematics';
+import { ShotgunWeapon } from './ShotgunWeapon';
+import { LaserGunWeapon } from './LaserGunWeapon';
+import { RocketLauncherWeapon } from './RocketLauncherWeapon';
 
 export class WeaponManager {
   static readonly HMG_SWEEP_ANGULAR_VELOCITY: number = 12.0; // rad/s (~687.5 deg/s)
@@ -13,6 +16,9 @@ export class WeaponManager {
     PISTOL: Infinity,
     HEAVY_MACHINE_GUN: 0,
     FLAME_SHOT: 0,
+    SHOTGUN: 0,
+    LASER_GUN: 0,
+    ROCKET_LAUNCHER: 0,
   };
   private grenadeCount: number = 10;
   private cooldownTimer: number = 0; // seconds remaining
@@ -155,6 +161,18 @@ export class WeaponManager {
       projectile = this.projectileManager.spawnFlameShot(muzzlePos, targetAimVec, engine);
       this.currentFiringAngle = targetAngle;
       this.hasInitializedAngle = true;
+    } else if (this.activeWeapon === 'SHOTGUN') {
+      projectile = ShotgunWeapon.fire(muzzlePos, targetAimVec, facing, engine, this.projectileManager);
+      this.currentFiringAngle = targetAngle;
+      this.hasInitializedAngle = true;
+    } else if (this.activeWeapon === 'LASER_GUN') {
+      projectile = LaserGunWeapon.fire(muzzlePos, targetAimVec, facing, engine, this.projectileManager);
+      this.currentFiringAngle = targetAngle;
+      this.hasInitializedAngle = true;
+    } else if (this.activeWeapon === 'ROCKET_LAUNCHER') {
+      projectile = RocketLauncherWeapon.fire(muzzlePos, targetAimVec, facing, engine, this.projectileManager);
+      this.currentFiringAngle = targetAngle;
+      this.hasInitializedAngle = true;
     }
 
     if (!projectile) {
@@ -240,13 +258,40 @@ export class WeaponManager {
   /**
    * Applies an item pickup (e.g. from Hostage POW or crate).
    */
-  applyItemPickup(dropType: ItemDropType, engine?: GameEngine): void {
+  applyItemPickup(dropType: ItemDropType, engine?: GameEngine, player?: any): void {
     switch (dropType) {
       case ItemDropType.WEAPON_HMG:
         this.acquireWeapon('HEAVY_MACHINE_GUN', 200, engine);
         break;
       case ItemDropType.WEAPON_FLAME:
         this.acquireWeapon('FLAME_SHOT', 30, engine);
+        break;
+      case ItemDropType.WEAPON_SHOTGUN:
+        this.acquireWeapon('SHOTGUN', 30, engine);
+        break;
+      case ItemDropType.WEAPON_LASER:
+        this.acquireWeapon('LASER_GUN', 200, engine);
+        break;
+      case ItemDropType.WEAPON_ROCKET:
+        this.acquireWeapon('ROCKET_LAUNCHER', 30, engine);
+        break;
+      case ItemDropType.MEDKIT:
+        if (player) {
+          if (player.health < player.maxHealth) {
+            player.health = player.maxHealth;
+          } else {
+            player.lives++;
+          }
+        }
+        engine?.eventBus.emit('play_sound', { sound: 'sfx_item_pickup' });
+        engine?.eventBus.emit('award_score', { score: 1000, label: 'MEDKIT' });
+        break;
+      case ItemDropType.SHIELD:
+        if (player) {
+          player.shieldCharges = 2;
+        }
+        engine?.eventBus.emit('play_sound', { sound: 'sfx_item_pickup' });
+        engine?.eventBus.emit('shield_acquired', { charges: 2 });
         break;
       case ItemDropType.GRENADE_CRATE:
         this.grenadeCount = Math.min(99, this.grenadeCount + 10);
@@ -278,6 +323,9 @@ export class WeaponManager {
       PISTOL: Infinity,
       HEAVY_MACHINE_GUN: 0,
       FLAME_SHOT: 0,
+      SHOTGUN: 0,
+      LASER_GUN: 0,
+      ROCKET_LAUNCHER: 0,
     };
     this.grenadeCount = 10;
     this.cooldownTimer = 0;

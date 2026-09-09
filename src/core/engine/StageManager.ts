@@ -1,4 +1,5 @@
 import { Platform } from '../physics/Platform';
+import { AABB, createAABB } from '../physics/AABB';
 import { GameEngine } from './GameEngine';
 import { SoldierEnemy } from '../entities/enemies/SoldierEnemy';
 
@@ -94,6 +95,19 @@ export class StageManager {
     return this.currentCameraX;
   }
 
+  getCamera(): { x: number; y: number; width: number; height: number } {
+    return {
+      x: this.currentCameraX,
+      y: 0,
+      width: 480,
+      height: 270,
+    };
+  }
+
+  getViewportBoundingBox(): AABB {
+    return createAABB(this.currentCameraX, 0, 480, 270);
+  }
+
   isCameraLocked(): boolean {
     return this.cameraLocked;
   }
@@ -102,6 +116,12 @@ export class StageManager {
     this.cameraBounds = { ...bounds };
     this.cameraLocked = true;
     this.engine.eventBus.emit('camera_locked', bounds);
+  }
+
+  setCameraBounds(bounds: CameraBounds): void {
+    const prev = { ...this.cameraBounds };
+    this.cameraBounds = { ...bounds };
+    this.engine.eventBus.emit('camera_bounds_changed', { previousBounds: prev, currentBounds: bounds });
   }
 
   unlockCamera(newMaxX?: number): void {
@@ -168,6 +188,7 @@ export class StageManager {
         entity.id === 'player' ||
         entity.type === 'PLAYER' ||
         entity.type === 'BOSS_TETSUYUKI' ||
+        entity.type === 'BOSS_IRON_NOKANA' ||
         entity.type === 'MID_BOSS_VEHICLE' ||
         entity.type === 'POW'
       ) {
@@ -194,5 +215,17 @@ export class StageManager {
 
   getPlatforms(): Platform[] {
     return this.currentStage ? this.currentStage.platforms : [];
+  }
+
+  collapsePlatform(platformId: string): boolean {
+    if (!this.currentStage) return false;
+    const idx = this.currentStage.platforms.findIndex((p) => p.id === platformId);
+    if (idx !== -1) {
+      const removed = this.currentStage.platforms.splice(idx, 1)[0];
+      this.engine.removePlatform(platformId);
+      this.engine.eventBus.emit('platform_collapsed', { platformId, bounds: removed.bounds });
+      return true;
+    }
+    return false;
   }
 }

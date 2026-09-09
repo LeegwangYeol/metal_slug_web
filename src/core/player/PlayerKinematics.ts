@@ -45,6 +45,7 @@ export interface PlayerInputSnapshot {
   shootPressed: boolean;
   shootHeld: boolean;
   grenadePressed: boolean;
+  ultimatePressed?: boolean;
 }
 
 export class PlayerKinematics {

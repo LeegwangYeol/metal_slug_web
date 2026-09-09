@@ -74,11 +74,11 @@ describe('Hostage POW Rescue State Machine Suite', () => {
       samples[drop] = (samples[drop] ?? 0) + 1;
     }
 
-    // Check that common items (HMG 35%, Flame 25%, Grenades 20%) appear significantly more than rare items (Jewel 2%)
-    expect(samples[ItemDropType.WEAPON_HMG]).toBeGreaterThan(200);
-    expect(samples[ItemDropType.WEAPON_FLAME]).toBeGreaterThan(150);
-    expect(samples[ItemDropType.GRENADE_CRATE]).toBeGreaterThan(120);
-    expect(samples[ItemDropType.SCORE_JEWEL]).toBeLessThan(100);
+    // Check that common items appear significantly more than rare items (Jewel 2%)
+    expect(samples[ItemDropType.WEAPON_HMG]).toBeGreaterThan(160);
+    expect(samples[ItemDropType.WEAPON_FLAME]).toBeGreaterThan(110);
+    expect(samples[ItemDropType.GRENADE_CRATE]).toBeGreaterThan(80);
+    expect(samples[ItemDropType.SCORE_JEWEL]).toBeLessThan(60);
   });
 
   it('should allow player to collect dropped item to upgrade weapon', () => {

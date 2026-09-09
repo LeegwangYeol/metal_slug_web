@@ -18,6 +18,7 @@ import { HUDOverlay } from '../ui/HUDOverlay';
 import { Vector2D, vec2 } from '../core/math/Vector2D';
 import { AimAngle, PlayerKinematics, PlayerPosture } from '../core/player/PlayerKinematics';
 import { RenderCorpseState } from '../core/entities/enemies/DeathCorpseManager';
+import { WeaponType } from '../core/weapons/WeaponTypes';
 
 export interface LetterboxBounds {
   scale: number;
@@ -34,7 +35,7 @@ export interface RenderPlayerState {
   state: 'idle' | 'run' | 'jump' | 'crouch' | 'aim' | 'knife' | 'fire' | 'death';
   aimAngle?: any;
   aimDirection?: Vector2D;
-  weaponType?: 'PISTOL' | 'HEAVY_MACHINE_GUN' | 'FLAME_SHOT';
+  weaponType?: WeaponType;
   animFrame?: number;
   isMelee?: boolean;
   isFiring?: boolean;
@@ -99,7 +100,7 @@ export interface RenderExplosionState {
 export interface RenderHUDState {
   score: number;
   lives: number;
-  weaponType: 'PISTOL' | 'HEAVY_MACHINE_GUN' | 'FLAME_SHOT';
+  weaponType: WeaponType;
   ammo: number; // Infinity or number
   grenades: number;
   hostagesRescued: number;
@@ -111,6 +112,31 @@ export interface RenderHUDState {
   isPaused?: boolean;
   isGameOver?: boolean;
   isStageClear?: boolean;
+}
+
+export interface RenderCinematicFXState {
+  screenFlashAlpha?: number;     // 0.0 to 1.0
+  screenFlashColor?: string;     // e.g. '#ffffff' or 'rgba(255, 120, 0, 0.7)'
+  cameraShake?: {
+    intensity: number;
+    offsetX?: number;
+    offsetY?: number;
+  };
+  bomber?: {
+    x: number;
+    y: number;
+    shadowY?: number;
+    progress?: number;
+    dropBombs?: boolean;
+  };
+  shockwaves?: Array<{
+    x: number;
+    y: number;
+    radius: number;
+    maxRadius?: number;
+    alpha?: number;
+    color?: string;
+  }>;
 }
 
 export interface RenderSceneState {
@@ -125,6 +151,7 @@ export interface RenderSceneState {
   projectiles?: RenderProjectileState[];
   explosions?: RenderExplosionState[];
   hud?: RenderHUDState;
+  cinematicFX?: RenderCinematicFXState;
 }
 
 
@@ -215,6 +242,11 @@ export class CanvasRenderer {
 
     // Pass 4: Projectiles & Explosions
     this.renderProjectilesAndExplosionsPass(scene.projectiles ?? [], scene.explosions ?? [], cam, time);
+
+    // Pass 4.5: Cinematic FX (Bomber flyover, shockwaves, screen flash, camera shake)
+    if (scene.cinematicFX) {
+      this.renderCinematicFXPass(scene.cinematicFX, cam, time);
+    }
 
     // Pass 5: Retro Arcade HUD Overlay (Screen Space)
     if (scene.hud) {
@@ -705,7 +737,7 @@ export class CanvasRenderer {
     aimDir: Vector2D;
     worldReticle: Vector2D;
     distance: number;
-    weaponType: 'PISTOL' | 'HEAVY_MACHINE_GUN' | 'FLAME_SHOT';
+    weaponType: WeaponType;
   } {
     let posture = PlayerPosture.STANDING;
     if (p.state === 'crouch') {
@@ -993,6 +1025,91 @@ export class CanvasRenderer {
     ctx.fillRect(rx - 1, ry - 1, 2, 2);
 
     ctx.restore();
+  }
+
+  /**
+   * Pass 4.5: Cinematic FX (Tactical Bomber Flyover & Shadow, Expanding Shockwaves, Screen Flash, Detonation Shake).
+   */
+  public renderCinematicFXPass(fx: RenderCinematicFXState, cam: Camera, time: number): void {
+    const ctx = this.virtualCtx;
+
+    // 1. Camera Shake Jitter
+    if (fx.cameraShake && fx.cameraShake.intensity > 0) {
+      const shakeX = fx.cameraShake.offsetX ?? Math.sin(time * 60) * fx.cameraShake.intensity;
+      const shakeY = fx.cameraShake.offsetY ?? Math.cos(time * 50) * fx.cameraShake.intensity;
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+    }
+
+    // 2. Tactical Bomber Aircraft & Ground Shadow
+    if (fx.bomber) {
+      const screenX = fx.bomber.x - cam.renderX;
+      const screenY = fx.bomber.y;
+      const shadowY = fx.bomber.shadowY ?? 226;
+
+      // Ground shadow
+      if (this.spriteFactory.hasSprite('tactical_bomber_shadow')) {
+        this.spriteFactory.drawSprite(ctx, 'tactical_bomber_shadow', screenX, shadowY);
+      } else {
+        ctx.fillStyle = 'rgba(10, 10, 10, 0.45)';
+        ctx.fillRect(screenX - 24, shadowY - 4, 48, 8);
+      }
+
+      // Bomber aircraft
+      if (this.spriteFactory.hasSprite('tactical_bomber')) {
+        this.spriteFactory.drawSprite(ctx, 'tactical_bomber', screenX, screenY);
+      } else {
+        ctx.fillStyle = '#485848';
+        ctx.fillRect(screenX - 32, screenY - 8, 64, 16);
+      }
+
+      // Dropped bombs
+      if (fx.bomber.dropBombs && this.spriteFactory.hasSprite('air_bomb_falling_0')) {
+        this.spriteFactory.drawSprite(ctx, 'air_bomb_falling_0', screenX - 16, screenY + 16);
+      }
+    }
+
+    // 3. Expanding Shockwave Rings
+    if (fx.shockwaves && fx.shockwaves.length > 0) {
+      for (const wave of fx.shockwaves) {
+        const waveScreenX = wave.x - cam.renderX;
+        const waveScreenY = wave.y;
+        const alpha = wave.alpha ?? 1.0;
+        const radius = Math.max(1, wave.radius);
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+        // Outer glow arc
+        ctx.strokeStyle = wave.color ?? '#ffaa33';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(waveScreenX, waveScreenY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // High-intensity white inner ring
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(waveScreenX, waveScreenY, Math.max(1, radius * 0.85), 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+    }
+
+    // 4. Apocalyptic Screen Flash (White / Orange Full-Screen Alpha Overlay)
+    if (fx.screenFlashAlpha && fx.screenFlashAlpha > 0.001) {
+      const alpha = Math.min(1.0, Math.max(0.0, fx.screenFlashAlpha));
+      ctx.save();
+      ctx.fillStyle = fx.screenFlashColor ?? `rgba(255, 255, 255, ${alpha})`;
+      ctx.fillRect(0, 0, CanvasRenderer.VIRTUAL_WIDTH, CanvasRenderer.VIRTUAL_HEIGHT);
+      ctx.restore();
+    }
+
+    if (fx.cameraShake && fx.cameraShake.intensity > 0) {
+      ctx.restore();
+    }
   }
 
   /**

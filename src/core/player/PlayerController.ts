@@ -13,6 +13,7 @@ import {
 import { WeaponState, ItemDropType } from '../weapons/WeaponTypes';
 import { WeaponManager } from '../weapons/WeaponManager';
 import { Grenade } from '../weapons/Grenade';
+import { UltimateManager } from './UltimateManager';
 
 export interface PlayerState {
   position: Vector2D;
@@ -43,6 +44,7 @@ export class PlayerController implements GameEntity {
   public lives: number = 3;
   public score: number = 0;
   public rescuedPowCount: number = 0;
+  public shieldCharges: number = 0;
 
   // Locomotion & Posture
   public facing: FacingDirection = 1;
@@ -110,6 +112,13 @@ export class PlayerController implements GameEntity {
     this.posture = PlayerPosture.AIRBORNE;
     this.actionState = PlayerActionState.JUMPING;
     engine.eventBus.emit('play_sound', { sound: 'sfx_player_jump' });
+  }
+
+  // Tactical Ultimate Move System
+  public readonly ultimateManager: UltimateManager = new UltimateManager();
+
+  public triggerUltimateMove(engine: GameEngine): boolean {
+    return this.ultimateManager.trigger(engine, this);
   }
 
   getPlayerState(): PlayerState {
@@ -242,6 +251,11 @@ export class PlayerController implements GameEntity {
     // 9. Secondary Combat: Grenade Throw
     if (input.grenadePressed) {
       this.throwGrenade(engine);
+    }
+
+    // 10. Tactical Ultimate Move Trigger
+    if (input.ultimatePressed) {
+      this.triggerUltimateMove(engine);
     }
   }
 
@@ -441,6 +455,9 @@ export class PlayerController implements GameEntity {
   update(dt: number, engine: GameEngine): void {
     if (!this.isAlive) return;
 
+    // Advance Ultimate Move state machine
+    this.ultimateManager.update(dt, engine, (engine as any).cameraX);
+
     if (this.isAttackingMelee) {
       this.updateMeleeAttack(dt, engine);
       this.velocity.x = 0;
@@ -540,8 +557,20 @@ export class PlayerController implements GameEntity {
     );
   }
 
-  takeDamage(amount: number = 1.0): void {
+  takeDamage(amount: number = 1.0, engine?: GameEngine): void {
     if (this.invulnerabilityTimer > 0 || !this.isAlive) return;
+
+    // Shield 2-hit damage absorption buffer
+    if (this.shieldCharges > 0) {
+      this.shieldCharges--;
+      this.invulnerabilityTimer = 0.5;
+      engine?.eventBus.emit('play_sound', { sound: 'sfx_shield_absorb' });
+      engine?.eventBus.emit('shield_hit', { remainingCharges: this.shieldCharges });
+      if (this.shieldCharges <= 0) {
+        engine?.eventBus.emit('play_sound', { sound: 'sfx_shield_break' });
+      }
+      return;
+    }
 
     this.health -= amount;
     if (this.health <= 0) {
@@ -571,7 +600,7 @@ export class PlayerController implements GameEntity {
     if (other.type === 'ITEM_PICKUP') {
       const dropType = (other as any).dropType as ItemDropType;
       if (dropType) {
-        this.weaponManager.applyItemPickup(dropType, engine);
+        this.weaponManager.applyItemPickup(dropType, engine, this);
         (other as any).isAlive = false;
       }
     }
@@ -586,9 +615,27 @@ export class PlayerController implements GameEntity {
     // Enemy bullet collision (Bug-03 fix)
     if (other.type === 'ENEMY_BULLET') {
       if (this.invulnerabilityTimer <= 0) {
-        this.takeDamage((other as any).damage ?? 1.0);
+        this.takeDamage((other as any).damage ?? 1.0, engine);
         (other as any).isAlive = false;
         engine.removeEntity(other.id);
+      }
+    }
+
+    // Environmental Hazard, boss shockwaves and artillery collision
+    if (
+      other.type === 'ENVIRONMENTAL_HAZARD' ||
+      other.type === 'HAZARD' ||
+      other.type === 'THRUSTER_SHOCKWAVE' ||
+      other.type === 'GROUND_FLAME' ||
+      other.type === 'ARTILLERY_SHELL' ||
+      other.type === 'FALLING_DEBRIS'
+    ) {
+      if (this.invulnerabilityTimer <= 0) {
+        const dmg = (other as any).damage ?? 1.0;
+        this.takeDamage(dmg, engine);
+        if (typeof (other as any).detonate === 'function') {
+          (other as any).detonate(engine);
+        }
       }
     }
   }

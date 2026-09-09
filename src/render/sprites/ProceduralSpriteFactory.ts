@@ -370,6 +370,7 @@ export class ProceduralSpriteFactory {
     this.generateProjectileSprites();
     this.generateExplosionSprites();
     this.generateHudSprites();
+    this.generateExpansionSprites();
 
     this.initialized = true;
   }
@@ -395,19 +396,34 @@ export class ProceduralSpriteFactory {
     'rebel_death_burn_ash_1',
   ]);
 
+  private readonly expansionKeys: Set<string> = new Set();
+
   public hasSprite(key: string): boolean {
     return this.spriteCache.has(key);
   }
 
-  public getAllKeys(includePolish: boolean = false): string[] {
-    if (includePolish) {
-      return Array.from(this.spriteCache.keys());
-    }
-    return Array.from(this.spriteCache.keys()).filter((k) => !this.polishKeys.has(k));
+  public getAllKeys(includePolish: boolean = false, includeExpansion: boolean = false): string[] {
+    return Array.from(this.spriteCache.keys()).filter((k) => {
+      if (!includePolish && this.polishKeys.has(k)) return false;
+      if (!includeExpansion && this.expansionKeys.has(k)) return false;
+      return true;
+    });
   }
 
-  public count(includePolish: boolean = false): number {
-    return this.getAllKeys(includePolish).length;
+  public count(includePolish: boolean = false, includeExpansion: boolean = false): number {
+    return this.getAllKeys(includePolish, includeExpansion).length;
+  }
+
+  private registerExpansionSprite(
+    key: string,
+    width: number,
+    height: number,
+    anchorX: number,
+    anchorY: number,
+    renderFn: (ctx: CanvasContext2DLike) => void
+  ): SpriteFrame {
+    this.expansionKeys.add(key);
+    return this.registerSprite(key, width, height, anchorX, anchorY, renderFn);
   }
 
 
@@ -2224,6 +2240,446 @@ export class ProceduralSpriteFactory {
     // Boss Health Bar Frame (184x12)
     this.registerSprite('hud_boss_bar_frame', 184, 12, 0, 0, (ctx) => {
       drawBeveledPlate(ctx, 0, 0, 184, 12, '#222222', H[2], H[3], H[1]);
+    });
+  }
+
+  /**
+   * Generates procedural expansion sprites for Milestone M3 (Ultimate Move, Iron Nokana, Hazards, Allies, Items).
+   * All sprites registered here are strictly captured in expansionKeys to preserve the 164-key baseline invariant.
+   */
+  private generateExpansionSprites(): void {
+    // -----------------------------------------------------------------------
+    // 1. Ultimate Move: Tactical Bomber & Shadows (7 sprites)
+    // -----------------------------------------------------------------------
+
+    // Tactical Heavy Bomber (64x32)
+    this.registerExpansionSprite('tactical_bomber', 64, 32, 32, 16, (ctx) => {
+      // Main fuselage
+      drawBeveledPlate(ctx, 8, 10, 48, 12, '#485848', '#708870', '#283828', '#141c14');
+      // Wings
+      drawBeveledPlate(ctx, 20, 2, 24, 28, '#3d4d3d', '#607860', '#203020', '#101810');
+      // Cockpit canopy
+      ctx.fillStyle = '#68c8e8';
+      ctx.fillRect(40, 12, 10, 4);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(44, 12, 4, 2);
+      // Twin Engines
+      drawBeveledPlate(ctx, 16, 6, 12, 6, '#555555', '#888888', '#222222');
+      drawBeveledPlate(ctx, 16, 20, 12, 6, '#555555', '#888888', '#222222');
+      // Propeller blur
+      ctx.fillStyle = 'rgba(240, 240, 200, 0.6)';
+      ctx.fillRect(14, 4, 2, 10);
+      ctx.fillRect(14, 18, 2, 10);
+      // Camo markings & star emblem
+      ctx.fillStyle = '#e8c040';
+      ctx.fillRect(28, 14, 4, 4);
+      drawRivet(ctx, 24, 14);
+      drawRivet(ctx, 36, 14);
+    });
+
+    // Tactical Bomber Ground Shadow (48x16)
+    this.registerExpansionSprite('tactical_bomber_shadow', 48, 16, 24, 8, (ctx) => {
+      ctx.fillStyle = 'rgba(10, 10, 10, 0.45)';
+      ctx.fillRect(4, 4, 40, 8);
+      ctx.fillRect(12, 1, 24, 14);
+      ctx.fillRect(2, 6, 44, 4);
+    });
+
+    // Falling Blockbuster Bomb 0 & 1 (16x24)
+    for (let f = 0; f < 2; f++) {
+      this.registerExpansionSprite(`air_bomb_falling_${f}`, 16, 24, 8, 12, (ctx) => {
+        // Bomb body
+        drawBeveledPlate(ctx, 3, 4, 10, 14, '#384038', '#586858', '#182018', '#081008');
+        // Yellow hazard warning stripe
+        ctx.fillStyle = f === 0 ? '#e8b820' : '#f8d040';
+        ctx.fillRect(4, 9, 8, 3);
+        // Tail fins
+        ctx.fillStyle = '#202820';
+        ctx.fillRect(1, 16, 4, 6);
+        ctx.fillRect(11, 16, 4, 6);
+        // Nose fuse glint
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(7, 2, 2, 2);
+      });
+    }
+
+    // Expanding Shockwave Rings 0, 1, 2 (48x48)
+    const ringAlphas = [0.9, 0.65, 0.4];
+    const ringRadii = [12, 18, 22];
+    for (let i = 0; i < 3; i++) {
+      this.registerExpansionSprite(`shockwave_ring_${i}`, 48, 48, 24, 24, (ctx) => {
+        const rad = ringRadii[i];
+        ctx.save();
+        ctx.globalAlpha = ringAlphas[i];
+        // Outer glow
+        ctx.fillStyle = '#ffaa33';
+        ctx.fillRect(24 - rad - 2, 24 - rad - 2, (rad + 2) * 2, 2);
+        ctx.fillRect(24 - rad - 2, 24 + rad, (rad + 2) * 2, 2);
+        ctx.fillRect(24 - rad - 2, 24 - rad, 2, rad * 2);
+        ctx.fillRect(24 + rad, 24 - rad, 2, rad * 2);
+        // Intense core ring
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(24 - rad, 24 - rad, rad * 2, 2);
+        ctx.fillRect(24 - rad, 24 + rad - 2, rad * 2, 2);
+        ctx.fillRect(24 - rad, 24 - rad + 2, 2, (rad - 2) * 2);
+        ctx.fillRect(24 + rad - 2, 24 - rad + 2, 2, (rad - 2) * 2);
+        ctx.restore();
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // 2. Boss Iron Nokana: Heavy Siege Crawler (7 sprites)
+    // -----------------------------------------------------------------------
+
+    // Nokana Armored Hull (120x60)
+    this.registerExpansionSprite('iron_nokana_hull', 120, 60, 60, 30, (ctx) => {
+      // Main chassis
+      drawBeveledPlate(ctx, 4, 12, 112, 38, '#702820', '#a84838', '#401410', '#1c0808');
+      // Upper superstructure armor
+      drawBeveledPlate(ctx, 24, 4, 72, 20, '#883028', '#c05848', '#501814', '#1c0808');
+      // Front ramming prow
+      drawBeveledPlate(ctx, 96, 20, 20, 24, '#505058', '#808088', '#282830', '#101018');
+      // Rivets along armor seams
+      for (let rx = 10; rx <= 110; rx += 14) {
+        drawRivet(ctx, rx, 14);
+        drawRivet(ctx, rx, 46);
+      }
+      // Exhaust heat vent
+      ctx.fillStyle = '#ff6622';
+      ctx.fillRect(28, 6, 16, 4);
+    });
+
+    // Nokana Heavy Treads 0 & 1 (110x24)
+    for (let t = 0; t < 2; t++) {
+      this.registerExpansionSprite(`iron_nokana_treads_${t}`, 110, 24, 55, 12, (ctx) => {
+        // Tread outer frame
+        drawBeveledPlate(ctx, 0, 2, 110, 20, '#282828', '#484848', '#141414', '#080808');
+        // Rotating road wheels
+        const wheelOffset = t === 0 ? 0 : 4;
+        for (let wx = 8 + wheelOffset; wx < 100; wx += 16) {
+          ctx.fillStyle = '#606068';
+          ctx.fillRect(wx, 6, 10, 10);
+          ctx.fillStyle = '#181820';
+          ctx.fillRect(wx + 3, 9, 4, 4);
+        }
+      });
+    }
+
+    // Nokana Main Artillery Cannon (64x20)
+    this.registerExpansionSprite('iron_nokana_cannon', 64, 20, 16, 10, (ctx) => {
+      drawBeveledPlate(ctx, 12, 4, 48, 12, '#484850', '#707078', '#242428', '#101014');
+      // Muzzle brake
+      drawBeveledPlate(ctx, 54, 2, 8, 16, '#606068', '#888890', '#303038', '#101014');
+      // Pivot mount
+      ctx.fillStyle = '#303034';
+      ctx.fillRect(4, 2, 12, 16);
+    });
+
+    // Nokana Vertical Missile Pod (36x24)
+    this.registerExpansionSprite('iron_nokana_missile_pod', 36, 24, 18, 12, (ctx) => {
+      drawBeveledPlate(ctx, 2, 2, 32, 20, '#585860', '#808088', '#303038', '#141418');
+      // 6 missile launch tube caps
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 3; c++) {
+          ctx.fillStyle = '#aa2222';
+          ctx.fillRect(6 + c * 9, 5 + r * 8, 6, 5);
+          ctx.fillStyle = '#f0a040';
+          ctx.fillRect(8 + c * 9, 7 + r * 8, 2, 2);
+        }
+      }
+    });
+
+    // Nokana Flamethrower Turret (30x20)
+    this.registerExpansionSprite('iron_nokana_flame_turret', 30, 20, 15, 10, (ctx) => {
+      drawBeveledPlate(ctx, 4, 4, 22, 12, '#604838', '#887058', '#382818', '#141008');
+      ctx.fillStyle = '#ff5511';
+      ctx.fillRect(0, 8, 6, 4);
+    });
+
+    // Nokana Demolished Wreckage (120x50)
+    this.registerExpansionSprite('iron_nokana_wreckage', 120, 50, 60, 25, (ctx) => {
+      drawBeveledPlate(ctx, 4, 14, 112, 32, '#282424', '#443c3c', '#181414', '#080606');
+      // Jagged breach holes
+      ctx.fillStyle = '#ff4400';
+      ctx.fillRect(36, 18, 18, 10);
+      ctx.fillStyle = '#100804';
+      ctx.fillRect(38, 20, 14, 6);
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(74, 16, 14, 8);
+    });
+
+    // -----------------------------------------------------------------------
+    // 3. Crisis Environmental Hazards (7 sprites)
+    // -----------------------------------------------------------------------
+
+    // Hazard Reticle: Artillery Strike (32x32)
+    this.registerExpansionSprite('hazard_reticle_artillery', 32, 32, 16, 16, (ctx) => {
+      ctx.strokeStyle = '#ff2222';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(4, 4, 24, 24);
+      // Crosshair lines
+      ctx.fillStyle = '#ffdd22';
+      ctx.fillRect(15, 1, 2, 30);
+      ctx.fillRect(1, 15, 30, 2);
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(13, 13, 6, 6);
+    });
+
+    // Hazard Reticle: Falling Debris (28x28)
+    this.registerExpansionSprite('hazard_reticle_debris', 28, 28, 14, 14, (ctx) => {
+      ctx.strokeStyle = '#ff9900';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(3, 3, 22, 22);
+      ctx.fillStyle = '#ffff00';
+      ctx.fillRect(13, 5, 2, 12);
+      ctx.fillRect(13, 20, 2, 3);
+    });
+
+    // Hazard Warning Icon Triangle (16x16)
+    this.registerExpansionSprite('hazard_warning_icon', 16, 16, 8, 8, (ctx) => {
+      ctx.fillStyle = '#f0c020';
+      ctx.fillRect(6, 1, 4, 2);
+      ctx.fillRect(4, 3, 8, 4);
+      ctx.fillRect(2, 7, 12, 5);
+      ctx.fillRect(0, 12, 16, 4);
+      ctx.fillStyle = '#101010';
+      ctx.fillRect(7, 4, 2, 5);
+      ctx.fillRect(7, 11, 2, 2);
+    });
+
+    // Falling Artillery Shell (12x24)
+    this.registerExpansionSprite('hazard_shell_falling', 12, 24, 6, 12, (ctx) => {
+      drawBeveledPlate(ctx, 2, 4, 8, 16, '#505058', '#808088', '#282830', '#101014');
+      ctx.fillStyle = '#ff4400';
+      ctx.fillRect(4, 1, 4, 4);
+      ctx.fillStyle = '#ffbb22';
+      ctx.fillRect(5, 0, 2, 2);
+    });
+
+    // Falling Ceiling Debris (20x20)
+    this.registerExpansionSprite('hazard_falling_debris', 20, 20, 10, 10, (ctx) => {
+      drawBeveledPlate(ctx, 2, 2, 16, 16, '#606060', '#909090', '#383838', '#181818');
+      ctx.fillStyle = '#b03020';
+      ctx.fillRect(6, 6, 8, 4);
+    });
+
+    // Ground Flame Hazard 0 & 1 (24x24)
+    for (let f = 0; f < 2; f++) {
+      this.registerExpansionSprite(`hazard_ground_flame_${f}`, 24, 24, 12, 20, (ctx) => {
+        ctx.fillStyle = '#ff2200';
+        ctx.fillRect(2, 12, 20, 10);
+        ctx.fillStyle = '#ff8800';
+        ctx.fillRect(4, 6, 16, 12);
+        ctx.fillStyle = '#ffee33';
+        ctx.fillRect(f === 0 ? 8 : 10, 2, 6, 10);
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // 4. Autonomous Ally Hyakutaro Ichimonji (10 sprites)
+    // -----------------------------------------------------------------------
+
+    // Hyakutaro Idle 0 & 1 (24x36)
+    for (let i = 0; i < 2; i++) {
+      this.registerExpansionSprite(`ally_hyakutaro_idle_${i}`, 24, 36, 12, 32, (ctx) => {
+        // Tattered prisoner shorts
+        ctx.fillStyle = '#506890';
+        ctx.fillRect(6, 16, 12, 10);
+        // Bare chest & head
+        ctx.fillStyle = '#e8a870';
+        ctx.fillRect(7, 8, 10, 9);
+        ctx.fillRect(8, 2, 8, 7);
+        // Wild unkempt hair & beard
+        ctx.fillStyle = '#483828';
+        ctx.fillRect(6, 0, 12, 4);
+        ctx.fillRect(7, 6, 10, 4);
+        // Martial stance legs
+        ctx.fillStyle = '#d89058';
+        ctx.fillRect(7, 26, 4, 6 + (i === 1 ? 1 : 0));
+        ctx.fillRect(13, 26, 4, 6);
+      });
+    }
+
+    // Hyakutaro Walk 0 & 1 (24x36)
+    for (let w = 0; w < 2; w++) {
+      this.registerExpansionSprite(`ally_hyakutaro_walk_${w}`, 24, 36, 12, 32, (ctx) => {
+        ctx.fillStyle = '#506890';
+        ctx.fillRect(6, 16, 12, 10);
+        ctx.fillStyle = '#e8a870';
+        ctx.fillRect(7, 8, 10, 9);
+        ctx.fillRect(8, 2, 8, 7);
+        ctx.fillStyle = '#483828';
+        ctx.fillRect(6, 0, 12, 4);
+        // Stride legs
+        ctx.fillStyle = '#d89058';
+        if (w === 0) {
+          ctx.fillRect(4, 26, 4, 7);
+          ctx.fillRect(14, 25, 4, 5);
+        } else {
+          ctx.fillRect(14, 26, 4, 7);
+          ctx.fillRect(4, 25, 4, 5);
+        }
+      });
+    }
+
+    // Hyakutaro Hadouken Ki-Blast Attack 0 & 1 (32x36)
+    for (let a = 0; a < 2; a++) {
+      this.registerExpansionSprite(`ally_hyakutaro_attack_${a}`, 32, 36, 16, 32, (ctx) => {
+        ctx.fillStyle = '#506890';
+        ctx.fillRect(6, 18, 12, 10);
+        ctx.fillStyle = '#e8a870';
+        ctx.fillRect(8, 10, 10, 9);
+        ctx.fillRect(9, 4, 8, 7);
+        ctx.fillStyle = '#483828';
+        ctx.fillRect(7, 2, 12, 4);
+        // Thrusting arms
+        ctx.fillStyle = '#e8a870';
+        ctx.fillRect(18, 12, 10, 6);
+        // Glowing Ki Energy at palms
+        ctx.fillStyle = a === 0 ? '#44aaff' : '#ffffff';
+        ctx.fillRect(26, 10, 6, 10);
+      });
+    }
+
+    // Hyakutaro Celebrate Cheers 0 & 1 (24x36)
+    for (let c = 0; c < 2; c++) {
+      this.registerExpansionSprite(`ally_hyakutaro_celebrate_${c}`, 24, 36, 12, 32, (ctx) => {
+        ctx.fillStyle = '#506890';
+        ctx.fillRect(6, 16, 12, 10);
+        ctx.fillStyle = '#e8a870';
+        ctx.fillRect(7, 8, 10, 9);
+        ctx.fillRect(8, 2, 8, 7);
+        // Raised arms
+        ctx.fillRect(3, 2, 4, 10);
+        ctx.fillRect(17, 2, 4, 10);
+      });
+    }
+
+    // Ally Ki Blast Projectile 0 & 1 (20x20)
+    for (let k = 0; k < 2; k++) {
+      this.registerExpansionSprite(`ally_ki_blast_${k}`, 20, 20, 10, 10, (ctx) => {
+        // Outer aura
+        ctx.fillStyle = '#2288ff';
+        ctx.fillRect(2, 2, 16, 16);
+        // Intense cyan core
+        ctx.fillStyle = '#88eeff';
+        ctx.fillRect(5, 5, 10, 10);
+        // Pure white center
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(7, 7, 6, 6);
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. Diverse Weapons, Items & Shields (10 sprites)
+    // -----------------------------------------------------------------------
+
+    // Item Crate: Shotgun (24x20)
+    this.registerExpansionSprite('item_crate_shotgun', 24, 20, 12, 10, (ctx) => {
+      drawBeveledPlate(ctx, 1, 1, 22, 18, '#885522', '#bb8844', '#553311', '#221100');
+      // Blue label with "S"
+      ctx.fillStyle = '#2255aa';
+      ctx.fillRect(5, 4, 14, 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(7, 6, 10, 2);
+      ctx.fillRect(7, 8, 3, 2);
+      ctx.fillRect(7, 10, 10, 2);
+      ctx.fillRect(14, 12, 3, 2);
+      ctx.fillRect(7, 14, 10, 2);
+    });
+
+    // Item Crate: Laser Gun (24x20)
+    this.registerExpansionSprite('item_crate_laser', 24, 20, 12, 10, (ctx) => {
+      drawBeveledPlate(ctx, 1, 1, 22, 18, '#3377aa', '#55aacc', '#1e4466', '#0a1e2e');
+      // "L"
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(8, 5, 3, 10);
+      ctx.fillRect(8, 13, 8, 2);
+    });
+
+    // Item Crate: Rocket Launcher (24x20)
+    this.registerExpansionSprite('item_crate_rocket', 24, 20, 12, 10, (ctx) => {
+      drawBeveledPlate(ctx, 1, 1, 22, 18, '#882222', '#bb4444', '#551111', '#220000');
+      // "R"
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(8, 5, 3, 10);
+      ctx.fillRect(11, 5, 5, 2);
+      ctx.fillRect(14, 7, 2, 4);
+      ctx.fillRect(11, 10, 5, 2);
+      ctx.fillRect(13, 12, 3, 3);
+    });
+
+    // Item Crate: Medkit (20x20)
+    this.registerExpansionSprite('item_crate_medkit', 20, 20, 10, 10, (ctx) => {
+      drawBeveledPlate(ctx, 1, 1, 18, 18, '#eeeeee', '#ffffff', '#cccccc', '#555555');
+      // Red cross
+      ctx.fillStyle = '#ee2222';
+      ctx.fillRect(8, 4, 4, 12);
+      ctx.fillRect(4, 8, 12, 4);
+    });
+
+    // Item Crate: Shield (20x20)
+    this.registerExpansionSprite('item_crate_shield', 20, 20, 10, 10, (ctx) => {
+      drawBeveledPlate(ctx, 1, 1, 18, 18, '#1e3860', '#3060a0', '#102038', '#081018');
+      // Blue energy shield emblem
+      ctx.fillStyle = '#44bbff';
+      ctx.fillRect(6, 4, 8, 4);
+      ctx.fillRect(5, 7, 10, 5);
+      ctx.fillRect(7, 12, 6, 4);
+      ctx.fillRect(9, 16, 2, 2);
+    });
+
+    // Projectile: Shotgun Pellet (8x8)
+    this.registerExpansionSprite('proj_shotgun_pellet', 8, 8, 4, 4, (ctx) => {
+      ctx.fillStyle = '#ff8800';
+      ctx.fillRect(1, 1, 6, 6);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(2, 2, 4, 4);
+    });
+
+    // Projectile: Laser Continuous Beam Segment (24x8)
+    this.registerExpansionSprite('proj_laser_beam', 24, 8, 12, 4, (ctx) => {
+      ctx.fillStyle = '#0088ff';
+      ctx.fillRect(0, 1, 24, 6);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 3, 24, 2);
+    });
+
+    // Projectile: Laser Beam Penetrating Head (16x10)
+    this.registerExpansionSprite('proj_laser_head', 16, 10, 8, 5, (ctx) => {
+      ctx.fillStyle = '#00aaff';
+      ctx.fillRect(2, 1, 12, 8);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(6, 3, 8, 4);
+    });
+
+    // Projectile: Homing Rocket Missile (20x10)
+    this.registerExpansionSprite('proj_homing_rocket', 20, 10, 10, 5, (ctx) => {
+      drawBeveledPlate(ctx, 6, 2, 12, 6, '#485848', '#708870', '#283828', '#141c14');
+      // Fiery exhaust plume
+      ctx.fillStyle = '#ff5500';
+      ctx.fillRect(0, 3, 6, 4);
+      ctx.fillStyle = '#ffdd33';
+      ctx.fillRect(2, 4, 4, 2);
+      // Red warhead tip
+      ctx.fillStyle = '#dd2222';
+      ctx.fillRect(18, 3, 2, 4);
+    });
+
+    // Player Shield Bubble (48x48)
+    this.registerExpansionSprite('player_shield_bubble', 48, 48, 24, 24, (ctx) => {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = '#33aaff';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(4, 4, 40, 40);
+      ctx.fillStyle = 'rgba(100, 200, 255, 0.25)';
+      ctx.fillRect(6, 6, 36, 36);
+      // Hexagonal glints
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(10, 10, 6, 2);
+      ctx.fillRect(32, 12, 4, 2);
+      ctx.restore();
     });
   }
 }
