@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Full Metal Slug - Game Initialization & Engine Benchmark Suite', () => {
+test.describe('Dark Fantasy Horde Survival - Game Initialization & Engine Benchmark Suite', () => {
   test('should boot headless browser, mount game container, and render canvas with zero fatal console errors', async ({
     page,
   }) => {
@@ -134,31 +134,38 @@ test.describe('Full Metal Slug - Game Initialization & Engine Benchmark Suite', 
     expect(pageErrors).toHaveLength(0);
   });
 
-  test('should expose __GAME__, __ENGINE__, __AUDIO_CTX__ and respond to player input and stage progression', async ({
+  test('should expose window.__game, initialize dark fantasy components, and respond to input', async ({
     page,
   }) => {
     await page.goto('/');
 
-    const gameDiagnostics = await page.evaluate(async () => {
-      const w = window as any;
-      const game = w.__GAME__;
-      const engine = w.__ENGINE__;
-      const audioCtx = w.__AUDIO_CTX__;
+    // Wait until GrimHarvestGame is mounted and running
+    await page.waitForFunction(
+      () => {
+        const w = window as any;
+        const g = w.__game ?? w.__GAME__;
+        return g && g.player && g.hordeManager && g.weaponManager;
+      },
+      { timeout: 10000 }
+    );
 
-      if (!game || !engine) {
-        return { error: 'Game or Engine not exposed on window' };
+    const gameDiagnostics = await page.evaluate(() => {
+      const w = window as any;
+      const game = w.__game ?? w.__GAME__;
+
+      if (!game) {
+        return { error: 'Game not exposed on window' };
       }
 
-      // Check player initial position and weapon
       const player = game.player;
       const initialPos = { x: player.position.x, y: player.position.y };
-      const initialWeapon = player.weaponManager.getActiveWeapon();
-      const initialLives = player.lives;
-      const initialScore = player.score;
+      const starterWeapon = game.weaponManager.getActiveWeapons()[0]?.id;
+      const initialHealth = player.stats.currentHealth;
+      const initialLevel = player.level;
+      const initialEnemies = game.hordeManager.getActiveCount();
 
       // Simulate keyboard input Right movement
       game.keyboard.setAction('right', true);
-      // Run 30 simulation ticks
       for (let i = 0; i < 30; i++) {
         game.step(1 / 60);
       }
@@ -166,42 +173,34 @@ test.describe('Full Metal Slug - Game Initialization & Engine Benchmark Suite', 
 
       const movedX = player.position.x;
 
-      // Simulate firing handgun
-      game.keyboard.setAction('fire', true);
-      game.step(1 / 60);
-      game.keyboard.setAction('fire', false);
-      game.step(1 / 60);
-
-      const entities = engine.getAllEntities();
-      const hasBullet =
-        entities.some((e: any) => e.type === 'PROJECTILE') ||
-        (game.cuteCoordinator?.bubbleManager?.bubbles?.length ?? 0) > 0;
-      const platformCount = engine.getPlatforms().length;
-
       return {
         hasGame: !!game,
-        hasEngine: !!engine,
-        hasAudioCtx: !!audioCtx,
+        hasPlayer: !!player,
+        hasHordeManager: !!game.hordeManager,
+        hasWeaponManager: !!game.weaponManager,
+        hasUpgradeSystem: !!game.upgradeSystem,
+        hasUpgradeModal: !!game.upgradeModal,
         initialPos,
         movedX,
-        initialWeapon,
-        initialLives,
-        initialScore,
-        hasBullet,
-        platformCount,
+        starterWeapon,
+        initialHealth,
+        initialLevel,
+        initialEnemies,
       };
     });
 
     expect(gameDiagnostics.hasGame).toBe(true);
-    expect(gameDiagnostics.hasEngine).toBe(true);
-    expect(gameDiagnostics.hasAudioCtx).toBe(true);
+    expect(gameDiagnostics.hasPlayer).toBe(true);
+    expect(gameDiagnostics.hasHordeManager).toBe(true);
+    expect(gameDiagnostics.hasWeaponManager).toBe(true);
+    expect(gameDiagnostics.hasUpgradeSystem).toBe(true);
+    expect(gameDiagnostics.hasUpgradeModal).toBe(true);
     expect(gameDiagnostics.initialPos).toBeDefined();
-    if (gameDiagnostics.initialPos && gameDiagnostics.movedX !== undefined) {
-      expect(gameDiagnostics.movedX).toBeGreaterThan(gameDiagnostics.initialPos.x);
-    }
-    expect(gameDiagnostics.initialWeapon).toBe('PISTOL');
-    expect(gameDiagnostics.initialLives).toBe(3);
-    expect(gameDiagnostics.platformCount).toBeGreaterThan(5);
-    expect(gameDiagnostics.hasBullet).toBe(true);
+    expect(gameDiagnostics.movedX).toBeGreaterThan(gameDiagnostics.initialPos!.x);
+    expect(gameDiagnostics.starterWeapon).toBe('scythe');
+    expect(gameDiagnostics.initialHealth).toBe(100);
+    expect(gameDiagnostics.initialLevel).toBe(1);
+    expect(gameDiagnostics.initialEnemies).toBeGreaterThanOrEqual(25);
   });
 });
+

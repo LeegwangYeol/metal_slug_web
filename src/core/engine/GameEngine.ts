@@ -1,9 +1,16 @@
+/**
+ * GameEngine.ts - Headless Fixed-Timestep Simulation Core.
+ *
+ * Capabilities:
+ * - Deterministic fixed 60Hz physics accumulator (dt = 1/60s).
+ * - Decoupled entity lifecycle and event dispatching.
+ * - Zero DOM / Canvas dependencies, enabling instant headless unit tests.
+ */
+
 import { Vector2D } from '../math/Vector2D';
 import { AABB, BoundingBox } from '../physics/AABB';
-import { Platform } from '../physics/Platform';
-import { SpatialGrid, SpatialGridItem } from '../physics/SpatialGrid';
 
-export interface GameEntity extends SpatialGridItem {
+export interface GameEntity {
   id: string;
   type: string;
   position: Vector2D;
@@ -48,14 +55,8 @@ export class EventBus {
 export interface GameEngineOptions {
   fixedTimestep?: number; // default 1/60 s
   maxSubSteps?: number;   // default 5 to avoid spiral of death
-  spatialCellSize?: number; // default 64 px
 }
 
-/**
- * GameEngine - Headless 60Hz fixed-timestep simulation core.
- * Coordinates entity lifecycle, kinematics, collision resolution, and event broadcasting.
- * Zero DOM or Canvas dependencies.
- */
 export class GameEngine {
   public static readonly DEFAULT_TIMESTEP: number = 1 / 60; // 0.0166667s
 
@@ -68,18 +69,14 @@ export class GameEngine {
   private isRunning: boolean = false;
 
   public readonly eventBus: EventBus = new EventBus();
-  public readonly spatialGrid: SpatialGrid<GameEntity>;
 
   private entities: Map<string, GameEntity> = new Map();
   private entitiesToAdd: GameEntity[] = [];
   private entityIdsToRemove: Set<string> = new Set();
 
-  private platforms: Platform[] = [];
-
   constructor(options: GameEngineOptions = {}) {
     this.fixedTimestep = options.fixedTimestep ?? GameEngine.DEFAULT_TIMESTEP;
     this.maxSubSteps = options.maxSubSteps ?? 5;
-    this.spatialGrid = new SpatialGrid<GameEntity>(options.spatialCellSize ?? 64);
   }
 
   start(): void {
@@ -101,29 +98,6 @@ export class GameEngine {
 
   getTotalSimulationTime(): number {
     return this.totalSimulationTime;
-  }
-
-  // --- Platform Management ---
-
-  setPlatforms(platforms: Platform[]): void {
-    this.platforms = [...platforms];
-  }
-
-  addPlatform(platform: Platform): void {
-    this.platforms.push(platform);
-  }
-
-  removePlatform(platformId: string): boolean {
-    const idx = this.platforms.findIndex((p) => p.id === platformId);
-    if (idx !== -1) {
-      this.platforms.splice(idx, 1);
-      return true;
-    }
-    return false;
-  }
-
-  getPlatforms(): Platform[] {
-    return this.platforms;
   }
 
   // --- Entity Management ---
@@ -187,7 +161,6 @@ export class GameEngine {
     if (this.entitiesToAdd.length > 0) {
       for (const entity of this.entitiesToAdd) {
         this.entities.set(entity.id, entity);
-        this.spatialGrid.insert(entity);
       }
       this.entitiesToAdd = [];
     }
@@ -195,11 +168,7 @@ export class GameEngine {
     // 2. Process pending removals
     if (this.entityIdsToRemove.size > 0) {
       for (const id of this.entityIdsToRemove) {
-        const entity = this.entities.get(id);
-        if (entity) {
-          this.spatialGrid.remove(entity);
-          this.entities.delete(id);
-        }
+        this.entities.delete(id);
       }
       this.entityIdsToRemove.clear();
     }
@@ -208,8 +177,6 @@ export class GameEngine {
     for (const entity of this.entities.values()) {
       if (entity.isAlive) {
         entity.update(dt, this);
-        // Refresh position in spatial grid
-        this.spatialGrid.update(entity);
       } else {
         this.entityIdsToRemove.add(entity.id);
       }
@@ -220,20 +187,18 @@ export class GameEngine {
   }
 
   /**
-   * Checks collisions between dynamic entities registered in the spatial grid.
+   * Checks collisions between dynamic entities.
    */
   private resolveEntityCollisions(): void {
     const activeEntities = Array.from(this.entities.values()).filter((e) => e.isAlive);
 
-    for (const entity of activeEntities) {
-      const candidates = this.spatialGrid.query(entity.bounds);
-      for (const other of candidates) {
-        if (entity.id !== other.id && other.isAlive) {
-          if (BoundingBox.intersects(entity.bounds, other.bounds)) {
-            if (entity.onCollision) {
-              entity.onCollision(other, this);
-            }
-          }
+    for (let i = 0; i < activeEntities.length; i++) {
+      const entity = activeEntities[i];
+      for (let j = i + 1; j < activeEntities.length; j++) {
+        const other = activeEntities[j];
+        if (BoundingBox.intersects(entity.bounds, other.bounds)) {
+          entity.onCollision?.(other, this);
+          other.onCollision?.(entity, this);
         }
       }
     }
@@ -243,8 +208,6 @@ export class GameEngine {
     this.entities.clear();
     this.entitiesToAdd = [];
     this.entityIdsToRemove.clear();
-    this.platforms = [];
-    this.spatialGrid.clear();
     this.accumulator = 0;
     this.tickCount = 0;
     this.totalSimulationTime = 0;

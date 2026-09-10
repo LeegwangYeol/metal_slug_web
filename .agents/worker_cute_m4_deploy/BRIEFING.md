@@ -1,4 +1,4 @@
-# BRIEFING — 2026-09-10T17:28:10+09:00
+# BRIEFING — 2026-09-10T17:33:10+09:00
 
 ## Mission
 Execute Milestone M4: Git commit, push to remote `main`, and live Vercel production deployment verification for the Autonomous Cute Shooter Reinvention project.
@@ -22,7 +22,7 @@ Execute Milestone M4: Git commit, push to remote `main`, and live Vercel product
 
 ## Current Parent
 - Conversation ID: c0a7538f-b163-4fae-9aaa-d9e17ebc0c62
-- Updated: 2026-09-10T17:28:10+09:00
+- Updated: 2026-09-10T17:33:10+09:00
 
 ## Task Summary
 - **What to build**: Production deployment and live verification of the autonomous cute shooter reinvention.
@@ -31,19 +31,23 @@ Execute Milestone M4: Git commit, push to remote `main`, and live Vercel product
 - **Code layout**: Root directory `/Users/user/teamwork_projects/metal_slug_web`.
 
 ## Key Decisions Made
-- Proceed with verification of git status, ensure zero untracked unwanted files, stage all cute reinvention code, tests, screenshots, and docs.
-- Commit with conventional commit message as specified in dispatch.
-- Push to origin main and monitor Vercel status.
+- Cleaned up TS unused variables in `tests/e2e/adversarial_cute_input_spam.spec.ts` and added backwards-compatible `update()` alias on `FullMetalSlugGame` in `src/main.ts`.
+- Verified 48/48 unit test files (686 tests) and 8/8 E2E test files (38 tests) green.
+- Staged all files with `git add -A`.
+- Committed with conventional commit `4a6957a`.
+- Pushed to `origin/main` (`ec468f2..4a6957a`).
+- Verified Vercel deployment `dpl_FuLijxWrEAAb528sAzrwcadaAE1M` reached `● Ready` in 13 seconds.
+- Verified live HTTP 200 responses on both production domains and bundle URL `index-DxCshFBw.js`.
 
 ## Change Tracker
-- **Files modified**: None yet in this worker turn.
-- **Build status**: Passed in M3 (vite built in 404ms, 48/48 unit test files green, 36/36 e2e green).
-- **Pending issues**: Git staging, commit, push, Vercel verification.
+- **Files modified**: `src/main.ts`, `tests/e2e/adversarial_cute_input_spam.spec.ts`, staged and committed.
+- **Build status**: `npm run build` passed (362ms, 0 errors).
+- **Pending issues**: None. All M4 tasks complete.
 
 ## Quality Status
-- **Build/test result**: 686/686 unit tests green, 36/36 e2e green in M3.
+- **Build/test result**: 686/686 unit tests green, 38/38 e2e tests green.
 - **Lint status**: 0 errors.
-- **Tests added/modified**: `tests/unit/cute_sprites_and_palette.test.ts`, `tests/e2e/cute_gameplay_loop.spec.ts`.
+- **Live status**: `● Ready`, HTTP 200 on `https://metal-slug-web-lovat.vercel.app` and `https://metalslugweb.vercel.app`.
 
 ## Loaded Skills
 - None explicitly assigned.

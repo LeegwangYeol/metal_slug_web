@@ -27,8 +27,8 @@ Decoupled multi-tier simulation, rendering, and UI architecture:
 4. **Verification & Deployment (`tests/`, `artifacts/cute_reinvention/`)**:
    - Continuous 15+ second active Playwright playtest (`tests/e2e/cute_gameplay_loop.spec.ts`) with 0 JS/engine errors.
    - 4 canonical screenshot artifacts in `artifacts/cute_reinvention/`.
-   - 100% green Vitest unit tests (48/48 test files, 686 tests) and Playwright E2E (7/7 suites, 36 tests).
-   - Git commit, push to `origin/main`, and verified Vercel production deployment.
+   - 100% green Vitest unit tests (48/48 test files, 686 tests) and Playwright E2E (8/8 suites, 38 tests).
+   - Git commit `4a6957a`, push to `origin/main`, and verified Vercel production deployment (HTTP/2 200).
 
 ---
 
@@ -52,7 +52,7 @@ Decoupled multi-tier simulation, rendering, and UI architecture:
 | 15 | 15s Continuous E2E Playtest | Playwright test actively playing 5 phases for >= 15s with 0 errors | M3 | R3, Explorer 3 |
 | 16 | Visual Proof Screenshots | 4 canonical 960x540 PNG screenshots captured in artifacts/cute_reinvention/ | M3 | R3, Explorer 3 |
 | 17 | 100% Green Test Suite | Complete Vitest and Playwright test suites passing with 0 errors | M3 | R3, Explorer 3 |
-| 18 | Git Push to origin/main | Staged, committed, and pushed to main branch on GitHub | M4 | R3, Explorer 3 |
+| 18 | Git Push to origin/main | Staged, committed, and pushed to main branch on GitHub (commit 4a6957a) | M4 | R3, Explorer 3 |
 | 19 | Vercel Deployment Verification | Both production domains verified with HTTP 200 and Ready status | M4 | R3, Explorer 3 |
 
 ---
@@ -64,7 +64,7 @@ Decoupled multi-tier simulation, rendering, and UI architecture:
 | M1 | Overwhelmingly Cute & Charming Art Overhaul | Pastel palettes, chibi hero, bouncy foes, candy terrain, storybook HUD, popups | M0 | DONE |
 | M2 | Autonomous Gameplay Reinvention | Star arena, bubble trap, cascade combos, pet companion, altars & perks | M1 | DONE |
 | M3 | 15s Playtesting, Visual Proof & Test Hardening | Playwright active 15s playtest, visual screenshots, 100% green tests | M2 | DONE |
-| M4 | Autonomous Git Push & Vercel Verification | Commit, push to origin/main, verify Vercel production status & HTTP 200 | M3 | IN_PROGRESS |
+| M4 | Autonomous Git Push & Vercel Verification | Commit, push to origin/main, verify Vercel production status & HTTP 200 | M3 | DONE |
 
 ---
 

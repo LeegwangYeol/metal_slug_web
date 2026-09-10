@@ -254,4 +254,41 @@ Because the core gameplay will change drastically, the team must autonomously wr
 
 승인 (User has provided explicit approval to proceed with the autonomous 100-agent reinvention of the game.)
 
+## 2026-09-10T10:36:41Z
+
+Use a very large team of 60 agents. Rebuild the entire game from absolute scratch. Discard all the previous code, logic, and "cute" assets. Create a dark fantasy, Vampire Survivors-like horde survival shooter.
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Complete Reboot & Dark Fantasy Art Style
+Delete all existing gameplay logic and assets. Overhaul the engine to support a dark fantasy aesthetic. The visuals should be gritty, dark, and epic—featuring undead swarms, gothic magic, and imposing environments.
+
+### R2. Horde Survival Core Loop (Vampire Survivors-like)
+Implement an overwhelming horde survival core loop. The player must survive against massive waves of enemies that scale in difficulty. Include auto-firing weapons, experience gems, level-ups, and a rogue-lite upgrade selection system to build overpowered synergies.
+
+### R3. Automated Playtesting & Deployment
+The team must autonomously write new Playwright E2E tests to play the horde survival loop and ensure the engine can handle massive enemy counts without crashing. Once verified, push to `origin/main` to trigger Vercel.
+
+## Acceptance Criteria
+
+### Verification & Deployment
+- [ ] Visual Proof: Playwright screenshots clearly demonstrate the new dark fantasy aesthetic and overwhelming enemy swarms.
+- [ ] Playable Horde Loop: A Playwright E2E test survives for at least 30 seconds, successfully collecting XP, leveling up, and selecting an upgrade without engine lag or crashes.
+- [ ] 100% Green Tests: The test suite must be updated and pass cleanly.
+- [ ] Deployment: Git push to `origin/main` is verified and Vercel build succeeds.
+
+## 2026-09-10T10:36:45Z
+
+승인 (The user has given explicit approval to completely wipe the previous project and rebuild it from scratch as a Dark Fantasy Vampire Survivors-like using a 60-agent swarm.)
+
+## 2026-09-10T10:37:39Z
+
+[CRITICAL USER FEEDBACK] "기획단부터 바꿔 새끼야" (Change it completely from the planning/foundation stage).
+Completely halt any coding. Redo fundamental planning, architecture, and core design documents from scratch. Do not reuse any previous architectural ideas. Reflect a serious, heavy, dark-fantasy horde survival game from the very foundation. Create a deep, robust blueprint before writing any code.
+
+
+
 

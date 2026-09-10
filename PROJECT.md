@@ -1,91 +1,122 @@
-# Project: Metal Slug Web (Full Metal Slug) — UI/UX & Level Design Overhaul
+# Project: Dark Fantasy Horde Survival ("Grim Harvest: Undead Siege")
 
-## Architecture
-Decoupled multi-tier simulation, rendering, and UI architecture:
-1. **Simulation Core (`src/core/`)**:
-   - Decoupled from DOM/Window/Canvas.
-   - Fixed 60Hz semi-implicit Euler timestep.
-   - Enhanced multi-tier platform collision & drop-through resolution (`Platform.ts`, `PlayerController.ts`).
-   - Dynamic paratrooper ground/platform resolution (`SoldierEnemy.ts`).
-   - Destructible cover obstacles (`DestructibleObstacle.ts`: sandbag barricades, supply crates, explosive fuel barrels).
-   - Player death & respawn lifecycle: `ALIVE` -> `DYING` (1.2s knockback arc) -> `RESPAWN_PARACHUTE` / `CONTINUE_COUNTDOWN` (10s timer) -> `GAME_OVER`.
-2. **Render Layer (`src/render/`)**:
-   - Upgraded to modern 16:9 widescreen HD: 960x540 internal canvas framebuffer with crisp pixelated CSS display scaling, eliminating claustrophobia.
-   - Expanded dynamic camera tracking (>528px forward vision) and spacious 1100px boss arenas.
-   - Modular parallax background tiling supporting 960px+ seamlessly.
-   - Charming retro-arcade aesthetics: vibrant tropical azure palette, expressive chibi-arcade proportions, bouncy visual feedback.
-3. **UI & Controls Layer (`src/ui/`)**:
-   - Classic arcade Continue countdown screen (10s timer, large 9..0 digits, press Fire/Jump to continue).
-   - Polished arcade tutorial & controls guide banner/overlay (WASD/Arrows, J/Z Fire, K/X Jump, L/C Grenade, U Ultimate, auto-dismiss & `[H]` toggle).
-   - HUD overhaul: cute animated Marco portrait, Ultimate Move stock gauge, bomb fuse, and beveled metallic arcade framing.
-4. **Testing & Visual Verification (`tests/`, `artifacts/ui_overhaul/`)**:
-   - Playwright visual proof: `artifacts/ui_overhaul/screen_terrain.png` and `artifacts/ui_overhaul/respawn_tutorial.png`.
-   - 100% green Vitest unit test suite (asserting platforms, drop-through, continue countdown, tutorial state).
-   - 100% green Playwright E2E browser tests and 0 TypeScript errors.
-   - Autonomous Git commit, push to `origin/main`, and Vercel deployment status confirmation.
+## Core Vision & Identity
+A grim, brutal, gothic dark-fantasy horde survival shooter inspired by Vampire Survivors.
+The player controls an exiled dark sorcerer / grim inquisitor fighting off endless tides of the undead and cosmic horrors across an cursed wasteland.
+Survival demands lethal precision, automated occult weaponry, soul-essence harvesting, and synergistic rogue-lite boons.
 
 ---
 
-## Feature Inventory
-| # | Feature | Description | Milestone | Source |
-|---|---------|-------------|-----------|--------|
-| 1 | 16:9 HD Resolution (960x540) | Modern 16:9 canvas framebuffer with crisp integer pixel scaling | M1 | R1, Explorer 1 |
-| 2 | Widescreen Camera & Arenas | Camera deadzones (>528px forward sight) and spacious 1100px boss arenas | M1 | R1, Explorer 1 |
-| 3 | Parallax Background Tiling | Modular horizontal multi-buffer wrapping without edge cutoffs | M1 | R1, Explorer 1 |
-| 4 | Charming Arcade Visuals | Vibrant tropical palette, expressive chibi proportions, charming sprites | M1 | User Feedback, Explorer 1 |
-| 5 | Multi-Tier Platform System | 24 platforms across 5 zones (stilt docks, towers, bridges, catwalks) | M2 | R1, Explorer 2 |
-| 6 | Stepped Terrain & Elevation | Ground elevation variation, sand dunes, tidal dips, sunken trenches | M2 | R1, Explorer 2 |
-| 7 | Destructible Cover Obstacles | Sandbag barricades, supply crates, and red explosive fuel barrels | M2 | R1, Explorer 2 |
-| 8 | Platform Drop-Through Fix | Fix freeze bug by caching `ignoredPlatformId` at drop initiation | M2 | BugHunt, Explorer 2 |
-| 9 | Paratrooper Dynamic Landing | Paratroopers check `PlatformPhysics.resolveGroundContact` to land on towers | M2 | R1, Explorer 2 |
-| 10 | Authentic Player Death Arc | 1.2s knockback arc using pre-rendered `player_death_0..3` frames | M3 | R2, Explorer 3 |
-| 11 | Arcade Continue Countdown | 10s countdown timer with large 9..0 digits and continue re-entry | M3 | R2, Explorer 3 |
-| 12 | Tactical Parachute Respawn | Respawn drop-in from screen top with parachute canopy & 2.5s invulnerability | M3 | R2, Explorer 3 |
-| 13 | On-Screen Tutorial & Controls | Arcade instruction placard showing WASD/Arrows, J/Z, K/X, L/C, U | M3 | R2, Explorer 3 |
-| 14 | HUD Polish & Ultimate Stock | Cute Marco portrait, Ultimate stock meter, bomb fuse, metallic bevels | M3 | R2, Explorer 3 |
-| 15 | Visual Proof Screenshots | Capture `screen_terrain.png` and `respawn_tutorial.png` in `artifacts/ui_overhaul/` | M4 | R3, Acceptance |
-| 16 | 100% Green Test Suite | Vitest and Playwright test suites passing with 0 TypeScript compilation errors | M4 | R3, Acceptance |
-| 17 | Autonomous Git Commit & Push | Autonomous commit and push to `origin/main` on GitHub | M5 | R3, Acceptance |
-| 18 | Vercel Deployment Verification | Check Vercel build status and deployment logs to confirm success | M5 | R3, Acceptance |
+## 🏛️ Foundational Engine Architecture
+
+### 1. High-Performance Horde Simulation Core (`src/core/`)
+- **Entity Component & Horde Pool**:
+  - High-density spatial partitioning (dynamic spatial hash grid / quadtree) capable of simulating 1,000+ simultaneous active undead entities at locked 60Hz.
+  - Zero-garbage object pooling for projectiles, damage numbers, soul gems, and particle effects.
+  - Fixed-timestep physics simulation (`dt = 1/60`) completely decoupled from rendering.
+- **Player Entity (`src/core/entities/Player.ts`)**:
+  - Omnidirectional 360-degree movement with smooth inertia and responsive collision.
+  - Core statistics: Max Health, Health Regen, Armor / Damage Reduction, Move Speed, Might (Damage Multiplier), Area of Effect, Projectile Speed, Cooldown Reduction, Magnet Radius, Luck / Crit Chance.
+  - Soul level & XP progression curve: `XP_required = base * (level ^ 1.5)`.
+- **Horde Wave Director (`src/core/systems/WaveDirector.ts`)**:
+  - Continuous elapsed-time horde scaling:
+    - *Minute 0:00–0:30 (The Awakening)*: Shambling skeletons and crawling ghouls surrounding the player in staggered clusters.
+    - *Minute 0:30–1:00 (The Swarm)*: High-density zombie hordes and fast phantom bats executing ring surrounds.
+    - *Minute 1:00+ (Nightfall)*: Massive undead legion surges, elite armored death knights, and spectral banshees with projectile attacks.
+  - Periodic Mini-Bosses & Horde Events (e.g. Abyssal Reaper at milestone times).
+- **Automated Occult Arsenal (`src/core/weapons/`)**:
+  - Weapons fire automatically based on independent internal cooldowns, targeting nearest enemies, random clusters, or orbiting the player:
+    1. **Arcane Scythe**: Sweeping spectral blade cutting arcs through forward enemy clusters.
+    2. **Soul Orbiters**: Orbiting skull flames orbiting the player that incinerate encroaching enemies on contact.
+    3. **Abyssal Lightning**: Strikes down random dense enemy clusters with chaining electrical necrosis.
+    4. **Bone Spear**: High-velocity piercing projectiles penetrating multiple undead in a straight line.
+    5. **Cursed Aura (Death Sigil)**: Periodic pulsating damage ring centered on player with heavy knockback.
+- **Loot & Magnetism System (`src/core/systems/LootManager.ts`)**:
+  - Defeated enemies spawn Soul Shards / Blood Gems (Emerald, Ruby, Violet for varying XP values).
+  - Shards remain persistent until attracted by the player's Magnet radius, accelerating towards the player with lerped velocity.
+- **Rogue-Lite Boon & Synergy Engine (`src/core/systems/UpgradeSystem.ts`)**:
+  - Upon leveling up, the game pauses simulation and generates 3–4 randomized upgrade cards.
+  - Weapons can be upgraded from Rank 1 to 5.
+  - Passives (Tome of Might, Ring of Velocity, Blood Chalice, Eldritch Magnet, Obsidian Armor).
+  - Synergistic Weapon Evolutions at max rank (e.g. Arcane Scythe + Blood Chalice = Soul Reaping Harvester).
 
 ---
 
-## Milestones
-| # | Name | Scope | Dependencies | Status |
-|---|------|-------|-------------|--------|
-| M0 | Survey & Architecture Assessment | Full codebase investigation across viewport, terrain, UI, and test suite | None | DONE |
-| M1 | 16:9 HD Screen & Viewport Expansion | Canvas 960x540, dynamic camera, parallax tiling, charming arcade styling | M0 | DONE |
-| M2 | Level Design & Terrain System Overhaul | 24 platforms, 5 zones, destructible obstacles, paratrooper landing, drop-through fix | M1 | DONE |
-| M3 | Death, Respawn Flow & Tutorial UI | Death arc, 10s continue countdown, parachute respawn, tutorial placard, HUD ultimate gauge | M1 | DONE |
-| M4 | E2E Visual Verification & Test Hardening | Playwright screenshots in artifacts/ui_overhaul/, 100% green tests | M2, M3 | DONE |
-| M5 | Autonomous Git Push & Vercel Verification | Commit, push to origin/main, check Vercel build status & logs | M4 | DONE |
+## 🎨 Dark Fantasy Aesthetic & Render Pipeline (`src/render/`)
+
+### 1. Gothic Color Palette & Atmosphere
+- Deep grim palettes:
+  - Abyssal Void (`#08060c`, `#0f0d1a`, `#171326`)
+  - Necrotic Emerald (`#0d3824`, `#19633e`, `#28a745`, `#68d391`)
+  - Blood Crimson (`#380a0a`, `#6b1212`, `#a81d1d`, `#e53e3e`)
+  - Bone Ivory (`#2a2624`, `#615852`, `#b8aea5`, `#ede5de`)
+  - Cursed Arcane (`#1a0c2e`, `#3c1b6b`, `#7038b8`, `#b794f6`)
+
+### 2. High-Performance Procedural & Canvas Rendering
+- Dynamic multi-layered gothic backdrop:
+  - Cursed desolate graveyard with weathered obsidian tombstones, twisted dead trees, and ground mist.
+  - Blood moon / eclipse looming in the darkened stormy sky with drifting storm clouds.
+  - Dynamic runic circles engraved into ancient stone flagging.
+- Swarm Visuals:
+  - Distinct silhouette-driven procedural sprites for Player, Skeletons, Ghouls, Death Knights, and Banshees.
+  - Flashing damage frames (white/crimson flash on impact), gore splatters, and soul dissipation upon death.
+- Arcane VFX:
+  - Luminescent glowing trails, lingering spell circles, shadow aura, and floating XP gem glints.
 
 ---
 
-## Interface Contracts
+## 🖥️ Imposing Dark Fantasy UI & HUD (`src/ui/`)
+- **Gothic HUD**:
+  - Vitality Orb / Bar with deep crimson blood filling and cracked iron framing.
+  - Soul Level indicator and luminous green/violet XP bar stretching across top of screen.
+  - Elapsed Survival Timer (MM:SS) and Kill Counter with skull iconography.
+  - Active Weapon & Passive Inventory Slots displaying current ranks.
+- **Level-Up Choice Modal**:
+  - Pauses gameplay immediately.
+  - Ornate gothic stone tablets displaying Card Icon, Name, Rank, Description, and Stat Deltas.
+  - Keyboard (1, 2, 3, 4) and mouse click selection with visceral sound/visual confirmation.
+- **Game Over & Victory Screen**:
+  - "YOU HAVE SUCCUMBED TO THE HORDE" / "SURVIVAL ACHIEVED".
+  - Detailed run statistics: Survival Time, Total Kills, Damage Dealt, Final Level, Weapon DPS breakdown.
+  - Restart / Retry button.
 
-### 1. Viewport & Camera Contract (M1)
-- `CanvasRenderer.VIRTUAL_WIDTH = 960;`
-- `CanvasRenderer.VIRTUAL_HEIGHT = 540;`
-- `<canvas>` element dimensions: `960` x `540` with `image-rendering: pixelated;`
-- Camera viewport: width `960`, height `540`. Forward deadzone: `~528px`.
-- Mid-boss and Boss camera lockdown widths expanded to `1100px`.
+---
 
-### 2. Level Design & Platform Contract (M2)
-- Stage bounds: `STAGE_WIDTH = 3600`, `STAGE_HEIGHT = 540`.
-- Ground line base at `Y = 460` (or `Y = 230` scaled accordingly), with stepped elevations.
-- Preserved platform IDs: `boss_arena_left` at `(x: 1860, y: 170, w: 100, h: 12)` or mapped coordinate preserving crisis tests, `midboss_dock_left`, `midboss_dock_right`, `tower_platform`, `bunker_2`.
-- Destructible obstacle types: `'SANDBAG_BARRICADE'`, `'SUPPLY_CRATE'`, `'EXPLOSIVE_BARREL'`.
+## 🧪 Rigorous Verification & Deployment Strategy
 
-### 3. Death & Respawn Contract (M3)
-- Player states:
-  - `PlayerActionState.DYING`: 1.2s knockback arc, cycling `player_death_0..3`.
-  - `PlayerActionState.RESPAWNING_PARACHUTE`: starts at `Y = 20`, controlled descent at `vy = 60 px/s`, canopy attached, 2.5s invulnerability flashing.
-- Continue Countdown:
-  - 10s countdown timer when `lives <= 0`.
-  - Digit rendering: 9..0.
-  - On Fire or Jump button: resets lives to 3, drops in with parachute.
-  - On timer expiration: transitions to final Game Over banner.
-- Tutorial Placard:
-  - Visible on game start, 5s auto-dismiss or toggle with key `H`.
-  - Displays movement, shoot, jump, grenade, ultimate bindings.
+1. **Unit Test Suite (`tests/unit/`)**:
+   - `HordeManager.test.ts`: 1,000+ enemy spawn, culling, spatial grid lookup, zero memory leaks.
+   - `PlayerProgression.test.ts`: XP curve math, leveling logic, stat calculation with passives.
+   - `WeaponsAndSynergies.test.ts`: Auto-firing timing, projectile pierce, damage scaling, evolution triggers.
+   - `WaveDirector.test.ts`: Escalation timeline, difficulty scaling, enemy type distribution.
+
+2. **Automated Playwright E2E Playtesting (`tests/e2e/`)**:
+   - `horde_survival.spec.ts`:
+     - Launches browser and runs continuous 30+ second survival simulation.
+     - Simulates player dodging hordes while auto-firing kills enemies.
+     - Verifies XP gem collection and leveling up.
+     - Interacts with Level-Up modal and selects an upgrade card.
+     - Confirms simulation resumes seamlessly with upgraded stats.
+     - Asserts zero JavaScript errors, zero unhandled rejections, and zero engine lag.
+   - High-resolution visual proof screenshots saved in `artifacts/dark_fantasy/`:
+     - `artifacts/dark_fantasy/horde_swarm.png` (demonstrating overwhelming undead swarms and dark gothic art).
+     - `artifacts/dark_fantasy/level_up_modal.png` (demonstrating gothic upgrade card selection).
+     - `artifacts/dark_fantasy/survival_gameplay.png` (demonstrating auto-firing weapons and visual effects).
+
+3. **Production Deployment**:
+   - 100% green tests (`npm test` and `npm run test:e2e`).
+   - Clean production build (`npm run build`).
+   - Git push to `origin/main` on GitHub.
+   - Verify Vercel deployment status.
+
+---
+
+## 🏁 Milestones & 60-Agent Decomposition
+
+| Milestone | Scope | Agent Allocation | Dependencies | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **M1: Foundation & High-Performance Core** | Wipe old cute code, implement spatial grid, horde entity pooling, player physics, XP/leveling math | Agents 1–15 | None | **DONE** |
+| **M2: Dark Fantasy Art & Gothic Render Engine** | Dark fantasy palette, procedural undead & player sprites, cursed graveyard backdrop, spell VFX, gothic HUD | Agents 16–30 | M1 | **DONE** |
+| **M3: Occult Arsenal, Upgrades & Horde Director** | 5 auto-firing weapons, rogue-lite level-up modal, passives & synergies, escalating wave spawner | Agents 31–45 | M1, M2 | **DONE** |
+| **M4: Automated E2E Playtesting & Hardening** | Playwright 30s+ survival loop test, visual proof screenshots, comprehensive unit tests | Agents 46–55 | M3 | **DONE** |
+| **M5: Deployment & Live Production Verification** | Clean build, 100% green tests, git push to origin/main, Vercel verification | Agents 56–60 | M4 | **DONE** |

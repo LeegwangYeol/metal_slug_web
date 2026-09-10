@@ -1,0 +1,123 @@
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -16,6 +16,7 @@
+ import { Camera } from './render/Camera';
+ import { KeyboardController } from './input/KeyboardController';
+ import { TouchVirtualPad } from './input/TouchVirtualPad';
++import { GothicHUD } from './ui/GothicHUD';
+ 
+ export class GrimHarvestGame {
+   public static readonly VIRTUAL_WIDTH = 960;
+@@ -28,6 +29,7 @@
+   public readonly camera: Camera;
+   public readonly keyboard: KeyboardController;
+   public readonly touchPad: TouchVirtualPad;
++  public readonly hud: GothicHUD;
+ 
+   private canvas: HTMLCanvasElement | null = null;
+   private ctx: CanvasRenderingContext2D | null = null;
+@@ -81,6 +83,12 @@
+     this.keyboard = new KeyboardController();
+     this.touchPad = new TouchVirtualPad();
+ 
++    // 4. Gothic HUD
++    this.hud = new GothicHUD({
++      virtualWidth: GrimHarvestGame.VIRTUAL_WIDTH,
++      virtualHeight: GrimHarvestGame.VIRTUAL_HEIGHT,
++    });
++
+     // 4. Initial Swarm Deployment
+     this.spawnInitialSwarm();
+ 
+@@ -218,6 +226,14 @@
+ 
+     // 6. Camera Tracking
+     this.camera.update(this.player.position.x, this.player.position.y, dt);
++
++    // 7. Gothic HUD Update
++    this.hud.update(dt, {
++      player: this.player,
++      hordeManager: this.hordeManager,
++      elapsedTime: this.elapsedTime,
++      killCount: this.killCount || this.hordeManager.totalKilled,
++    });
+   }
+ 
+   public render(): void {
+@@ -322,70 +338,13 @@
+ 
+     ctx.restore();
+ 
+-    // 6. Draw Gothic HUD Overlay
+-    this.renderHUD(ctx, w);
+-  }
+-
+-  private renderHUD(ctx: CanvasRenderingContext2D, width: number): void {
+-    // XP Bar across top
+-    const xpRatio = this.player.xpToNextLevel > 0
+-      ? Math.min(1.0, this.player.currentXP / this.player.xpToNextLevel)
+-      : 0;
+-
+-    ctx.fillStyle = '#171326';
+-    ctx.fillRect(0, 0, width, 8);
+-    ctx.fillStyle = '#68d391';
+-    ctx.fillRect(0, 0, width * xpRatio, 8);
+-
+-    // Text info
+-    ctx.font = 'bold 14px sans-serif';
+-    ctx.fillStyle = '#ede5de';
+-    ctx.fillText(`LVL: ${this.player.level}`, 16, 28);
+-    ctx.fillText(`SWARM: ${this.hordeManager.getActiveCount()}`, 90, 28);
+-
+-    // Timer (MM:SS)
+-    const minutes = Math.floor(this.elapsedTime / 60);
+-    const seconds = Math.floor(this.elapsedTime % 60);
+-    const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+-    ctx.fillText(`TIME: ${timeStr}`, width / 2 - 35, 28);
+-
+-    // Health Bar
+-    const hpRatio = Math.max(0, this.player.stats.currentHealth / this.player.stats.maxHealth);
+-    const barWidth = 140;
+-    const barHeight = 12;
+-    const barX = width - barWidth - 16;
+-    const barY = 16;
+-
+-    ctx.fillStyle = '#380a0a';
+-    ctx.fillRect(barX, barY, barWidth, barHeight);
+-    ctx.fillStyle = '#e53e3e';
+-    ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
+-    ctx.strokeStyle = '#615852';
+-    ctx.lineWidth = 1;
+-    ctx.strokeRect(barX, barY, barWidth, barHeight);
+-
+-    // Game Over banner
+-    if (!this.player.isAlive) {
+-      ctx.fillStyle = 'rgba(8, 6, 12, 0.8)';
+-      ctx.fillRect(0, 0, width, GrimHarvestGame.VIRTUAL_HEIGHT);
+-
+-      ctx.font = 'bold 36px sans-serif';
+-      ctx.fillStyle = '#e53e3e';
+-      ctx.textAlign = 'center';
+-      ctx.fillText(
+-        'YOU HAVE SUCCUMBED TO THE HORDE',
+-        width / 2,
+-        GrimHarvestGame.VIRTUAL_HEIGHT / 2 - 20
+-      );
+-      ctx.font = '18px sans-serif';
+-      ctx.fillStyle = '#ede5de';
+-      ctx.fillText(
+-        `Survived: ${timeStr} | Final Soul Level: ${this.player.level}`,
+-        width / 2,
+-        GrimHarvestGame.VIRTUAL_HEIGHT / 2 + 20
+-      );
+-      ctx.textAlign = 'start';
+-    }
++    // 6. Draw Gothic HUD Overlay
++    this.hud.render(ctx, w, h, {
++      player: this.player,
++      hordeManager: this.hordeManager,
++      elapsedTime: this.elapsedTime,
++      killCount: this.killCount || this.hordeManager.totalKilled,
++    });
+   }
+ }

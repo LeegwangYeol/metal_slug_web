@@ -1,0 +1,724 @@
+
+Running 9 tests using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/game_initialization.spec.ts:4:3 › Dark Fantasy Horde Survival - Game Initialization & Engine Benchmark Suite › should boot headless browser, mount game container, and render canvas with zero fatal console errors (206ms)
+  ✓  2 [chromium] › tests/e2e/game_initialization.spec.ts:57:3 › Dark Fantasy Horde Survival - Game Initialization & Engine Benchmark Suite › should maintain 60 FPS animation loop stably over 300 frames without crashing (3.8s)
+  ✓  3 [chromium] › tests/e2e/game_initialization.spec.ts:137:3 › Dark Fantasy Horde Survival - Game Initialization & Engine Benchmark Suite › should expose window.__game, initialize dark fantasy components, and respond to input (167ms)
+[E2E Survival] t=0.07s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+[E2E Survival] t=0.1s | HP=100/100 | Kills=0 | TotalXP=0 | Level=1
+  -> steer=STOP curMinD=445.7 futMinD=Infinity score=260
+[E2E Survival] t=0.20s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=437.0 futMinD=Infinity score=260
+[E2E Survival] t=0.35s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=426.2 futMinD=Infinity score=260
+[E2E Survival] t=0.50s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=417.5 futMinD=Infinity score=260
+[E2E Survival] t=0.63s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=407.7 futMinD=Infinity score=260
+[E2E Survival] t=0.77s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=400.2 futMinD=Infinity score=260
+[E2E Survival] t=0.92s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=390.4 futMinD=369.6 score=260
+[E2E Survival] t=1.05s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+[E2E Survival] t=1.1s | HP=100/100 | Kills=0 | TotalXP=0 | Level=1
+  -> steer=STOP curMinD=381.7 futMinD=360.9 score=260
+[E2E Survival] t=1.18s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=373.1 futMinD=352.3 score=260
+[E2E Survival] t=1.33s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=363.3 futMinD=342.5 score=260
+[E2E Survival] t=1.47s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=354.7 futMinD=333.9 score=260
+[E2E Survival] t=1.62s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=344.9 futMinD=324.1 score=260
+[E2E Survival] t=1.75s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=336.2 futMinD=315.4 score=260
+[E2E Survival] t=1.90s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=326.5 futMinD=305.7 score=260
+[E2E Survival] t=2.03s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+[E2E Survival] t=2.0s | HP=100/100 | Kills=0 | TotalXP=0 | Level=1
+  -> steer=STOP curMinD=317.8 futMinD=297.0 score=260
+[E2E Survival] t=2.17s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=309.2 futMinD=288.4 score=260
+[E2E Survival] t=2.32s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=299.4 futMinD=278.6 score=260
+[E2E Survival] t=2.45s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=290.7 futMinD=269.9 score=260
+[E2E Survival] t=2.60s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=281.0 futMinD=260.2 score=260
+[E2E Survival] t=2.73s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=272.3 futMinD=251.5 score=260
+[E2E Survival] t=2.87s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=263.2 futMinD=242.4 score=260
+[E2E Survival] t=3.02s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+[E2E Survival] t=3.0s | HP=100/100 | Kills=0 | TotalXP=0 | Level=1
+  -> steer=STOP curMinD=251.7 futMinD=230.9 score=260
+[E2E Survival] t=3.15s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=240.8 futMinD=218.3 score=260
+[E2E Survival] t=3.30s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=228.1 futMinD=201.8 score=260
+[E2E Survival] t=3.43s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=216.5 futMinD=187.1 score=260
+[E2E Survival] t=3.57s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=204.8 futMinD=172.5 score=260
+[E2E Survival] t=3.72s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=191.2 futMinD=156.0 score=260
+[E2E Survival] t=3.87s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=174.7 futMinD=139.5 score=260
+[E2E Survival] t=4.00s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=160.0 futMinD=124.8 score=260
+[E2E Survival] t=4.13s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=145.3 futMinD=110.1 score=260
+[E2E Survival] t=4.28s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=128.8 futMinD=93.6 score=260
+[E2E Survival] t=4.42s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=114.2 futMinD=79.0 score=-2715
+[E2E Survival] t=4.55s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=99.5 futMinD=64.3 score=-21389
+[E2E Survival] t=4.68s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=84.8 futMinD=49.6 score=-48522
+[E2E Survival] t=4.83s | HP=100.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=STOP curMinD=68.3 futMinD=33.1 score=-131645
+[E2E Survival] t=4.97s | HP=85.0 | Pos=(0.0, 0.0) | Kills=0 | XP=0 | Lvl=1
+  -> steer=LEFT curMinD=53.7 futMinD=4.1 score=-1291377
+[E2E Survival] t=5.10s | HP=85.0 | Pos=(-17.2, 0.0) | Kills=0 | XP=0 | Lvl=1
+[E2E Survival] t=5.1s | HP=85.03999999999996/100 | Kills=0 | TotalXP=0 | Level=1
+  -> steer=DOWN curMinD=21.8 futMinD=13.0 score=-1614972
+[E2E Survival] t=5.23s | HP=85.1 | Pos=(-26.7, 17.2) | Kills=0 | XP=0 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=9.3 futMinD=9.3 score=-3491253
+[E2E Survival] t=5.38s | HP=85.1 | Pos=(-41.1, 39.8) | Kills=0 | XP=0 | Lvl=1
+  -> steer=LEFT curMinD=6.4 futMinD=6.4 score=-3787173
+[E2E Survival] t=5.53s | HP=75.1 | Pos=(-69.6, 46.6) | Kills=0 | XP=0 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=6.8 futMinD=6.8 score=-2454516
+[E2E Survival] t=5.67s | HP=75.2 | Pos=(-89.0, 61.0) | Kills=5 | XP=1 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=14.1 futMinD=14.1 score=-1222728
+[E2E Survival] t=5.82s | HP=75.2 | Pos=(-110.2, 82.3) | Kills=5 | XP=2 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=26.3 futMinD=26.3 score=-315166
+[E2E Survival] t=5.95s | HP=60.2 | Pos=(-129.0, 101.1) | Kills=5 | XP=4 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=37.1 futMinD=37.1 score=-89622
+[E2E Survival] t=6.08s | HP=60.2 | Pos=(-147.9, 120.0) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=6.1s | HP=60.23666666666645/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_LEFT curMinD=47.5 futMinD=47.5 score=-24072
+[E2E Survival] t=6.23s | HP=60.3 | Pos=(-169.1, 141.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=59.4 futMinD=50.8 score=-5664
+[E2E Survival] t=6.37s | HP=60.3 | Pos=(-188.0, 142.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=58.0 futMinD=58.0 score=-7838
+[E2E Survival] t=6.50s | HP=45.3 | Pos=(-206.8, 146.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=61.2 futMinD=61.2 score=-5842
+[E2E Survival] t=6.63s | HP=45.3 | Pos=(-232.0, 153.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=71.9 futMinD=71.9 score=531
+[E2E Survival] t=6.78s | HP=45.4 | Pos=(-262.0, 153.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=83.3 futMinD=83.3 score=-40
+[E2E Survival] t=6.93s | HP=45.4 | Pos=(-283.7, 136.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=85.0 futMinD=85.0 score=-167
+[E2E Survival] t=7.07s | HP=45.4 | Pos=(-302.6, 118.0) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=7.1s | HP=45.43333333333294/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=UP_LEFT curMinD=94.0 futMinD=94.0 score=106
+[E2E Survival] t=7.20s | HP=45.5 | Pos=(-321.4, 99.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=101.5 futMinD=97.7 score=104
+[E2E Survival] t=7.35s | HP=45.5 | Pos=(-325.9, 69.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=99.6 futMinD=99.6 score=120
+[E2E Survival] t=7.47s | HP=45.5 | Pos=(-325.9, 46.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=99.9 futMinD=98.2 score=120
+[E2E Survival] t=7.62s | HP=45.5 | Pos=(-325.9, 16.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=96.8 futMinD=96.8 score=119
+[E2E Survival] t=7.73s | HP=45.6 | Pos=(-325.9, -7.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=98.6 futMinD=92.5 score=70
+[E2E Survival] t=7.90s | HP=45.6 | Pos=(-345.0, -31.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=109.5 futMinD=109.5 score=5
+[E2E Survival] t=8.03s | HP=45.6 | Pos=(-371.2, -35.5) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=8.0s | HP=45.6266666666661/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=LEFT curMinD=108.8 futMinD=108.4 score=13
+[E2E Survival] t=8.17s | HP=45.7 | Pos=(-397.9, -35.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=107.1 futMinD=107.1 score=7
+[E2E Survival] t=8.32s | HP=45.7 | Pos=(-427.9, -35.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=111.3 futMinD=90.3 score=260
+[E2E Survival] t=8.45s | HP=45.7 | Pos=(-434.5, -35.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=105.8 futMinD=97.3 score=-9
+[E2E Survival] t=8.58s | HP=45.7 | Pos=(-449.0, -49.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=96.1 futMinD=94.3 score=42
+[E2E Survival] t=8.73s | HP=45.8 | Pos=(-470.2, -71.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=93.0 futMinD=93.0 score=38
+[E2E Survival] t=8.87s | HP=45.8 | Pos=(-489.0, -90.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=97.4 futMinD=97.4 score=32
+[E2E Survival] t=9.00s | HP=45.8 | Pos=(-507.9, -108.8) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=9.0s | HP=45.819999999999254/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=UP curMinD=106.4 futMinD=97.1 score=58
+[E2E Survival] t=9.15s | HP=45.8 | Pos=(-512.3, -138.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=100.8 futMinD=100.1 score=76
+[E2E Survival] t=9.28s | HP=45.9 | Pos=(-512.3, -165.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=98.7 futMinD=98.7 score=72
+[E2E Survival] t=9.43s | HP=45.9 | Pos=(-512.3, -195.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=103.1 futMinD=93.8 score=80
+[E2E Survival] t=9.58s | HP=45.9 | Pos=(-495.5, -216.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=95.9 futMinD=95.3 score=106
+[E2E Survival] t=9.72s | HP=46.0 | Pos=(-476.7, -235.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=93.8 futMinD=93.8 score=108
+[E2E Survival] t=9.85s | HP=46.0 | Pos=(-457.8, -254.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=102.7 futMinD=102.7 score=106
+[E2E Survival] t=9.98s | HP=46.0 | Pos=(-439.0, -273.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=110.3 futMinD=89.3 score=221
+[E2E Survival] t=10.13s | HP=46.0 | Pos=(-433.5, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=104.1 futMinD=96.6 score=64
+[E2E Survival] t=10.27s | HP=46.1 | Pos=(-416.4, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=94.5 futMinD=92.7 score=120
+[E2E Survival] t=10.42s | HP=46.1 | Pos=(-386.4, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=90.6 futMinD=90.6 score=119
+[E2E Survival] t=10.55s | HP=46.1 | Pos=(-359.7, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=93.7 futMinD=93.7 score=119
+[E2E Survival] t=10.70s | HP=46.2 | Pos=(-329.7, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=103.1 futMinD=103.1 score=119
+[E2E Survival] t=10.83s | HP=46.2 | Pos=(-303.0, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=108.7 futMinD=108.7 score=118
+[E2E Survival] t=10.97s | HP=46.2 | Pos=(-276.4, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=111.3 futMinD=111.3 score=118
+[E2E Survival] t=11.10s | HP=46.2 | Pos=(-249.7, -278.7) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=11.1s | HP=46.23999999999887/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=RIGHT curMinD=115.4 futMinD=115.4 score=118
+[E2E Survival] t=11.25s | HP=46.3 | Pos=(-219.7, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=122.6 futMinD=87.4 score=118
+[E2E Survival] t=11.38s | HP=46.3 | Pos=(-213.0, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=112.4 futMinD=112.4 score=67
+[E2E Survival] t=11.52s | HP=46.3 | Pos=(-195.9, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=112.7 futMinD=112.7 score=117
+[E2E Survival] t=11.67s | HP=46.4 | Pos=(-165.9, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=121.5 futMinD=121.5 score=117
+[E2E Survival] t=11.80s | HP=46.4 | Pos=(-139.2, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=131.0 futMinD=95.8 score=260
+[E2E Survival] t=11.93s | HP=46.4 | Pos=(-129.2, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=124.9 futMinD=89.7 score=242
+[E2E Survival] t=12.08s | HP=46.4 | Pos=(-129.2, -278.7) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=12.1s | HP=46.43666666666536/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=RIGHT curMinD=107.2 futMinD=107.2 score=67
+[E2E Survival] t=12.23s | HP=46.5 | Pos=(-108.7, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=109.8 futMinD=109.8 score=117
+[E2E Survival] t=12.37s | HP=46.5 | Pos=(-82.0, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=120.8 futMinD=120.8 score=118
+[E2E Survival] t=12.52s | HP=46.5 | Pos=(-52.0, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=133.4 futMinD=98.2 score=260
+[E2E Survival] t=12.63s | HP=46.5 | Pos=(-45.4, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=126.7 futMinD=91.5 score=260
+[E2E Survival] t=12.78s | HP=46.6 | Pos=(-45.4, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=109.5 futMinD=109.5 score=69
+[E2E Survival] t=12.93s | HP=46.6 | Pos=(-24.9, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=112.6 futMinD=104.1 score=120
+[E2E Survival] t=13.07s | HP=46.6 | Pos=(1.8, -278.7) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=13.1s | HP=46.63333333333185/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=123.7 futMinD=88.5 score=177
+[E2E Survival] t=13.22s | HP=46.7 | Pos=(8.5, -278.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=112.9 futMinD=110.9 score=47
+[E2E Survival] t=13.35s | HP=46.7 | Pos=(22.9, -293.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=112.3 futMinD=108.9 score=89
+[E2E Survival] t=13.48s | HP=46.7 | Pos=(41.7, -312.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=109.7 futMinD=107.0 score=81
+[E2E Survival] t=13.63s | HP=46.7 | Pos=(63.0, -333.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=106.6 futMinD=106.6 score=70
+[E2E Survival] t=13.75s | HP=46.8 | Pos=(79.5, -349.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=110.0 futMinD=89.0 score=202
+[E2E Survival] t=13.90s | HP=46.8 | Pos=(84.9, -355.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=103.7 futMinD=103.7 score=9
+[E2E Survival] t=14.05s | HP=46.8 | Pos=(101.7, -371.9) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=14.1s | HP=46.829999999998336/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=108.0 futMinD=86.9 score=90
+[E2E Survival] t=14.18s | HP=46.9 | Pos=(104.7, -375.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=100.7 futMinD=100.7 score=-1
+[E2E Survival] t=14.33s | HP=46.9 | Pos=(121.5, -391.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=102.9 futMinD=93.6 score=69
+[E2E Survival] t=14.47s | HP=46.9 | Pos=(147.7, -396.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=97.6 futMinD=96.2 score=87
+[E2E Survival] t=14.62s | HP=46.9 | Pos=(177.7, -396.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=94.4 futMinD=94.4 score=81
+[E2E Survival] t=14.75s | HP=47.0 | Pos=(204.4, -396.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=98.1 futMinD=98.1 score=75
+[E2E Survival] t=14.90s | HP=47.0 | Pos=(234.4, -396.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=107.7 futMinD=104.3 score=95
+[E2E Survival] t=15.03s | HP=47.0 | Pos=(253.7, -381.8) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=15.0s | HP=47.02666666666482/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_RIGHT curMinD=105.9 futMinD=105.9 score=109
+[E2E Survival] t=15.17s | HP=47.1 | Pos=(272.6, -362.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=106.9 futMinD=106.9 score=107
+[E2E Survival] t=15.30s | HP=47.1 | Pos=(291.4, -344.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=113.1 futMinD=92.0 score=260
+[E2E Survival] t=15.45s | HP=47.1 | Pos=(294.5, -341.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=105.7 futMinD=96.1 score=56
+[E2E Survival] t=15.60s | HP=47.1 | Pos=(294.5, -320.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=96.6 futMinD=90.1 score=112
+[E2E Survival] t=15.73s | HP=47.2 | Pos=(294.5, -293.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=89.4 futMinD=89.4 score=87
+[E2E Survival] t=15.87s | HP=47.2 | Pos=(294.5, -267.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=89.1 futMinD=89.1 score=68
+[E2E Survival] t=16.00s | HP=47.2 | Pos=(294.5, -240.5) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=16.0s | HP=47.21999999999798/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN curMinD=94.5 futMinD=94.5 score=119
+[E2E Survival] t=16.15s | HP=47.2 | Pos=(294.5, -210.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=105.4 futMinD=99.3 score=115
+[E2E Survival] t=16.30s | HP=47.3 | Pos=(294.5, -180.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=106.6 futMinD=96.5 score=104
+[E2E Survival] t=16.42s | HP=47.3 | Pos=(294.5, -157.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=97.1 futMinD=94.5 score=112
+[E2E Survival] t=16.57s | HP=47.3 | Pos=(294.5, -127.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=93.1 futMinD=81.8 score=242
+[E2E Survival] t=16.70s | HP=47.4 | Pos=(294.5, -100.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=96.3 futMinD=96.3 score=92
+[E2E Survival] t=16.83s | HP=47.4 | Pos=(308.9, -81.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=101.9 futMinD=101.9 score=101
+[E2E Survival] t=16.98s | HP=47.4 | Pos=(330.1, -59.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=112.8 futMinD=91.9 score=260
+[E2E Survival] t=17.13s | HP=47.4 | Pos=(333.7, -52.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=105.7 futMinD=104.3 score=69
+[E2E Survival] t=17.27s | HP=47.5 | Pos=(333.7, -35.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=99.7 futMinD=99.7 score=119
+[E2E Survival] t=17.40s | HP=47.5 | Pos=(333.7, -8.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=101.3 futMinD=101.3 score=118
+[E2E Survival] t=17.55s | HP=47.5 | Pos=(333.7, 21.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=109.4 futMinD=88.5 score=175
+[E2E Survival] t=17.67s | HP=47.6 | Pos=(333.7, 28.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=106.2 futMinD=90.8 score=65
+[E2E Survival] t=17.82s | HP=47.6 | Pos=(333.7, 45.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=109.2 futMinD=88.3 score=164
+[E2E Survival] t=17.97s | HP=47.6 | Pos=(333.7, 52.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=104.5 futMinD=104.5 score=22
+[E2E Survival] t=18.10s | HP=47.6 | Pos=(348.1, 66.4) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=18.1s | HP=47.6399999999976/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_RIGHT curMinD=103.0 futMinD=103.0 score=65
+[E2E Survival] t=18.25s | HP=47.7 | Pos=(369.4, 87.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=108.6 futMinD=108.6 score=54
+[E2E Survival] t=18.38s | HP=47.7 | Pos=(388.2, 106.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=112.5 futMinD=91.3 score=260
+[E2E Survival] t=18.52s | HP=47.7 | Pos=(391.3, 109.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=105.6 futMinD=94.3 score=32
+[E2E Survival] t=18.65s | HP=47.7 | Pos=(391.3, 126.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=94.4 futMinD=94.4 score=26
+[E2E Survival] t=18.80s | HP=47.8 | Pos=(405.7, 149.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=100.0 futMinD=100.0 score=71
+[E2E Survival] t=18.93s | HP=47.8 | Pos=(410.1, 175.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=102.6 futMinD=102.6 score=79
+[E2E Survival] t=19.08s | HP=47.8 | Pos=(410.1, 205.6) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=19.1s | HP=47.83666666666409/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_LEFT curMinD=107.1 futMinD=97.3 score=84
+[E2E Survival] t=19.22s | HP=47.9 | Pos=(395.7, 224.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=100.9 futMinD=97.1 score=106
+[E2E Survival] t=19.35s | HP=47.9 | Pos=(376.9, 243.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=96.6 futMinD=96.1 score=111
+[E2E Survival] t=19.50s | HP=47.9 | Pos=(355.6, 265.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=94.3 futMinD=94.3 score=109
+[E2E Survival] t=19.62s | HP=47.9 | Pos=(339.1, 281.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=99.5 futMinD=99.5 score=107
+[E2E Survival] t=19.77s | HP=48.0 | Pos=(317.9, 302.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=113.3 futMinD=92.0 score=260
+[E2E Survival] t=19.90s | HP=48.0 | Pos=(314.9, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=105.6 futMinD=102.6 score=68
+[E2E Survival] t=20.03s | HP=48.0 | Pos=(297.7, 305.8) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=20.0s | HP=48.026666666663914/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=LEFT curMinD=98.0 futMinD=98.0 score=120
+[E2E Survival] t=20.17s | HP=48.1 | Pos=(271.0, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=97.9 futMinD=97.9 score=119
+[E2E Survival] t=20.32s | HP=48.1 | Pos=(241.0, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=104.7 futMinD=104.7 score=119
+[E2E Survival] t=20.47s | HP=48.1 | Pos=(211.0, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=113.2 futMinD=92.0 score=260
+[E2E Survival] t=20.62s | HP=48.1 | Pos=(204.4, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=106.7 futMinD=106.7 score=69
+[E2E Survival] t=20.73s | HP=48.2 | Pos=(190.5, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=108.0 futMinD=108.0 score=119
+[E2E Survival] t=20.87s | HP=48.2 | Pos=(163.9, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=119.3 futMinD=98.1 score=260
+[E2E Survival] t=21.02s | HP=48.2 | Pos=(157.2, 305.8) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=21.0s | HP=48.2233333333304/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=114.1 futMinD=92.9 score=260
+[E2E Survival] t=21.17s | HP=48.3 | Pos=(157.2, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=103.5 futMinD=103.5 score=69
+[E2E Survival] t=21.30s | HP=48.3 | Pos=(140.0, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=110.7 futMinD=89.4 score=229
+[E2E Survival] t=21.45s | HP=48.3 | Pos=(130.0, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=107.4 futMinD=107.4 score=69
+[E2E Survival] t=21.58s | HP=48.3 | Pos=(112.9, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=109.9 futMinD=88.7 score=189
+[E2E Survival] t=21.73s | HP=48.4 | Pos=(106.2, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=101.3 futMinD=101.3 score=70
+[E2E Survival] t=21.87s | HP=48.4 | Pos=(89.0, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=98.8 futMinD=98.8 score=120
+[E2E Survival] t=22.00s | HP=48.4 | Pos=(62.4, 305.8) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=22.0s | HP=48.41999999999689/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=LEFT curMinD=104.7 futMinD=104.7 score=120
+[E2E Survival] t=22.13s | HP=48.4 | Pos=(35.7, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=114.7 futMinD=93.5 score=260
+[E2E Survival] t=22.28s | HP=48.5 | Pos=(29.0, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=109.5 futMinD=88.3 score=168
+[E2E Survival] t=22.42s | HP=48.5 | Pos=(29.0, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=102.0 futMinD=102.0 score=70
+[E2E Survival] t=22.55s | HP=48.5 | Pos=(11.9, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=109.6 futMinD=88.4 score=145
+[E2E Survival] t=22.70s | HP=48.6 | Pos=(5.2, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=102.4 futMinD=102.4 score=69
+[E2E Survival] t=22.82s | HP=48.6 | Pos=(-8.6, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=100.5 futMinD=100.5 score=119
+[E2E Survival] t=22.97s | HP=48.6 | Pos=(-38.6, 305.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=102.7 futMinD=93.6 score=-19
+[E2E Survival] t=23.10s | HP=48.6 | Pos=(-48.1, 322.9) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=23.1s | HP=48.63999999999669/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=112.8 futMinD=89.2 score=215
+[E2E Survival] t=23.25s | HP=48.7 | Pos=(-48.1, 329.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=103.5 futMinD=83.0 score=-147
+[E2E Survival] t=23.38s | HP=48.7 | Pos=(-62.6, 315.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=89.6 futMinD=78.6 score=-13
+[E2E Survival] t=23.52s | HP=48.7 | Pos=(-81.4, 296.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=77.6 futMinD=77.6 score=-181
+[E2E Survival] t=23.65s | HP=48.7 | Pos=(-100.3, 277.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=76.0 futMinD=76.0 score=-542
+[E2E Survival] t=23.82s | HP=48.8 | Pos=(-123.9, 253.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=84.8 futMinD=80.5 score=23
+[E2E Survival] t=23.97s | HP=48.8 | Pos=(-153.4, 249.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=89.3 futMinD=89.3 score=66
+[E2E Survival] t=24.10s | HP=48.8 | Pos=(-180.0, 249.5) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=24.1s | HP=48.83999999999651/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=UP_LEFT curMinD=91.4 futMinD=91.4 score=105
+[E2E Survival] t=24.23s | HP=48.9 | Pos=(-199.4, 235.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=103.4 futMinD=103.4 score=120
+[E2E Survival] t=24.37s | HP=48.9 | Pos=(-218.2, 216.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=117.0 futMinD=95.9 score=260
+[E2E Survival] t=24.52s | HP=48.9 | Pos=(-221.3, 213.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=108.9 futMinD=87.8 score=129
+[E2E Survival] t=24.65s | HP=48.9 | Pos=(-221.3, 213.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=99.3 futMinD=99.3 score=69
+[E2E Survival] t=24.78s | HP=49.0 | Pos=(-235.7, 198.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=104.4 futMinD=104.4 score=118
+[E2E Survival] t=24.93s | HP=49.0 | Pos=(-256.9, 177.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=118.4 futMinD=97.2 score=260
+[E2E Survival] t=25.07s | HP=49.0 | Pos=(-260.0, 174.4) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=25.1s | HP=49.033333333329665/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=112.9 futMinD=87.6 score=129
+[E2E Survival] t=25.20s | HP=49.1 | Pos=(-260.0, 174.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=103.6 futMinD=103.6 score=65
+[E2E Survival] t=25.33s | HP=49.1 | Pos=(-274.4, 160.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=111.6 futMinD=111.6 score=113
+[E2E Survival] t=25.47s | HP=49.1 | Pos=(-293.3, 141.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=122.1 futMinD=119.6 score=109
+[E2E Survival] t=25.62s | HP=49.1 | Pos=(-314.5, 119.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=134.0 futMinD=98.8 score=260
+[E2E Survival] t=25.73s | HP=49.2 | Pos=(-317.6, 116.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=124.7 futMinD=89.5 score=230
+[E2E Survival] t=25.88s | HP=49.2 | Pos=(-317.6, 116.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=107.3 futMinD=107.3 score=3
+[E2E Survival] t=26.02s | HP=49.2 | Pos=(-334.7, 116.8) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=26.0s | HP=49.22333333332949/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=LEFT curMinD=106.2 futMinD=106.2 score=47
+[E2E Survival] t=26.17s | HP=49.3 | Pos=(-364.7, 116.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=115.7 futMinD=99.2 score=69
+[E2E Survival] t=26.30s | HP=49.3 | Pos=(-384.1, 102.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=109.8 futMinD=88.4 score=120
+[E2E Survival] t=26.43s | HP=49.3 | Pos=(-387.2, 99.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=98.7 futMinD=90.4 score=22
+[E2E Survival] t=26.58s | HP=49.3 | Pos=(-401.6, 84.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=89.3 futMinD=89.3 score=-31
+[E2E Survival] t=26.73s | HP=49.4 | Pos=(-430.1, 78.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=104.1 futMinD=104.1 score=54
+[E2E Survival] t=26.87s | HP=49.4 | Pos=(-449.5, 63.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=106.7 futMinD=92.0 score=72
+[E2E Survival] t=27.00s | HP=49.4 | Pos=(-453.9, 37.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=97.6 futMinD=92.3 score=89
+[E2E Survival] t=27.13s | HP=49.4 | Pos=(-453.9, 10.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=91.6 futMinD=91.6 score=92
+[E2E Survival] t=27.28s | HP=49.5 | Pos=(-453.9, -19.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=91.7 futMinD=91.7 score=99
+[E2E Survival] t=27.43s | HP=49.5 | Pos=(-453.9, -49.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=90.2 futMinD=90.2 score=95
+[E2E Survival] t=27.57s | HP=49.5 | Pos=(-453.9, -75.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=94.8 futMinD=94.8 score=92
+[E2E Survival] t=27.70s | HP=49.6 | Pos=(-453.9, -102.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=103.5 futMinD=100.9 score=103
+[E2E Survival] t=27.83s | HP=49.6 | Pos=(-439.5, -121.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=101.7 futMinD=101.7 score=118
+[E2E Survival] t=27.98s | HP=49.6 | Pos=(-418.2, -143.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=103.6 futMinD=103.6 score=118
+[E2E Survival] t=28.12s | HP=49.6 | Pos=(-399.4, -161.9) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=28.1s | HP=49.64333333332911/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=117.2 futMinD=95.8 score=260
+[E2E Survival] t=28.25s | HP=49.7 | Pos=(-396.3, -165.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=110.1 futMinD=88.7 score=145
+[E2E Survival] t=28.38s | HP=49.7 | Pos=(-396.3, -165.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=100.7 futMinD=100.7 score=67
+[E2E Survival] t=28.52s | HP=49.7 | Pos=(-381.9, -179.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=104.0 futMinD=104.0 score=68
+[E2E Survival] t=28.67s | HP=49.8 | Pos=(-377.5, -208.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=122.8 futMinD=101.4 score=260
+[E2E Survival] t=28.80s | HP=49.8 | Pos=(-377.5, -215.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=119.2 futMinD=97.7 score=260
+[E2E Survival] t=28.93s | HP=49.8 | Pos=(-377.5, -215.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=109.7 futMinD=88.2 score=87
+[E2E Survival] t=29.08s | HP=49.8 | Pos=(-377.5, -215.6) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=29.1s | HP=49.83666666666227/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=UP curMinD=98.9 futMinD=97.1 score=24
+[E2E Survival] t=29.22s | HP=49.9 | Pos=(-377.5, -232.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=94.3 futMinD=94.3 score=71
+[E2E Survival] t=29.37s | HP=49.9 | Pos=(-377.5, -262.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=93.5 futMinD=93.5 score=64
+[E2E Survival] t=29.50s | HP=49.9 | Pos=(-377.5, -289.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=104.0 futMinD=95.5 score=77
+[E2E Survival] t=29.63s | HP=49.9 | Pos=(-363.0, -308.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=98.0 futMinD=97.1 score=100
+[E2E Survival] t=29.78s | HP=50.0 | Pos=(-341.8, -330.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=95.5 futMinD=95.5 score=99
+[E2E Survival] t=29.92s | HP=50.0 | Pos=(-323.0, -348.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=99.6 futMinD=99.6 score=96
+[E2E Survival] t=30.05s | HP=50.0 | Pos=(-304.1, -367.7) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=30.0s | HP=50.029999999995425/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=UP_RIGHT curMinD=104.8 futMinD=104.8 score=93
+[E2E Survival] t=30.18s | HP=50.1 | Pos=(-285.3, -386.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=113.7 futMinD=92.2 score=260
+[E2E Survival] t=30.33s | HP=50.1 | Pos=(-282.2, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=105.9 futMinD=103.3 score=67
+[E2E Survival] t=30.48s | HP=50.1 | Pos=(-261.7, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=98.7 futMinD=98.7 score=119
+[E2E Survival] t=30.62s | HP=50.1 | Pos=(-235.0, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=99.8 futMinD=99.8 score=118
+[E2E Survival] t=30.75s | HP=50.2 | Pos=(-208.3, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=104.1 futMinD=104.1 score=118
+[E2E Survival] t=30.88s | HP=50.2 | Pos=(-181.7, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=116.6 futMinD=95.1 score=260
+[E2E Survival] t=31.03s | HP=50.2 | Pos=(-171.7, -389.6) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=31.0s | HP=50.22666666666191/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=110.6 futMinD=89.1 score=213
+[E2E Survival] t=31.17s | HP=50.3 | Pos=(-171.7, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=100.5 futMinD=100.5 score=68
+[E2E Survival] t=31.32s | HP=50.3 | Pos=(-151.2, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=104.6 futMinD=104.6 score=118
+[E2E Survival] t=31.45s | HP=50.3 | Pos=(-124.5, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=116.6 futMinD=95.1 score=260
+[E2E Survival] t=31.60s | HP=50.3 | Pos=(-117.8, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=111.1 futMinD=89.6 score=240
+[E2E Survival] t=31.73s | HP=50.4 | Pos=(-117.8, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=101.0 futMinD=101.0 score=67
+[E2E Survival] t=31.88s | HP=50.4 | Pos=(-97.3, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=107.9 futMinD=107.9 score=116
+[E2E Survival] t=32.02s | HP=50.4 | Pos=(-70.7, -389.6) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=32.0s | HP=50.4233333333284/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=122.5 futMinD=101.0 score=260
+[E2E Survival] t=32.15s | HP=50.4 | Pos=(-64.0, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=118.6 futMinD=97.1 score=260
+[E2E Survival] t=32.30s | HP=50.5 | Pos=(-64.0, -389.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=107.2 futMinD=107.2 score=-27
+[E2E Survival] t=32.43s | HP=50.5 | Pos=(-64.0, -406.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=102.9 futMinD=102.9 score=19
+[E2E Survival] t=32.57s | HP=50.5 | Pos=(-64.0, -433.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=106.2 futMinD=106.2 score=13
+[E2E Survival] t=32.70s | HP=50.6 | Pos=(-64.0, -460.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP curMinD=111.7 futMinD=111.7 score=8
+[E2E Survival] t=32.85s | HP=50.6 | Pos=(-64.0, -490.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=109.5 futMinD=93.1 score=36
+[E2E Survival] t=33.00s | HP=50.6 | Pos=(-49.6, -512.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=97.1 futMinD=89.8 score=38
+[E2E Survival] t=33.13s | HP=50.6 | Pos=(-30.7, -531.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=87.9 futMinD=87.9 score=-71
+[E2E Survival] t=33.27s | HP=50.7 | Pos=(-11.9, -550.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=85.5 futMinD=85.5 score=-209
+[E2E Survival] t=33.42s | HP=50.7 | Pos=(9.3, -571.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_RIGHT curMinD=88.9 futMinD=88.9 score=-27
+[E2E Survival] t=33.55s | HP=50.7 | Pos=(28.2, -590.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=95.2 futMinD=92.1 score=71
+[E2E Survival] t=33.70s | HP=50.8 | Pos=(57.7, -595.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=97.9 futMinD=97.9 score=83
+[E2E Survival] t=33.83s | HP=50.8 | Pos=(84.4, -595.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=RIGHT curMinD=98.7 futMinD=98.7 score=80
+[E2E Survival] t=33.97s | HP=50.8 | Pos=(111.1, -595.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=104.0 futMinD=95.5 score=99
+[E2E Survival] t=34.12s | HP=50.8 | Pos=(133.7, -580.5) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=34.1s | HP=50.84333333332802/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_RIGHT curMinD=98.2 futMinD=93.5 score=114
+[E2E Survival] t=34.25s | HP=50.9 | Pos=(152.6, -561.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=91.1 futMinD=91.1 score=113
+[E2E Survival] t=34.38s | HP=50.9 | Pos=(171.4, -542.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=89.2 futMinD=89.2 score=69
+[E2E Survival] t=34.53s | HP=50.9 | Pos=(192.6, -521.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=92.4 futMinD=92.4 score=105
+[E2E Survival] t=34.67s | HP=51.0 | Pos=(211.5, -502.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=98.9 futMinD=98.9 score=105
+[E2E Survival] t=34.80s | HP=51.0 | Pos=(230.4, -483.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=99.8 futMinD=99.8 score=107
+[E2E Survival] t=34.95s | HP=51.0 | Pos=(251.6, -462.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=100.8 futMinD=100.8 score=106
+[E2E Survival] t=35.08s | HP=51.0 | Pos=(270.4, -443.8) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=35.1s | HP=51.036666666661176/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_RIGHT curMinD=113.7 futMinD=113.7 score=105
+[E2E Survival] t=35.22s | HP=51.1 | Pos=(289.3, -425.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=117.1 futMinD=92.5 score=260
+[E2E Survival] t=35.37s | HP=51.1 | Pos=(292.4, -421.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=108.6 futMinD=108.6 score=53
+[E2E Survival] t=35.50s | HP=51.1 | Pos=(306.8, -407.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=111.6 futMinD=111.6 score=101
+[E2E Survival] t=35.63s | HP=51.1 | Pos=(325.6, -388.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=121.2 futMinD=89.4 score=226
+[E2E Survival] t=35.78s | HP=51.2 | Pos=(329.2, -381.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=114.1 futMinD=112.6 score=49
+[E2E Survival] t=35.93s | HP=51.2 | Pos=(346.0, -364.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=108.5 futMinD=79.8 score=119
+[E2E Survival] t=36.07s | HP=51.2 | Pos=(350.4, -338.0) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=36.1s | HP=51.233333333327664/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_RIGHT curMinD=91.8 futMinD=91.8 score=81
+[E2E Survival] t=36.22s | HP=51.3 | Pos=(364.8, -315.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_RIGHT curMinD=89.3 futMinD=89.3 score=55
+[E2E Survival] t=36.35s | HP=51.3 | Pos=(383.7, -296.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=97.0 futMinD=93.8 score=104
+[E2E Survival] t=36.50s | HP=51.3 | Pos=(390.5, -268.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=99.9 futMinD=99.9 score=119
+[E2E Survival] t=36.63s | HP=51.3 | Pos=(390.5, -241.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=98.9 futMinD=98.9 score=115
+[E2E Survival] t=36.77s | HP=51.4 | Pos=(390.5, -214.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=102.2 futMinD=99.5 score=110
+[E2E Survival] t=36.92s | HP=51.4 | Pos=(390.5, -184.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=99.1 futMinD=96.2 score=117
+[E2E Survival] t=37.05s | HP=51.4 | Pos=(390.5, -158.0) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=37.0s | HP=51.42999999999415/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN curMinD=94.7 futMinD=94.7 score=118
+[E2E Survival] t=37.17s | HP=51.5 | Pos=(390.5, -134.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=96.0 futMinD=96.0 score=117
+[E2E Survival] t=37.33s | HP=51.5 | Pos=(390.5, -101.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=104.5 futMinD=104.5 score=116
+[E2E Survival] t=37.47s | HP=51.5 | Pos=(390.5, -74.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=115.3 futMinD=93.7 score=260
+[E2E Survival] t=37.60s | HP=51.5 | Pos=(390.5, -64.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=113.9 futMinD=92.3 score=260
+[E2E Survival] t=37.75s | HP=51.6 | Pos=(390.5, -64.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=103.1 futMinD=103.1 score=65
+[E2E Survival] t=37.88s | HP=51.6 | Pos=(390.5, -47.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=113.8 futMinD=90.0 score=258
+[E2E Survival] t=38.02s | HP=51.6 | Pos=(390.5, -40.8) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=38.0s | HP=51.62333333332731/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_LEFT curMinD=110.0 futMinD=110.0 score=66
+[E2E Survival] t=38.17s | HP=51.7 | Pos=(376.1, -26.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=107.8 futMinD=107.8 score=115
+[E2E Survival] t=38.30s | HP=51.7 | Pos=(357.2, -7.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=111.6 futMinD=111.6 score=114
+[E2E Survival] t=38.43s | HP=51.7 | Pos=(338.3, 11.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=118.1 futMinD=87.8 score=135
+[E2E Survival] t=38.57s | HP=51.7 | Pos=(335.3, 14.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=111.7 futMinD=111.7 score=66
+[E2E Survival] t=38.72s | HP=51.8 | Pos=(335.3, 34.9) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN curMinD=114.2 futMinD=114.2 score=114
+[E2E Survival] t=38.85s | HP=51.8 | Pos=(335.3, 61.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=124.0 futMinD=87.4 score=116
+[E2E Survival] t=38.98s | HP=51.8 | Pos=(335.3, 71.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=117.8 futMinD=117.8 score=68
+[E2E Survival] t=39.13s | HP=51.8 | Pos=(320.8, 86.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=118.4 futMinD=118.4 score=118
+[E2E Survival] t=39.28s | HP=51.9 | Pos=(299.6, 107.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=126.5 futMinD=90.0 score=259
+[E2E Survival] t=39.40s | HP=51.9 | Pos=(296.6, 110.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=114.2 futMinD=114.2 score=68
+[E2E Survival] t=39.55s | HP=51.9 | Pos=(282.1, 124.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=117.1 futMinD=117.1 score=118
+[E2E Survival] t=39.68s | HP=52.0 | Pos=(263.3, 143.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=126.5 futMinD=89.9 score=257
+[E2E Survival] t=39.83s | HP=52.0 | Pos=(260.2, 146.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=112.6 futMinD=112.6 score=69
+[E2E Survival] t=39.98s | HP=52.0 | Pos=(243.4, 163.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=117.8 futMinD=117.8 score=119
+[E2E Survival] t=40.10s | HP=52.0 | Pos=(226.9, 179.9) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=40.1s | HP=52.0399999999936/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=STOP curMinD=126.8 futMinD=90.2 score=260
+[E2E Survival] t=40.25s | HP=52.1 | Pos=(223.9, 183.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=113.1 futMinD=113.1 score=70
+[E2E Survival] t=40.40s | HP=52.1 | Pos=(207.1, 197.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=116.8 futMinD=116.8 score=120
+[E2E Survival] t=40.53s | HP=52.1 | Pos=(188.2, 216.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=127.4 futMinD=90.8 score=260
+[E2E Survival] t=40.67s | HP=52.2 | Pos=(185.1, 219.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=115.7 futMinD=115.7 score=69
+[E2E Survival] t=40.82s | HP=52.2 | Pos=(168.4, 233.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=119.8 futMinD=119.8 score=119
+[E2E Survival] t=40.95s | HP=52.2 | Pos=(149.5, 252.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=130.5 futMinD=94.0 score=260
+[E2E Survival] t=41.10s | HP=52.2 | Pos=(146.4, 255.7) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=41.1s | HP=52.239999999993415/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=DOWN_LEFT curMinD=117.1 futMinD=117.1 score=66
+[E2E Survival] t=41.23s | HP=52.3 | Pos=(132.0, 270.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=DOWN_LEFT curMinD=121.7 futMinD=121.7 score=113
+[E2E Survival] t=41.37s | HP=52.3 | Pos=(113.1, 289.0) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=132.6 futMinD=96.0 score=260
+[E2E Survival] t=41.52s | HP=52.3 | Pos=(110.1, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=119.2 futMinD=119.2 score=69
+[E2E Survival] t=41.63s | HP=52.3 | Pos=(96.2, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=115.5 futMinD=115.5 score=119
+[E2E Survival] t=41.78s | HP=52.4 | Pos=(66.2, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=121.9 futMinD=121.9 score=120
+[E2E Survival] t=41.92s | HP=52.4 | Pos=(39.6, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=129.4 futMinD=92.8 score=260
+[E2E Survival] t=42.05s | HP=52.4 | Pos=(32.9, 292.1) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=42.0s | HP=52.42999999999324/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=LEFT curMinD=117.7 futMinD=117.7 score=70
+[E2E Survival] t=42.20s | HP=52.5 | Pos=(15.7, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=117.7 futMinD=117.7 score=120
+[E2E Survival] t=42.35s | HP=52.5 | Pos=(-14.3, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=128.3 futMinD=91.8 score=260
+[E2E Survival] t=42.48s | HP=52.5 | Pos=(-20.9, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=118.9 futMinD=118.9 score=69
+[E2E Survival] t=42.63s | HP=52.5 | Pos=(-41.4, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=120.9 futMinD=120.9 score=118
+[E2E Survival] t=42.77s | HP=52.6 | Pos=(-68.1, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=131.2 futMinD=94.6 score=260
+[E2E Survival] t=42.92s | HP=52.6 | Pos=(-78.1, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=123.1 futMinD=86.6 score=71
+[E2E Survival] t=43.05s | HP=52.6 | Pos=(-78.1, 292.1) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=43.0s | HP=52.62999999999306/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=LEFT curMinD=105.3 futMinD=105.3 score=65
+[E2E Survival] t=43.20s | HP=52.7 | Pos=(-95.3, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=106.3 futMinD=106.3 score=113
+[E2E Survival] t=43.35s | HP=52.7 | Pos=(-125.3, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=LEFT curMinD=118.2 futMinD=118.2 score=108
+[E2E Survival] t=43.50s | HP=52.7 | Pos=(-155.3, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=130.2 futMinD=93.6 score=260
+[E2E Survival] t=43.63s | HP=52.7 | Pos=(-161.9, 292.1) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=120.9 futMinD=120.9 score=70
+[E2E Survival] t=43.77s | HP=52.8 | Pos=(-176.4, 277.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=119.3 futMinD=119.3 score=120
+[E2E Survival] t=43.90s | HP=52.8 | Pos=(-195.2, 258.8) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=124.4 futMinD=87.9 score=142
+[E2E Survival] t=44.05s | HP=52.8 | Pos=(-198.3, 255.7) | Kills=5 | XP=5 | Lvl=1
+[E2E Survival] t=44.0s | HP=52.82999999999288/100 | Kills=5 | TotalXP=5 | Level=1
+  -> steer=UP_LEFT curMinD=110.3 futMinD=110.3 score=70
+[E2E Survival] t=44.18s | HP=52.9 | Pos=(-212.7, 241.3) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=112.1 futMinD=112.1 score=119
+[E2E Survival] t=44.32s | HP=52.9 | Pos=(-231.6, 222.4) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=120.1 futMinD=120.1 score=118
+[E2E Survival] t=44.47s | HP=52.9 | Pos=(-252.8, 201.2) | Kills=5 | XP=5 | Lvl=1
+  -> steer=STOP curMinD=127.4 futMinD=90.6 score=260
+[E2E Survival] t=44.62s | HP=52.9 | Pos=(-256.3, 193.6) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=114.5 futMinD=114.5 score=66
+[E2E Survival] t=44.75s | HP=53.0 | Pos=(-270.8, 181.5) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=115.8 futMinD=115.8 score=113
+[E2E Survival] t=44.88s | HP=53.0 | Pos=(-289.6, 162.7) | Kills=5 | XP=5 | Lvl=1
+  -> steer=UP_LEFT curMinD=121.7 futMinD=115.0 score=110
+[E2E Survival] t=45.03s | HP=53.0 | Pos=(-310.8, 141.5) | Kills=5 | XP=5 | Lvl=1
+  ✘  4 [chromium] › tests/e2e/horde_survival.spec.ts:62:3 › Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Hardening › Playable Horde Loop: actively survives >= 30s, auto-fires, vacuums soul gems, triggers level-up modal, selects boon, and verifies 0 lag/errors (45.2s)
+  ✓  5 [chromium] › tests/e2e/horde_survival.spec.ts:502:3 › Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Hardening › Visual Proof 1: captures horde_swarm.png (dense undead swarm around sorcerer against blood moon) (276ms)
+  ✓  6 [chromium] › tests/e2e/horde_survival.spec.ts:571:3 › Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Hardening › Visual Proof 2: captures level_up_modal.png (canvas-rendered gothic card modal with gold filigree and rank pips) (257ms)
+  ✓  7 [chromium] › tests/e2e/horde_survival.spec.ts:695:3 › Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Hardening › Visual Proof 3: captures survival_gameplay.png (active spell VFX: Arcane Scythe cleave, Soul Orbiters skulls, Abyssal Lightning arcs, Bone Spear trails, and Cursed Aura pulses) (320ms)
+  ✓  8 [chromium] › tests/e2e/horde_survival.spec.ts:869:3 › Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Hardening › Visual Proof Audit: asserts all 3 dark fantasy screenshots exist, are valid 960x540 PNGs, and exceed 50KB (2ms)
+  ✓  9 [chromium] › tests/e2e/horde_survival.spec.ts:903:3 › Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Hardening › Zero-Lag Benchmark: maintains locked 60 FPS animation loop over 300 frames without frame drops or memory stalls (3.9s)
+
+
+  1) [chromium] › tests/e2e/horde_survival.spec.ts:62:3 › Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Hardening › Playable Horde Loop: actively survives >= 30s, auto-fires, vacuums soul gems, triggers level-up modal, selects boon, and verifies 0 lag/errors 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 10
+    Received:    5
+
+      487 |     expect(finalReport.health).toBeGreaterThan(0);
+      488 |     expect(finalReport.kills).toBeGreaterThanOrEqual(1);
+    > 489 |     expect(finalReport.totalXP).toBeGreaterThanOrEqual(10);
+          |                                 ^
+      490 |     expect(finalReport.level).toBeGreaterThanOrEqual(2);
+      491 |     expect(modalSelectedCount).toBeGreaterThanOrEqual(1);
+      492 |     expect(finalReport.isPaused).toBe(false);
+        at /Users/user/src/fullmetalslug/tests/e2e/horde_survival.spec.ts:489:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/horde_survival-Milestone-M-463cf-n-and-verifies-0-lag-errors-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/horde_survival-Milestone-M-463cf-n-and-verifies-0-lag-errors-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/horde_survival.spec.ts:62:3 › Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Hardening › Playable Horde Loop: actively survives >= 30s, auto-fires, vacuums soul gems, triggers level-up modal, selects boon, and verifies 0 lag/errors 
+  8 passed (56.8s)
+EXIT_CODE=1

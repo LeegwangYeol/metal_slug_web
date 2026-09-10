@@ -6,7 +6,13 @@
 
 import { Vector2D } from '../core/math/Vector2D';
 import { AABB, BoundingBox } from '../core/physics/AABB';
-import { CameraBounds } from '../core/engine/StageManager';
+
+export interface CameraBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
 
 export interface CameraOptions {
   viewportWidth?: number;  // default 960
