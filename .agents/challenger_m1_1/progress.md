@@ -1,19 +1,14 @@
-# Progress — Challenger M1-1
+# Progress Log — challenger_m1_1
 
-Last visited: 2026-09-10T01:13:30Z
-Status: Completed
+- Last visited: 2026-09-10T15:48:30Z
+- Status: Completed all empirical stress tests, oracles, and edge case challenges for Milestone 1 restart engine. Preparing handoff report with APPROVE verdict.
 
-## Completed Steps
-- [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Reviewed mandatory context: ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m1_viewport/handoff.md
-- [x] Investigated codebase: `CanvasRenderer.ts`, `Camera.ts`, `ParallaxBackground.ts`, `ProceduralSpriteFactory.ts`
-- [x] Authored empirical adversarial stress test suite: `tests/unit/challenger_m1_viewport_stress.test.ts` (19 tests)
-- [x] Tested letterbox calculations across non-standard resolutions (21:9, 4:3, 1:1, vertical mobile, 32:9, 8K, 1x1, fractional)
-- [x] Tested parallax horizontal wrapping at extreme coordinates (x = 0, 480, 960, 1920, 3840, 100,000, -100,000, subpixels, 1,000 step sweep)
-- [x] Verified ProceduralSpriteFactory 164-key invariant across 1,000 calls, fresh instances, and redundant init()
-- [x] Verified camera deadzone (>528px forward reaction view) and 1100px boss arenas
-- [x] Verified full test suite: 37 test files, 500 tests passed (100% green)
-- [x] Verified `npx tsc --noEmit` (0 errors) and `npm run build` (success in 291ms)
-- [x] Verified Playwright tests: game_initialization (3/3), visual_verification (6/6), gameplay_controls (5/5), death_animations (3/3)
-- [x] Documented findings and explicit APPROVE verdict in handoff.md
-- [ ] Send completion message to parent
+## Completed Verification Steps:
+1. [x] Read MANDATORY files: ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m1_1/handoff.md.
+2. [x] Implemented dedicated adversarial verification suite: `tests/unit/ChallengerRestartEngine_M1_1.test.ts` (9 extensive stress tests).
+3. [x] Verified 50 consecutive restarts in high-churn conditions (0 leaks, 0 NaNs, 0 crashes, bounded heap).
+4. [x] Verified accumulator spike clamping (dt = 100.0s clamped to 5 sub-steps, debt zeroed, 0ms thread freeze).
+5. [x] Verified exact starting state invariant preservation across Die -> Restart -> 100 Ticks -> Die -> Restart.
+6. [x] Verified adversarial edge cases (progression callbacks retained, 0.5s death debounce enforced against spam, victory state reset, camera deadzone coordinates).
+7. [x] Full test suite verification: 21 test files passed, 247 unit tests passed, 0 TypeScript errors (`npx tsc --noEmit`), clean production build (`npm run build`).
+8. [x] Written 5-component handoff report with verdict: APPROVE.

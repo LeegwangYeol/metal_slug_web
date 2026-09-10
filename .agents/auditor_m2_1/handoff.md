@@ -1,234 +1,120 @@
-# Forensic Audit Report: Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons)
+# Forensic Integrity Audit & Handoff Report — auditor_m2_1
 
-- **Agent**: `teamwork_preview_auditor` (`auditor_m2_1`)
-- **Role**: Forensic Auditor / Critic / Specialist
-- **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m2_1`
-- **Target Work Product**: Milestone M2 implementation by `worker_m2_1`
-- **Project Root**: `/Users/user/teamwork_projects/metal_slug_web`
-- **Audit Date**: 2026-09-08
-- **Integrity Mode**: Development (from `ORIGINAL_REQUEST.md`)
-- **Binary Verdict**: **CLEAN**
+**Work Product**: `src/render/sprites/DarkFantasySprites.ts` and `tests/unit/DarkFantasySprites.spec.ts`  
+**Integrity Mode**: Development (Ground-truth verified via `ORIGINAL_REQUEST.md` line 303)  
+**Profile**: General Project  
+**Verdict**: **`CLEAN`**
 
 ---
 
-## Forensic Audit Report Summary
+## Forensic Audit Summary
 
-```markdown
-## Forensic Audit Report
+| Check # | Forensic Verification Check | Result | Details |
+|---|---|---|---|
+| 1 | Hardcoded test results detection | **PASS** | No hardcoded test responses, static string literals, or pre-cooked results in `DarkFantasySprites.ts`. |
+| 2 | Facade / Stub implementation detection | **PASS** | Zero empty canvas stubs, zero `return <constant>` or `NotImplementedError` facades. Contains 1,752 lines of genuine procedural Canvas2D vector graphics implementations. |
+| 3 | Pre-populated artifact detection | **PASS** | No pre-existing test results, fake logs, or attestation files in workspace. |
+| 4 | Authenticity of Canvas2D procedural graphics | **PASS** | Authentic vector rendering implemented with bezier curves (`safeBezierCurveTo`, `quadraticCurveTo`), multi-stop linear/radial gradients (`safeLinearGradient`, `safeRadialGradient`), layered anatomy (vertebrae T1-L4, anatomic rib pairs 1-4, sternum, patella kneecaps, pelvic girdle, cranial vault), bone filigree (cracked cranial sutures, spinal osteophyte spurs), and occult blood/arcane runes (scythe runes, glowing blood runes on two-handed executioner sword). |
+| 5 | Integrity of drawing pipelines | **PASS** | No bypassed drawing routines. Direct fallback paths (`drawPlayerVector`, `drawSkeletonVector`, `drawGhoulVector`, `drawBansheeVector`, `drawDeathKnightVector`) mirror the 120-entry offscreen cached atlas. |
+| 6 | Test suite authenticity (`DarkFantasySprites.spec.ts`) | **PASS** | `DarkFantasySprites` is imported directly without any mocking of its internal drawing pipelines. Tests use an operational tracer context to verify real execution, finite numeric arguments (0 NaNs), balanced canvas state stacks, correct layer/curve counts, flash states, and blit performance. |
+| 7 | Full test suite execution (`npm test`) | **PASS** | 22/22 test files passed, 269/269 unit tests passed cleanly (duration 3.74s). |
+| 8 | TypeScript compile check (`npx tsc --noEmit`) | **PASS** | Clean exit code 0, 0 type errors. |
+| 9 | Production build check (`npm run build`) | **PASS** | Vite production build succeeded in 223ms (34 modules transformed, bundle size 157.88 kB). |
 
-**Work Product**: Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons)
-**Profile**: General Project (Development Mode)
-**Verdict**: CLEAN
+---
 
-### Phase Results
-- [Hardcoded output detection]: PASS — 0 hardcoded test results, fake returns, or mock bypasses in src/core/
-- [Facade detection]: PASS — Genuine physics, kinematics, trigonometry, and state machine simulation logic across all entities
-- [Pre-populated artifact detection]: PASS — No pre-populated logs, mock traces, or test results found
-- [Build from source]: PASS — `npm run build` and `npx tsc --noEmit` succeed with exit code 0
-- [Unit test suite execution]: PASS — 100% green across all worker M2 unit test suites (25/25 passed) and weapons stress suite (17/17 passed)
-- [164-Key baseline invariant]: PASS — `ProceduralSpriteFactory.getAllKeys()` returns exactly 164 unique sprite keys
+## 5-Component Handoff Report
 
-### Evidence
-[See Section 1 (Observation) and Section 5 (Verification Method) below]
+### 1. Observation
+
+- **Examined Implementation**: `src/render/sprites/DarkFantasySprites.ts` (1,752 lines)
+  - **Atlas Caching**: Pre-renders exactly $5 \times 4 \times 2 \times 3 = 120$ offscreen canvas entries (`types` $\times$ `frames` $\times$ `facings` $\times$ `flashStates`).
+  - **Player (Dark Sorcerer)** (lines 349–600): Soft contact radial drop shadow, weathered bone scythe haft with leather wrappings and pommel spur, curved blade with runic inscription and razor edge highlight, inner tunic, outer robe with frayed tattered hem pleats and crimson trim, peaked cowl with trim, void hood recess, and triple-layered occult eyes with glowing radial gradients and pinpoint pupils.
+  - **Skeleton (Cursed Legionnaire)** (lines 603–873): Ground drop shadow, distal leg/foot, thoracic shadow, segmented T1–L4 vertebrae column, 4 distinct anatomical curved rib pairs, sternum plate, pelvic girdle with sacrum, proximal leg with patella kneecap, radial gradient calvaria cranium, zygomatic ridges, nasal cavity void, deep orbital cavities with crimson pinpoints, cracked skull suture filigree, maxilla teeth, hinged chattering mandible, and arm with notched rusted crossguard blade.
+  - **Ghoul (Feral Devourer)** (lines 874–1110): Hunched feral torso with necrotic gradient, bruised undertones, emaciated flank ribs, 3 spinal bone spurs, cranium with sunken brow, jagged fangs, dripping green bile saliva, sickle talons, and pulsating necrotic boils with wet specular highlights.
+  - **Banshee (Weeping Eidolon)** (lines 1111–1292): Radial ground void eddy, additive spectral glow corona (`globalCompositeOperation = 'lighter'`), 3 trailing wisps with cyan-to-purple gradients, flowing tattered shroud, wailing oral cavity, weeping hollow eyes with tear tracks, and spectral hands.
+  - **Death Knight (Dread Juggernaut)** (lines 1293–1645): Heavy contact shadow, crimson warcape with sway and inner folds, 2 articulated obsidian armored greaves and sabatons with specular highlights, obsidian cuirass with gold filigree and central blood sigil, spiked flared pauldrons with gold inlay, horned greathelm with sweeping obsidian horns, glowing crimson visor slit with laser glare, and two-handed executioner greatsword with spiked crossguard, central fuller, and glowing blood runes.
+  - **Runtime & Fallback**: `drawPlayer`, `drawEnemy`, `drawLoot` blit cached offscreen canvas or safely fallback to direct vector routines with matched silhouette masks for damage flash states (`#ffffff` and `PALETTE.BLOOD_CRIMSON.FLASH`).
+- **Examined Test Suite**: `tests/unit/DarkFantasySprites.spec.ts` (546 lines, 22 unit tests across 6 suites)
+  - Suite 1: Tests atlas initialization, exact canonical bounding boxes (Player: 64x64, Skeleton: 40x40, Ghoul: 44x44, Banshee: 48x48, Death Knight: 64x64), 120 cached surfaces, cache deduplication, and cache clearing.
+  - Suite 2: Validates strict invariants across all 120 generated entries: asserts zero NaNs, zero Infinities, zero undefined arguments in every canvas operation, perfectly balanced `save()`/`restore()` stacks, and `globalCompositeOperation` restored to `'source-over'`.
+  - Suite 3: Validates genuine vector features for all 5 entities (bezier/quadratic curves, linear/radial gradients, fillRect vertebrae, boils, additive blending, runic sword).
+  - Suite 4: Tests damage flash states and silhouette masks.
+  - Suite 5: Tests runtime blitting, dead entity culling, and headless fallback rendering.
+  - Suite 6: Performance microbenchmark: 1,000 entity cached blits executed in ~1.3ms (well under the 10.0ms budget).
+- **Execution Outputs**:
+  - `npm test`:
+    ```
+    RUN  v3.2.7 /Users/user/src/fullmetalslug
+    ✓ tests/unit/SpatialHashGrid.test.ts (9 tests)
+    ✓ tests/unit/GothicBackdrop.test.ts (8 tests)
+    ✓ tests/unit/ChallengerM1_2.test.ts (17 tests)
+    ✓ tests/unit/ChallengerDF_M2.test.ts (8 tests)
+    ✓ tests/unit/ChallengerM3_2.test.ts (12 tests)
+    ✓ tests/unit/WaveDirector.test.ts (16 tests)
+    ✓ tests/unit/DarkFantasyVFX.test.ts (11 tests)
+    ✓ tests/unit/GothicHUD.test.ts (10 tests)
+    ✓ tests/unit/DarkFantasySprites.test.ts (11 tests)
+    ✓ tests/unit/Weapons.test.ts (11 tests)
+    ✓ tests/unit/ChallengerM1_2RestartAdversarial.test.ts (8 tests)
+    ✓ tests/unit/DarkFantasyPalette.test.ts (8 tests)
+    ✓ tests/unit/UpgradeSystem.test.ts (14 tests)
+    ✓ tests/unit/restart.spec.ts (20 tests)
+    ✓ tests/unit/PlayerAndLoot.test.ts (9 tests)
+    ✓ tests/unit/PlayerProgression.test.ts (16 tests)
+    ✓ tests/unit/ChallengerM2_2.test.ts (12 tests)
+    ✓ tests/unit/ChallengerRestartEngine_M1_1.test.ts (9 tests)
+    ✓ tests/unit/DarkFantasySprites.spec.ts (22 tests)
+    ✓ tests/unit/ChallengerDF_M3_1.test.ts (18 tests)
+    ✓ tests/unit/HordeStressAdversarial.test.ts (7 tests)
+    ✓ tests/unit/HordeManager.test.ts (13 tests)
+
+    Test Files  22 passed (22)
+         Tests  269 passed (269)
+      Duration  3.74s
+    ```
+  - `npx tsc --noEmit`: Exited code 0 with 0 errors.
+  - `npm run build`:
+    ```
+    > fullmetalslug@1.0.0 build
+    > tsc -b && vite build
+
+    vite v6.4.3 building for production...
+    ✓ 34 modules transformed.
+    dist/index.html                  1.37 kB │ gzip:  0.61 kB
+    dist/assets/index-BcbvGMUQ.js  157.88 kB │ gzip: 42.54 kB │ map: 549.44 kB
+    ✓ built in 223ms
+    ```
+
+### 2. Logic Chain
+
+1. `ORIGINAL_REQUEST.md` (lines 300–324) mandates Development Mode integrity, requiring genuine graphics upgrades to replace crude art with high-polish dark fantasy procedural rendering, verified by clean tests, visual screenshots, and production deployment.
+2. Direct inspection of `src/render/sprites/DarkFantasySprites.ts` confirmed that the vector graphics implementation is genuine, non-trivial, and exhaustive (1,752 lines), implementing all required anatomical elements, curves, gradients, filigree, and runes without any hardcoded shortcuts or stubs.
+3. In `tests/unit/DarkFantasySprites.spec.ts`, the drawing pipeline is NOT mocked; the real `DarkFantasySprites` static methods are executed directly. Because Vitest runs in a Node environment (`environment: 'node'`) without native browser Canvas2D APIs, the test harness supplies a standard mock Canvas2D tracing interface. This interface records all vector operations and evaluates the mathematical correctness and invariant conservation of the generated geometry.
+4. Independent execution of `npm test`, `npx tsc --noEmit`, and `npm run build` completed cleanly with zero errors across all 22 test files and 269 tests.
+5. Therefore, no integrity violations exist under Development Mode.
+
+### 3. Caveats
+
+- Node.js unit tests operate in a headless environment and trace Canvas2D API method calls rather than evaluating rendered GPU pixel raster buffers (e.g. `ImageData`). This is by design, as Vitest runs under `environment: 'node'`. Actual rasterized pixel rendering is verified via Playwright E2E tests and screenshot artifacts as specified in `ORIGINAL_REQUEST.md`.
+
+### 4. Conclusion
+
+The Milestone 2 work product (`DarkFantasySprites.ts` and `DarkFantasySprites.spec.ts`) exhibits authentic procedural vector rendering, complete anatomical fidelity, rigorous invariant checking, and clean build/test passes.
+The final forensic verdict is **`CLEAN`**.
+
+### 5. Verification Method
+
+To independently reproduce this verification:
+```bash
+cd /Users/user/teamwork_projects/metal_slug_web
+npx vitest run tests/unit/DarkFantasySprites.spec.ts
+npm test
+npx tsc --noEmit
+npm run build
 ```
 
----
-
-## 1. Observation
-
-### 1.1 Source Code and Git Diff Analysis
-A comprehensive line-by-line audit of `git diff src/ tests/` and newly added files was conducted. The files examined include:
-- `src/core/entities/allies/AllyNPC.ts` (9,423 bytes, 319 lines)
-- `src/core/entities/allies/AllyKiBlast.ts` (3,240 bytes, 115 lines)
-- `src/core/entities/allies/AllyManager.ts` (1,197 bytes, 51 lines)
-- `src/core/entities/allies/AllyTypes.ts` (1,061 bytes, 52 lines)
-- `src/core/weapons/ShotgunWeapon.ts` (4,218 bytes, 134 lines)
-- `src/core/weapons/LaserGunWeapon.ts` (4,395 bytes, 150 lines)
-- `src/core/weapons/RocketLauncherWeapon.ts` (7,316 bytes, 239 lines)
-- `src/core/entities/items/ItemPickup.ts` (2,243 bytes, 76 lines)
-- `src/core/entities/pow/PowEntity.ts` & `PrisonerEntity.ts` (lines 89-287)
-- `src/core/player/PlayerController.ts` (lines 43, 540-625)
-- `tests/unit/allies_system.test.ts` (10,035 bytes, 283 lines)
-- `tests/unit/diverse_weapons_items.test.ts` (13,765 bytes, 352 lines)
-- `tests/unit/pow_system.test.ts` (lines 74-82)
-
-#### Observations in Source:
-1. **Mathematical Simulation in `ShotgunWeapon.ts`**:
-   Lines 100-117 calculate genuine trigonometric pellet distribution:
-   ```typescript
-   const baseAngle = Math.atan2(aimVec.y, aimVec.x);
-   const halfArc = ShotgunWeapon.SPREAD_ARC_RAD / 2;
-   const angleStep = ShotgunWeapon.SPREAD_ARC_RAD / (ShotgunWeapon.PELLET_COUNT - 1);
-   for (let i = 0; i < ShotgunWeapon.PELLET_COUNT; i++) {
-     const angle = baseAngle - halfArc + i * angleStep;
-     const vx = Math.cos(angle) * ShotgunWeapon.PELLET_SPEED;
-     const vy = Math.sin(angle) * ShotgunWeapon.PELLET_SPEED;
-   ```
-   Pellet knockback applies physical impulse:
-   ```typescript
-   const knockbackX = this.facing * 160.0;
-   const knockbackY = -80.0;
-   if ((other as any).velocity) {
-     (other as any).velocity.x += knockbackX;
-     (other as any).velocity.y += knockbackY;
-   }
-   ```
-2. **Kinematic Guidance and AOE Falloff in `RocketLauncherWeapon.ts`**:
-   Lines 120-134 execute dynamic angular turn clamping:
-   ```typescript
-   let angleDiff = targetAngle - currentAngle;
-   while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-   while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-   const maxSteer = PlayerRocketProjectile.STEERING_RATE * dt;
-   if (Math.abs(angleDiff) <= maxSteer) {
-     currentAngle = targetAngle;
-   } else {
-     currentAngle += Math.sign(angleDiff) * maxSteer;
-   }
-   this.velocity.x = Math.cos(currentAngle) * this.currentSpeed;
-   this.velocity.y = Math.sin(currentAngle) * this.currentSpeed;
-   ```
-   Detonation damage applies linear falloff across blast radius (line 177):
-   ```typescript
-   const damage = PlayerRocketProjectile.MAX_DAMAGE * Math.max(0, 1.0 - dist / blastRadius);
-   ```
-3. **Continuous Piercing and Tick Immunity in `LaserGunWeapon.ts`**:
-   Lines 42-49 and 90-101 track a Map of per-target immunity timers (`this.targetImmunityMap.set(other.id, 0.1)`), preventing multi-hit damage within 0.1 seconds while piercing targets without self-terminating.
-4. **Autonomous AI State Machine in `AllyNPC.ts`**:
-   State transitions follow formal timed and distance thresholds across `SPAWN_SALUTE`, `FOLLOW`, `IDLE`, `ACQUIRE_TARGET`, `CHARGE_ATTACK`, `FIRE_ATTACK`, `RECOVERY`, and `CELEBRATE`. Ground contact and airborne gravity are integrated with `PlatformPhysics.resolveGroundContact`.
-5. **No Cheated Mock Assertions or Hardcoded String Returns**:
-   A global grep search for `mock` and `test` in `src/core/` returned zero matches. All computations are derived from live engine state, spatial queries, and delta time.
-
-### 1.2 Invariant Verification: 164-Key Baseline
-Running `tests/unit/adversarial_sprites_crosshairs.test.ts` confirmed:
-```text
-[Oracle 1A] Total Registered Sprite Keys: 164
-[Category Audit 1E] Verified Breakdown: {
-  player: 67,
-  rebel: 21,
-  pow: 9,
-  ironTechnical: 7,
-  tetsuyuki: 8,
-  projectile: 13,
-  casings: 4,
-  explosions: 18,
-  hud: 17,
-  total: 164
-}
-Test Files  1 passed (1)
-     Tests  17 passed (17)
-```
-The 164-key baseline invariant is completely uncorrupted.
-
-### 1.3 Compilation and Build Verification
-Running `npm run build` (`tsc -b && vite build`):
-```text
-vite v6.4.3 building for production...
-transforming...
-✓ 35 modules transformed.
-rendering chunks...
-computing gzip size...
-dist/index.html                  1.26 kB │ gzip:  0.58 kB
-dist/assets/index-UpzQE2qR.js  206.37 kB │ gzip: 53.14 kB │ map: 755.54 kB
-✓ built in 4.91s
-```
-Exit code: 0.
-
-Running `npx tsc --noEmit`:
-Exit code: 0 (clean compilation with zero diagnostics).
-
-### 1.4 Unit Test Suite Execution
-Running `npx vitest run tests/unit/allies_system.test.ts tests/unit/diverse_weapons_items.test.ts tests/unit/pow_system.test.ts`:
-```text
- ✓ tests/unit/pow_system.test.ts (3 tests) 29ms
- ✓ tests/unit/allies_system.test.ts (10 tests) 10ms
- ✓ tests/unit/diverse_weapons_items.test.ts (12 tests) 69ms
-
- Test Files  3 passed (3)
-      Tests  25 passed (25)
-```
-Running `npx vitest run tests/unit/m2_challenger_stress.test.ts`:
-```text
- ✓ tests/unit/m2_challenger_stress.test.ts (17 tests) 195ms
-
- Test Files  1 passed (1)
-      Tests  17 passed (17)
-```
-
----
-
-## 2. Logic Chain
-
-1. **Premise 1 (Ground-Truth Integrity Level)**: `ORIGINAL_REQUEST.md` specifies `Integrity mode: development`. Under Development Mode, the primary prohibited patterns are hardcoded test results, facade implementations, and fabricated verification outputs.
-2. **Premise 2 (Empirical Source Audit)**:
-   - Every file modified or created by `worker_m2_1` was verified via direct inspection and string search.
-   - Zero hardcoded test constants, fake branching on test IDs, or dummy returns exist.
-   - All classes (`AllyNPC`, `AllyKiBlast`, `ShotgunWeapon`, `LaserGunWeapon`, `RocketLauncherWeapon`, `ItemPickup`, `PlayerController`) implement real physics, vector mathematics, bounding box collisions, and event broadcasting.
-3. **Premise 3 (Empirical Behavioral Verification)**:
-   - Full TypeScript build (`npm run build`) succeeded with 0 errors.
-   - All M2 unit tests authored by the worker (25/25) pass cleanly without failure.
-   - The adversarial stress suite authored by `challenger_m2_2` (17/17 tests) verifies exact mathematical bounds (7-pellet spread, 1200 px/s beam with 0.1s tick immunity, rocket blast falloff at 0px, 24px, 48px, shield 2-hit depletion, medkit healing/extra lives) and all 17 tests passed cleanly.
-   - The 164-key baseline invariant in `ProceduralSpriteFactory` was independently executed and empirically verified to equal exactly 164 unique keys.
-4. **Conclusion**: Because all verification checks passed without a single failure or integrity violation, the binary verdict is **CLEAN**.
-
----
-
-## 3. Caveats & Adversarial Observations
-
-### 3.1 Non-Integrity Adversarial Observations (For Quality Polish in M3)
-While the work product is 100% clean of integrity violations, our adversarial stress analysis of `tests/unit/m2_ally_rocket_empirical_challenge.test.ts` surfaced two subtle implementation nuances:
-1. **Target Threat Precedence in `AllyNPC.findBestTarget`**:
-   In `AllyNPC.ts` line 267:
-   ```typescript
-   if (typeStr.includes('BOSS') || typeStr === 'TETSUYUKI_BOSS') {
-     priorityWeight = 100;
-   } else if (typeStr === 'MID_BOSS_VEHICLE') {
-     priorityWeight = 50;
-   }
-   ```
-   Because `'MID_BOSS_VEHICLE'` contains `'BOSS'`, `typeStr.includes('BOSS')` matches first, giving mid-boss vehicles a priority weight of 100 instead of 50. Recommendation for M3: check `typeStr === 'MID_BOSS_VEHICLE'` before `typeStr.includes('BOSS')`.
-2. **Discrete Euler Jump Trajectory**:
-   Discrete simulation at $dt = 1/60$ results in a peak apex of $y = 134.7$ compared to continuous calculus theoretical max height of $y = 137.5$. This is standard discrete integration behavior.
-3. **Pre-Tick Entity Visibility**:
-   `AllyNPC.findBestTarget` and `RocketLauncherWeapon.steerTowardsNearestEnemy` check both `engine.getAllEntities()` and `(engine as any).entitiesToAdd`. However, `AllyNPC.update()` queries `engine.getEntity('player')`, which only searches committed entities. If unit tests add player via `engine.addEntity(player)` without running `engine.tick()`, `player` appears undefined until the first engine tick flushes. Tests should either call `engine.tick()` or seed entities directly.
-
----
-
-## 4. Conclusion
-
-The work product submitted by `worker_m2_1` for Milestone M2 strictly adheres to all architectural specifications, contains genuine simulation logic, passes all functional tests, preserves the 164-key baseline invariant, and compiles with zero errors.
-
-**Binary Forensic Verdict**: **CLEAN**
-
-The work product is approved from an integrity standpoint, and Milestone M2 is cleared for progression to Milestone M3 (Ultimate Move System & Presentation FX).
-
----
-
-## 5. Verification Method
-
-To independently verify all findings:
-1. **TypeScript Build**:
-   ```bash
-   npm run build
-   ```
-   *Expected: Exit code 0, bundled assets in `dist/`.*
-2. **Typecheck Diagnostics**:
-   ```bash
-   npx tsc --noEmit
-   ```
-   *Expected: Exit code 0, 0 diagnostic messages.*
-3. **Milestone M2 Unit Test Execution**:
-   ```bash
-   npx vitest run tests/unit/allies_system.test.ts tests/unit/diverse_weapons_items.test.ts tests/unit/pow_system.test.ts
-   ```
-   *Expected: 3 test files passed, 25 tests passed.*
-4. **Adversarial Weapons Stress Test**:
-   ```bash
-   npx vitest run tests/unit/m2_challenger_stress.test.ts
-   ```
-   *Expected: 1 test file passed, 17 tests passed.*
-5. **Procedural Sprite 164-Key Invariant**:
-   ```bash
-   npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts
-   ```
-   *Expected: `[Oracle 1A] Total Registered Sprite Keys: 164`, 17 tests passed.*
+Invalidation conditions:
+- Any test failure in `DarkFantasySprites.spec.ts` or the full 269-test suite.
+- Any compilation or packaging failure during `npx tsc --noEmit` or `npm run build`.
+- Detection of hardcoded mock returns or empty stubs in `DarkFantasySprites.ts`.

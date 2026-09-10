@@ -1,61 +1,60 @@
-# BRIEFING — 2026-09-10T11:14:00+09:00
+# BRIEFING — 2026-09-11T04:03:30+09:00
 
 ## Mission
-Visual UX and aesthetic evaluation of captured screenshot artifacts in artifacts/ui_overhaul, test verification, and adversarial integrity check.
+Evaluate Milestone 4 Visual Proof Suite & Artifact Verification, perform adversarial integrity check, and issue verdict.
 
 ## 🔒 My Identity
-- Archetype: reviewer / critic
+- Archetype: reviewer
 - Roles: reviewer, critic
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m4_2
-- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
 - Milestone: Milestone 4
 - Instance: 2 of 2
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Evidence-based review; adversarial stress testing
-- Check for integrity violations (hardcoded test outputs, dummy implementations, shortcuts, fabricated verification, self-certifying work)
+- High-Reliability Reviewer and Adversarial Critic
+- Strict integrity violation detection: hardcoded outputs, dummy facades, shortcuts, fabricated verification, self-certifying work
 
 ## Current Parent
-- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Updated: 2026-09-10T11:14:00+09:00
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-11T04:03:30+09:00
 
 ## Review Scope
 - **Files to review**:
-  - artifacts/ui_overhaul/screen_terrain.png (33,944 bytes, 960x540 PNG)
-  - artifacts/ui_overhaul/respawn_tutorial.png (39,859 bytes, 960x540 PNG)
-  - artifacts/ui_overhaul/continue_countdown.png (27,862 bytes, 960x540 PNG)
-  - tests/e2e/ui_overhaul_artifacts.spec.ts
-  - .agents/worker_m4_e2e_artifacts/handoff.md
-- **Interface contracts**: PROJECT.md, SCOPE.md, ORIGINAL_REQUEST.md, COLLABORATION.md
-- **Review criteria**: Visual appeal, "cute/charming/appealing" arcade aesthetic, elimination of cramped feeling, multi-tier platforms, parachute drop-in tutorial, continue screen, test execution
+  - `tests/e2e/restart_survival.spec.ts`
+  - `artifacts/dark_fantasy/enhanced_graphics_swarm.png`
+  - `artifacts/dark_fantasy/restart_verified.png`
+  - `artifacts/dark_fantasy/occult_vfx_lighting.png`
+  - `.agents/worker_m4_2/handoff.md`
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md
+- **Review criteria**: correctness, deterministic harness design, artifact integrity, PNG validity, dimension check, adversarial stress testing
 
 ## Review Checklist
 - **Items reviewed**:
-  - `artifacts/ui_overhaul/screen_terrain.png`: VERIFIED (960x540, panoramic 16:9 view, stilt docks, concrete bunker, suspension bridge, high watchtower with ladder, dune redoubts, crates, sandbags, explosive barrel, tied POWs, coastal parallax, cute arcade HUD)
-  - `artifacts/ui_overhaul/respawn_tutorial.png`: VERIFIED (960x540, gold-bordered tutorial card `★ MISSION CONTROLS & TACTICS ★` with keybindings grid, auto-dismiss prompt, tactical parachute respawn drop-in)
-  - `artifacts/ui_overhaul/continue_countdown.png`: VERIFIED (960x540, arcade continue overlay, giant digit 9, coin prompt, distressed chibi Marco with bandage and tear)
-  - `tests/e2e/ui_overhaul_artifacts.spec.ts`: VERIFIED (4 tests passing)
-  - Full Vitest suite: VERIFIED (42 files, 596 tests passed)
-  - Full Playwright suite: VERIFIED (6 spec files, 33 tests passed)
+  - `tests/e2e/restart_survival.spec.ts` (Tests 1, 2, 3a, 3b, 3c, 3d)
+  - `artifacts/dark_fantasy/enhanced_graphics_swarm.png` (241,380 bytes, 960x540, PNG magic valid)
+  - `artifacts/dark_fantasy/restart_verified.png` (212,903 bytes, 960x540, PNG magic valid)
+  - `artifacts/dark_fantasy/occult_vfx_lighting.png` (336,675 bytes, 960x540, PNG magic valid)
+  - `src/main.ts` (`restart()`, `stop()`, `step()`, `render()`, `canResurrect()`, `loopEpoch`)
+  - Build & Typecheck (`npx tsc --noEmit` -> clean 0 errors)
+  - Playwright test (`npx playwright test tests/e2e/restart_survival.spec.ts` -> 6/6 passed)
+  - Unit tests (`vitest` 372/372 tests passed)
 - **Verdict**: APPROVE
-- **Unverified claims**: None. All claims independently verified.
+- **Unverified claims**: none; all claims independently verified
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Ground line elevation (Y=230) vs bottom parallax exposure (Y=270..540): Verified as deliberate elevated coastal causeway design preserving world physics coordinates.
-  - Tutorial overlay obstruction: Verified 5s auto-dismiss + `[H]` toggle and horizontal non-overlap with player spawn.
-  - Continue countdown expiry: Verified clean transition to `GAME_OVER`.
-- **Vulnerabilities found**: None that compromise correctness, security, or acceptance criteria.
-- **Untested angles**: None within M4 visual verification scope.
+  - Loop epoch race condition: VERIFIED PROTECTED via `loopEpoch !== currentEpoch` bail out
+  - Death debounce bypass: VERIFIED PROTECTED via `deathTimer < 0.5` guard
+  - Deterministic capture harness fidelity: VERIFIED GENUINE canvas rendering via real engine systems
+  - Artifact integrity: VERIFIED REAL PNGs (212K–336K), genuine visual depth, correct dimensions
+- **Vulnerabilities found**: Port 4173 contention when multiple subagent test runs execute concurrently with `kill -9` webserver config. (Operational/harness caveat, not an application code defect).
+- **Untested angles**: Full mobile multitouch edge transitions under physical device latency.
 
 ## Key Decisions Made
-- Confirmed zero integrity violations: genuine canvas rendering, valid binary PNG signatures (0x89PNG), real Playwright browser automation.
-- Confirmed aesthetic alignment with user directive ("cute, charming, appealing" / "아기자기한 느낌").
-- Verdict: APPROVE.
+- Confirmed full compliance with all acceptance criteria and verified zero integrity violations.
+- Issuing APPROVE verdict.
 
 ## Artifact Index
-- .agents/reviewer_m4_2/BRIEFING.md
-- .agents/reviewer_m4_2/progress.md
-- .agents/reviewer_m4_2/handoff.md
-- .agents/reviewer_m4_2/DISPATCH.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m4_2/handoff.md — final review evaluation and verdict report

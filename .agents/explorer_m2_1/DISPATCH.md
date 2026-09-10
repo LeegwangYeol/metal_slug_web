@@ -1,21 +1,26 @@
-## 2026-09-08T02:19:49Z
-You are an Explorer subagent (teamwork_preview_explorer) for Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+## 2026-09-10T15:48:47Z
+You are explorer_m2_1 (role: Codebase Researcher / Explorer).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1
 
-You are READ-ONLY. DO NOT edit or modify source code files. Your task is to investigate, diagnose root causes, and provide an exact fix strategy.
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/src/render/sprites/DarkFantasySprites.ts
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+Mission:
+Investigate Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul):
+1. Examine `src/render/sprites/DarkFantasySprites.ts`:
+   - How sprites are currently generated, cached (offscreen canvas), and rendered.
+   - Current sprite resolution and caching mechanisms.
+2. Formulate high-fidelity procedural drawing design for **Player (Grim Sorcerer)**:
+   - Layered tattered cowl and hooded robe with dark crimson borders and shadow gradients.
+   - Ethereal bone scythe with purple runic glow and blade highlights.
+   - Glowing eye sockets / occult pupil pinpoints.
+   - Multi-frame walk/idle bobbing and directional flipping.
+3. Assess performance implications of procedural drawing and offscreen sprite atlas caching to maintain locked 60 FPS.
 
-YOUR MISSION & FOCUS:
-Investigate failing tests in tests/unit/allies_system.test.ts and related source code in src/core/entities/allies/ (e.g. AllyNPC.ts, AllyKiBlast.ts, AllyManager.ts).
-1. Run the test command: `npx vitest run tests/unit/allies_system.test.ts` (in /Users/user/teamwork_projects/metal_slug_web).
-2. For each failing test, examine the test assertion and inspect the corresponding source code lines.
-3. Diagnose the exact root causes of all failures (e.g., target acquisition logic, projectile spawn positions, friendly fire filtering, state transitions).
-4. Formulate a complete, concrete fix strategy with exact line-by-line recommendations for the Worker.
-5. Write your findings to your handoff report: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md following the Handoff Protocol (Observation, Logic Chain, Caveats, Conclusion, Recommended Fix Strategy).
-6. Send a message to your parent with a concise summary and the path to your handoff.md.
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md`.
+Update your `progress.md`.
+When complete, send a message to orchestrator with your findings.

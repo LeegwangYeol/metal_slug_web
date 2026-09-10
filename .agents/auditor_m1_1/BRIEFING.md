@@ -1,60 +1,58 @@
-# BRIEFING — 2026-09-10T01:11:00Z
+# BRIEFING — 2026-09-11T00:43:35+09:00
 
 ## Mission
-Forensic integrity audit of Milestone 1 changes in metal_slug_web (viewport, parallax, procedural sprites, HUD, resolution).
+Perform strict forensic integrity audit on Milestone 1 (game restart & subsystem reset logic).
 
 ## 🔒 My Identity
 - Archetype: forensic_auditor
-- Roles: critic, specialist, auditor
+- Roles: [critic, specialist, auditor]
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1
-- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Target: Milestone 1 (Viewport, Parallax, Procedural Sprites, HUD)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Target: Milestone 1
 
 ## 🔒 Key Constraints
 - Audit-only — do NOT modify implementation code
 - Trust NOTHING — verify everything independently
-- Provide explicit verdict: CLEAN or INTEGRITY VIOLATION with full evidence chain
+- Strict forensic checks against facade implementations, hardcoded returns, bypassed game logic
+- Follow ORIGINAL_REQUEST.md constraints
 
 ## Current Parent
-- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
 - Updated: not yet
 
 ## Audit Scope
-- **Work product**: Milestone 1 changes (CanvasRenderer.ts, Camera.ts, ParallaxBackground.ts, ProceduralSpriteFactory.ts, HUDOverlay.ts, main.ts, index.html, tests)
+- **Work product**: Milestone 1 code changes across Player, HordeManager, SpatialHashGrid, LootManager, WeaponManager, UpgradeSystem, UpgradeModal, main.ts, tests/unit/restart.spec.ts
 - **Profile loaded**: General Project
 - **Audit type**: forensic integrity check
 
 ## Audit Progress
 - **Phase**: reporting
 - **Checks completed**:
-  - Git status and line-by-line diff inspection across all 8 modified targets
-  - Detection of prohibited patterns (hardcoded test bypasses, facade implementations, test omissions)
-  - Independent compilation check via `npx tsc --noEmit` (0 errors)
-  - Independent test execution via `npm test` (35 test files, 464 tests passed, 0 failures)
-  - Independent Playwright E2E execution via `npx playwright test` (all tests passed)
-  - Empirical verification of 960x540 resolution, modular parallax loops, chibi-arcade procedural sprite details, and 1100px arena widths
-  - Adversarial boundary and stress tests on Camera, Parallax, Letterbox, and HUD text metrics
-- **Checks remaining**: None
+  - Foundational document review (ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m1_1/handoff.md)
+  - Phase 1: Mode-Agnostic Source Analysis (git diff, facade check, hardcoded values check, pre-populated artifact check)
+  - Phase 2: Behavioral verification (`npx tsc --noEmit`, `npx vitest run tests/unit/restart.spec.ts`, `npm test`, `npm run build`)
+  - Adversarial stress-testing (100 consecutive rapid restarts simulation)
+- **Checks remaining**: none
 - **Findings so far**: CLEAN
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Camera clamping under stage traversal & forward lock: Verified clamped strictly within [0, 2640], ratchet maintained.
-  - Parallax modular loop wrapping at extreme coordinates (-100,000 to +1,000,000): Verified seamless without exceptions.
-  - Letterbox calculation under non-standard aspect ratios (vertical phone, ultrawide, 32:9): Verified positive scales and valid offsets.
-  - HUD text width calculation with empty strings, special characters, and non-ASCII chars: Verified safe fallback to space width, no NaNs.
-- **Vulnerabilities found**: None
-- **Untested angles**: Mobile touch controls (out of M1 scope)
+  - Hardcoded test assertions or dummy reset methods -> DISPROVED (authentic logic throughout)
+  - State leakage / totalKilled inflation across restarts in HordeManager -> DISPROVED (clean O(N) pool purge, totalKilled reset to 0)
+  - Infinite loops under delta spikes / RAF freeze -> DISPROVED (MAX_SUB_STEPS = 5 clamp and accumulator zeroing verified)
+  - 100 consecutive rapid restarts stress test -> PASSED (activeCount: 35, playerHP: 100, killed: 0)
+- **Vulnerabilities found**: none
+- **Untested angles**: Audio teardown during headless tests (Grim Harvest does not execute HTML5 WebAudio in headless mode)
 
 ## Loaded Skills
-- None specified by orchestrator
+- None
 
 ## Key Decisions Made
-- Executed empirical runtime audits and stress tests via TSX script against production code modules
-- Confirmed full compliance with Milestone M1 specifications and verified genuine implementation
+- Confirmed Milestone 1 changes are 100% authentic with zero integrity violations.
+- Prepared verdict: CLEAN.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/DISPATCH.md — Audit assignment
-- /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/BRIEFING.md — Persistent memory
-- /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/progress.md — Liveness heartbeat
-- /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/handoff.md — Final audit report
+- /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/DISPATCH.md — dispatch message
+- /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/BRIEFING.md — working memory
+- /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/progress.md — liveness & heartbeat
+- /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/handoff.md — final audit report

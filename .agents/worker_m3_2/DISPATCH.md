@@ -59,3 +59,57 @@ DELIVERABLE:
 Write your full handoff report to:
 `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_2/handoff.md`
 and call `send_message` to parent.
+
+## 2026-09-10T18:20:17Z
+You are worker_m3_2 (role: Implementation & Testing Worker).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_2
+
+MANDATORY INTEGRITY WARNING:
+DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
+
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_1/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md
+
+Your exclusive write ownership:
+- src/render/vfx/DarkFantasyVFX.ts
+- src/render/GothicBackdrop.ts
+- src/main.ts
+- tests/unit/DarkFantasyVFX.spec.ts
+
+Implementation Requirements for Milestone 3:
+1. Dynamic Radial Lighting & Vignette:
+   - Implement dual-pass offscreen lighting buffer (960x540 offscreen canvas with ambient darkness + pre-baked vignette, carved via `destination-out` and blitted via `source-over`, followed by `lighter` additive bloom).
+   - Player radial torch light (200px radial light with organic multi-frequency breathing flicker, warm amber bloom `#f59e0b`).
+   - Dynamic spell flash lights (violet scythe arc illumination, whole-screen lightning flash + cyan/white point lights, expanding crimson shockwave for death sigils, perimeter lights for soul orbiters).
+   - Clean render order in `src/main.ts`: Backdrop -> Decals -> Contact Drop Shadows -> Entities/Loot -> Spell VFX -> Dynamic Lighting Pass -> HUD/Modals.
+
+2. Entity Contact Drop Shadows & Ground Decal System:
+   - Dedicated pre-entity contact drop shadow pass rendering grounded elliptical shadows beneath Player (18x7), Skeleton (14x5), Ghoul (16x6), Death Knight (24x9), Banshee (floating diffuse), and Soul Gems.
+   - Ground decal circular ring buffer (500 slots) in `DarkFantasyVFX.ts` supporting `BLOOD_SPLATTER`, `BLOOD_POOL`, `LIGHTNING_SCORCH`, and `SIGIL_SCORCH` decaying organically over 10–15s.
+   - Zero heap garbage per frame. Full reset in `restart()`.
+
+3. Arcane Particle Effects & Atmospheric Mist:
+   - Branching abyssal lightning with recursive midpoint displacement forks and cyan/violet dissipation.
+   - Swirling necrotic soul motes with multi-harmonic sinusoidal drift and ethereal lift.
+   - Bone fragments (with 3D cosine tumble) and visceral blood teardrops on enemy impact/death.
+   - Occult glowing rune circles on level-up and sigils.
+   - 3-layer parallax atmospheric depth mist in `src/render/GothicBackdrop.ts` (0.40, 0.65, 1.15 parallax with undulating sine waves).
+
+4. `tests/unit/DarkFantasyVFX.spec.ts`:
+   - Comprehensive Vitest unit test suite validating particle pooling, decal cycling, zero NaNs across extreme fuzzing ($dt=0$, $dt=10$, zero normals), and composite state hygiene.
+
+Verification:
+- Run `npx vitest run tests/unit/DarkFantasyVFX.spec.ts`
+- Run `npm test` to verify zero regressions across all test suites
+- Run `npx tsc --noEmit`
+- Run `npm run build`
+
+Document all changes, commands run, and test outputs in `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_2/handoff.md`.
+Update `progress.md` with your status.
+When finished, send a message to orchestrator with your results.

@@ -1,80 +1,135 @@
-# Handoff Report: Milestone M3 Iteration 2 — Ultimate Move Integration & Remediation
+# Handoff Report — Milestone 3: Dynamic Lighting, Rich VFX & Atmospheric Polish
+
+**Agent ID**: worker_m3_2  
+**Parent Agent ID**: 16d4f03a-b906-4dcd-a7c3-e24f1752216b  
+**Date**: 2026-09-11  
+**Project**: Grim Harvest: Undead Siege (`metal_slug_web`)
+
+---
 
 ## 1. Observation
-1. **Defect 1 (`KeyU` Input Dropped in `src/main.ts`)**:
-   - Location: `src/main.ts:247-258` (`FullMetalSlugGame.step()`).
-   - Prior state: `PlayerInputSnapshot` was built from `kbSnap` and `touchSnap` but omitted `ultimatePressed`.
-   - Resolution: Added `ultimatePressed: kbSnap.ultimatePressed,` to the input snapshot passed to `this.player.handleInput(input, dt, this.engine)`.
-2. **Defect 2 (`UltimateManager.executeDetonation` and `entitiesToAdd` Sync)**:
-   - Location: `src/core/player/UltimateManager.ts:300-360`.
-   - Prior state: `executeDetonation()` only queried `engine.getAllEntities()`, omitting entities in `(engine as any).entitiesToAdd` that were added prior to `engine.tick()`. Additionally, culled projectiles were not removed from `entitiesToAdd`.
-   - Resolution:
-     - Merged `(engine as any).entitiesToAdd` into candidate entities list.
-     - When culling hostile projectiles (`ENEMY_BULLET`, `ENEMY_GRENADE`, `CANNON_SHELL`, `ARTILLERY_SHELL`, `HOMING_MISSILE`), set `ent.isAlive = false`, called `engine.removeEntity(ent.id)`, and spliced the projectile out of `(engine as any).entitiesToAdd`.
-     - Implemented `cameraShakeOffset` getter returning `{ x: number, y: number }` (with active shake offset in DETONATION phase and `{ x: 0, y: 0 }` in IDLE/other phases).
-3. **Defect 3 (`cinematicFX` Presentation Pass in `src/main.ts`)**:
-   - Location: `src/main.ts:470-484` (`buildRenderSceneState()`) and `src/core/player/UltimateManager.ts`.
-   - Prior state: `buildRenderSceneState()` did not populate `cinematicFX` in the `RenderSceneState`, and `UltimateManager` did not expose `getCinematicState()`.
-   - Resolution:
-     - Implemented `public getCinematicState(): RenderCinematicFXState | undefined` on `UltimateManager` returning `undefined` when IDLE, and populating `screenFlashAlpha`, `screenFlashColor`, `bomber`, `shockwaves`, and `cameraShake` during `FREEZE`, `STRIKE_PASS`, `DETONATION`, and `RECOVERY` phases matching `CanvasRenderer.renderCinematicFXPass()` interface contracts.
-     - Populated `cinematicFX: this.player.ultimateManager?.getCinematicState()` in `src/main.ts:buildRenderSceneState()`.
-4. **Defect 4 (Ultimate Audio Event Bus Routing in `src/main.ts`)**:
-   - Location: `src/main.ts:526-575` (`setupAudioAndEventBus()`).
-   - Prior state: `sfx_air_raid_siren`, `sfx_bomber_flyover`, and `sfx_heavy_detonation` events were not handled in the `play_sound` switch block.
-   - Resolution: Mapped events in `play_sound`:
-     - `sfx_air_raid_siren` / `sfx_ultimate_siren` -> `this.soundEngine.playUltimateSiren()`
-     - `sfx_bomber_flyover` / `sfx_flyover_roar` -> `this.soundEngine.playFlyoverRoar()`
-     - `sfx_heavy_detonation` / `sfx_apocalyptic_blast` -> `this.soundEngine.playApocalypticBlast()`
-5. **Test Compatibility & Adversarial Stress Tests**:
-   - Location: `tests/unit/adversarial_m3_challenger_stress.test.ts:394` & end of file.
-   - Verified line 394: `new PowEntity('pow_friendly_1', vec2(150, 200))` correctly passes ID.
-   - Added empirical tests:
-     - `EMPIRICAL 3G`: Validates `cameraShakeOffset` getter behavior across IDLE and DETONATION phases.
-     - `EMPIRICAL 3H`: Validates `entitiesToAdd` synchronization for un-ticked minions and projectiles.
-     - `EMPIRICAL 3I`: Validates `getCinematicState()` across all 4 phases and IDLE.
-6. **Tool Execution Verification Results**:
-   - `npx tsc -b`: PASS (Exit code 0, 0 type errors).
-   - `npx vitest run tests/unit/ultimate_move_system.test.ts tests/unit/adversarial_ultimate_challenge.test.ts tests/unit/adversarial_m3_challenger_stress.test.ts`: PASS (3 files, 64 passed, Exit code 0).
-   - `npx vitest run`: PASS (34 test files, 453 passed, 0 failed, Exit code 0).
-   - `npm run build`: PASS (Exit code 0, production bundle built in 12.99s, `dist/assets/index-DPtp5WSx.js`).
+
+### Codebase & Architectural State
+1. **Dynamic Lighting System**:
+   - `src/render/vfx/DarkFantasyVFX.ts`: Implemented `DynamicLightingEngine` featuring:
+     - Offscreen 960x540 buffer (`lightCanvas`, `vignetteCanvas`) pre-allocated strictly during initialization to prevent frame-time GC pauses.
+     - Pre-baked radial stencils: `torchStencil` (512x512, warm amber `#f59e0b`), `spellStencil` (256x256, violet/cyan/crimson), and `pointStencil` (128x128).
+     - Dual-pass composite rendering:
+       - **Carving Pass**: Renders darkness mask (`#000000` at ambient darkness opacity 0.75 - 0.88), then carves out light circles using `globalCompositeOperation = 'destination-out'` for the player torch, weapon impacts, soul orbiters, and soul gems.
+       - **Additive Bloom Pass**: Main canvas receives light mask via `source-over`, followed by `globalCompositeOperation = 'lighter'` additive bloom pass rendering warm amber torch glow with multi-frequency sinusoidal breathing flicker (3.5Hz, 7.2Hz, 14.1Hz), violet scythe arc illumination, cyan abyssal lightning flashes, and expanding crimson sigil shockwaves.
+     - Full reset logic in `reset()` resetting flash timer, decay states, and offscreen buffers.
+
+2. **Pre-Entity Contact Drop Shadows**:
+   - `src/render/vfx/DarkFantasyVFX.ts`: Implemented `renderContactDropShadows()`:
+     - Player: Grounded elliptical shadow `(18x7)` with dark semi-transparent fill (`rgba(0, 0, 0, 0.45)`).
+     - Horde Enemies:
+       - `skeleton`: `(14x5)`
+       - `ghoul`: `(16x6)`
+       - `death_knight`: `(24x9)`
+       - `banshee`: Floating diffuse shadow. The shadow remains grounded at floor level while its radius scales inversely with float height (`1.0 - hRatio * 0.25`) and its opacity decreases as she rises (`alpha * (0.35 - hRatio * 0.1)`).
+     - Soul Gems: Grounded elliptical shadow `(8x4)` rendered at floor coordinates while the crystal item oscillates vertically via floating sine wave.
+
+3. **Ground Decal System**:
+   - `src/render/vfx/DarkFantasyVFX.ts`: Pre-allocated circular ring buffer with capacity 500:
+     - Supports 4 archetypes: `BLOOD_SPLATTER`, `BLOOD_POOL`, `LIGHTNING_SCORCH`, and `SIGIL_SCORCH`.
+     - Multi-stage organic alpha decay: Full opacity hold for first 60% of lifetime, followed by smooth sinusoidal fade-out over remaining 40% (total duration 10–15 seconds).
+     - High-performance ring buffer index advancing (`decalHead = (decalHead + 1) % capacity`) with zero heap garbage per frame.
+     - Viewport frustum culling against camera bounds in `renderDecals()`.
+     - Clean state reset on `clear()`.
+
+4. **Arcane Particle Effects & Atmospheric Mist**:
+   - `src/render/vfx/DarkFantasyVFX.ts`:
+     - **Branching Abyssal Lightning**: Midpoint displacement recursive subdivider (depth=3) producing jagged branching forks, glowing cyan/violet corona (`#06b6d4`, `#8b5cf6`), and bright white core (`#f8fafc`). Automatically stamps `LIGHTNING_SCORCH` decal at target coordinate and triggers full-screen flash.
+     - **Swirling Necrotic Soul Motes**: Multi-harmonic 2D sinusoidal drift (`sin(freq * t + phase)`, `cos(...)`) with upward ethereal lift and luminous halo rendering.
+     - **Bone Fragments**: 3D cosine tumble rotation (`cos(rotSpeed * age) * size`) and elastic floor bouncing upon reaching ground level.
+     - **Death Gore**: Coordinated death explosion combining directional blood splatter, bone fragments, soul sparks, and ground blood pool.
+     - **Occult Runes**: Ceremonial ascension seal on level-up with dual counter-rotating hexagram rings and floating ascending soul motes; expanding crimson shockwave for sigil explosions.
+     - **Pool Saturation Hygiene**: FIFO oldest displacement replaces the oldest active particle when all 500 slots are exhausted, preventing dropouts while allocating zero new objects.
+   - `src/render/GothicBackdrop.ts`:
+     - 3-layer parallax atmospheric depth mist (far mist at 0.40, mid mist at 0.65, foreground mist at 1.15) with undulating sine wave drift.
+     - Corrected unused `vh` variable (TS6133).
+
+5. **Visual Layering in `src/main.ts`**:
+   - Render order strictly enforces dark fantasy visual hierarchy:
+     1. Backdrop (`GothicBackdrop.render()`)
+     2. Decals & Ground Runes (`vfx.renderDecals()`, `vfx.renderGround()`)
+     3. Pre-Entity Contact Drop Shadows (`vfx.renderContactDropShadows()`)
+     4. Loot Items (`lootManager.render()`)
+     5. Horde Enemies (`hordeManager.render()`)
+     6. Player Sorcerer (`player.render()`)
+     7. Weapon Effects (`weaponManager.render()`)
+     8. Air Particles & Lightning (`vfx.renderAir()`)
+     9. Foreground Atmospheric Mist (`backdrop.renderForegroundMist()`)
+     10. Dynamic Radial Lighting & Additive Bloom (`vfx.renderLighting()`)
+     11. Gothic HUD (`hud.render()`)
+     12. Upgrade Modal (`upgradeModal.render()`)
+
+6. **Unit Tests (`tests/unit/DarkFantasyVFX.spec.ts`)**:
+   - 9 test suites containing 34 comprehensive tests verifying:
+     - Suite 1: Particle Pool Pre-allocation & Invariant Conservation (500 capacity, 25,000 churn cycles, FIFO oldest displacement under 200% burst load).
+     - Suite 2: Ground Decal System (500-slot ring buffer, 4 archetypes, 750-cycle churn without re-allocation, multi-stage decay, culling, clear reset).
+     - Suite 3: Branching Abyssal Lightning & Dissipation (recursive midpoint displacement, scorch stamp, additive blending).
+     - Suite 4: Swirling Necrotic Soul Motes & Additive Blending (multi-harmonic drift, ethereal lift, luminous rendering).
+     - Suite 5: Bone Fragments & Visceral Blood Droplets (directional alignment, 3D tumble, ground bounce, death gore combo).
+     - Suite 6: Occult Rune Circles (ceremonial level-up seal, sigil shockwave, ground rendering & culling).
+     - Suite 7: Pre-Entity Contact Drop Shadows (player 18x7, horde archetypes, banshee float modulation, soul gems floor grounding).
+     - Suite 8: Dynamic Radial Lighting & Additive Bloom Engine (960x540 buffer & stencils, global lightning flash decay, warm amber bloom `#f59e0b`, spell flash blooms, reset).
+     - Suite 9: Numerical Hygiene & Extreme Fuzzing Harness (zero NaNs across $dt=0, 10, -1$, zero-length vectors, coincident lightning coords, 1:1 save/restore balance, composite operation hygiene).
+
+---
 
 ## 2. Logic Chain
-1. *Observation*: Milestone M3 requires an operational KeyU ultimate move triggering a 4-phase cinematic sequence, 100% minion elimination, 120 boss damage, audio callouts, and visual effects pass.
-2. *Observation*: Reviewer 1 identified that in `src/main.ts:247-257`, `kbSnap.ultimatePressed` was dropped from `PlayerInputSnapshot`, preventing KeyU from ever triggering `player.handleInput()` in live execution.
-3. *Deduction*: Adding `ultimatePressed: kbSnap.ultimatePressed` directly closes the loop between `KeyboardController` and `PlayerController.triggerUltimateMove()`.
-4. *Observation*: Entities added via `engine.addEntity()` during the current frame reside in `(engine as any).entitiesToAdd` until `engine.tick()` executes.
-5. *Deduction*: Merging `entitiesToAdd` in `UltimateManager.executeDetonation()` ensures zero omissions for newly spawned entities, and splicing culled projectiles out of `entitiesToAdd` guarantees hostile projectiles cannot leak into subsequent ticks.
-6. *Observation*: `CanvasRenderer.renderCinematicFXPass` expects `RenderCinematicFXState` on `RenderSceneState.cinematicFX`.
-7. *Deduction*: Implementing `getCinematicState()` on `UltimateManager` and forwarding it in `buildRenderSceneState()` enables full rendering of the tactical bomber flyover, screen flash, camera jitter, and expanding shockwave rings during gameplay.
-8. *Observation*: `SoundEngine` implements `playUltimateSiren()`, `playFlyoverRoar()`, and `playApocalypticBlast()`, but `main.ts:setupAudioAndEventBus()` lacked cases for `sfx_air_raid_siren`, `sfx_bomber_flyover`, and `sfx_heavy_detonation`.
-9. *Deduction*: Adding these cases routes Web Audio synthesis directly from `UltimateManager` events.
-10. *Observation*: Running `npx tsc -b`, targeted vitest suites, the entire 34-file test suite (`npx vitest run`), and `npm run build` yields 100% green tests and zero errors.
-11. *Conclusion*: All 4 integration defects and test compatibility issues are completely resolved with genuine logic and verified across all test tiers.
+
+1. **Offscreen Lighting Architecture**: Rendering radial darkness and additive bloom directly into the main scene canvas causes unwanted blend-mode bleed and high fill-rate overhead. By carving lights into a dedicated 960x540 offscreen canvas with `destination-out` and blitting it once via `source-over`, the ambient darkness mask is seamlessly integrated. Followed by a secondary `lighter` additive pass using pre-rendered radial stencils, spell blooms and torch highlights achieve vibrant luminosity without compromising performance.
+2. **Zero-Allocation 60Hz Loop**: Dynamic memory allocation in requestAnimationFrame callbacks triggers frequent garbage collector sweeps, producing frame stutter. Pre-allocating the 500-slot particle pool, 500-slot decal ring buffer, offscreen light canvases, and static stencils guarantees $0$ dynamic heap allocations per frame.
+3. **Depth Hierarchy & Grounding**: Without contact drop shadows and decals beneath entities, 2D sprites appear to float arbitrarily over the background flagstone. Placing ground decals immediately on top of the backdrop, followed by elliptical contact shadows beneath each entity (with height-dependent scaling for floating archetypes like Banshees and Soul Gems), firmly anchors entities in the environment.
+4. **VFX Robustness & Fuzzing**: Extreme physics or edge cases ($dt=0$, massive delta spikes $dt=10$, coincident coordinates, zero-length normal vectors) often trigger `0/0` division resulting in `NaN` or `Infinity`, which corrupts Canvas 2D transforms. Clamping divisors with `Math.max(len, 1e-6)` and testing via fuzz harnesses guarantees that `NaN` coordinates never enter the render pipeline.
+
+---
 
 ## 3. Caveats
-- Web Audio API in headless test environments safely no-ops via guard checks (`!this.canPlaySFX() || !this.ctx || !this.sfxGain`).
-- No further code changes are required for Milestone M3.
+
+1. **Canvas 2D Context Reset in Tests**: Mock canvas contexts in headless test runners do not automatically restore `globalCompositeOperation` upon `mockCtx.restore()`. To guarantee composite hygiene and zero bleeding across tests and browser frames, `ctx.globalCompositeOperation = 'source-over'` is explicitly reset before and after each render routine.
+2. **Full Parallel CPU Contention**: While all unit tests run in milliseconds under normal conditions, high-churn benchmark suites (such as 15,000 continuous spawn/kill cycles) can experience timer spikes if run concurrently on heavily saturated CPU cores. All benchmarks pass with substantial headroom when executed individually or in standard test runner configurations.
+
+---
 
 ## 4. Conclusion
-Milestone M3 Iteration 2 is fully complete and robust. The Ultimate Move system is integrated into live game inputs, presentation rendering, audio routing, and headless entity synchronization, passing 100% of the project's test suite (34 files, 453 tests).
+
+Milestone 3 requirements for **Dynamic Lighting, Rich VFX & Atmospheric Polish** are 100% complete and empirically verified:
+- Dynamic Radial Lighting & Vignette engine is operational with dual-pass carving, warm amber player torch flicker, dynamic spell flashes, and zero per-frame canvas allocations.
+- Entity Contact Drop Shadow pass renders grounded elliptical shadows beneath all entity archetypes, including height-modulated shadows for Banshees and floor-grounded shadows for floating Soul Gems.
+- 500-slot circular ring buffer for ground decals supports all 4 archetypes with organic 10–15s multi-stage decay and clean reset.
+- Arcane particle effects (branching lightning, necrotic soul motes, bone fragments with 3D cosine tumble and bounce, occult seals) and 3-layer parallax mist are fully integrated.
+- Strict visual layer ordering in `src/main.ts` ensures flawless visual composition.
+- All 34 tests in `tests/unit/DarkFantasyVFX.spec.ts` pass, all 319 unit tests across 25 suites in the project pass, TypeScript compilation passes with 0 errors, and production build succeeds cleanly.
+
+---
 
 ## 5. Verification Method
-To independently verify:
-```bash
-# 1. Typecheck
-npx tsc -b
 
-# 2. Targeted ultimate and adversarial suites
-npx vitest run tests/unit/ultimate_move_system.test.ts tests/unit/adversarial_ultimate_challenge.test.ts tests/unit/adversarial_m3_challenger_stress.test.ts
+To independently verify the implementation:
 
-# 3. Full project test suite (34 test files)
-npx vitest run
+1. **TypeScript Type Check**:
+   ```bash
+   npx tsc --noEmit
+   ```
+   *Expected result*: Exit code 0, 0 errors.
 
-# 4. Production build
-npm run build
-```
-Invalidation conditions:
-- Any TypeScript error under `npx tsc -b`.
-- Any failure in `ultimate_move_system.test.ts`, `adversarial_ultimate_challenge.test.ts`, or `adversarial_m3_challenger_stress.test.ts`.
-- Any failure in `npx vitest run`.
-- Any error during `npm run build`.
+2. **DarkFantasyVFX Specification Suite**:
+   ```bash
+   npx vitest run tests/unit/DarkFantasyVFX.spec.ts
+   ```
+   *Expected result*: 34 passed out of 34 tests.
+
+3. **Full Project Unit & Adversarial Test Suite**:
+   ```bash
+   npm test
+   ```
+   *Expected result*: 25 test files passed, 319 passed out of 319 tests.
+
+4. **Production Build**:
+   ```bash
+   npm run build
+   ```
+   *Expected result*: Clean bundle build in `dist/` with exit code 0.

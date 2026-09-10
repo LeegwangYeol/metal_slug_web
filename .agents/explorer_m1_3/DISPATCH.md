@@ -1,19 +1,22 @@
-## 2026-09-03T16:37:16Z
-You are Explorer M1_3.
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/
-Your workspace root is: /Users/user/teamwork_projects/metal_slug_web/
+## 2026-09-10T15:28:44Z
+You are explorer_m1_3 (role: Codebase Researcher / Explorer).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3
 
-MANDATORY FIRST STEP: Read the authoritative user request at:
-/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-Also read the scope document:
-/Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen2/PROJECT.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
 
-Task:
-1. Run the project build and test commands via run_command:
-   - TypeScript build check: `npm run build`
-   - Vitest suite check: `npx vitest run`
-   - Check Playwright setup and tests in tests/e2e/
-2. Catalog total test counts, passing tests, failing tests, and compilation errors.
-3. Verify if any pre-existing tests outside M1 were broken, or if the 164-key sprite invariant or any other critical invariants are at risk.
-4. Write your full diagnostic baseline to /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/handoff.md.
-5. When complete, send a message to your parent with summary and artifact path.
+Mission:
+Investigate Milestone 1 (Restart State Engine & Lifecycle Architecture) with focus on:
+1. `src/core/weapons/WeaponManager.ts`: How active projectiles, weapon slots, and cooldown timers can be purged and reset to Rank 1 starter Arcane Scythe.
+2. `src/core/systems/UpgradeSystem.ts` and `src/ui/UpgradeModal.ts`: How pending upgrades, card generation, and modal display states are cleared/closed during restart.
+3. `src/core/systems/WaveDirector.ts`: How the wave escalation, phase timer, boss spawn triggers, and difficulty curve are reset to Phase 1 / 0:00.
+4. Camera and HUD reset: Camera offset, screen shake reset.
+5. Unit test design: Concrete plan for `tests/unit/restart.spec.ts` using Vitest to verify that `restart()` cleanly resets all state, pools, and simulation clock without errors.
+
+Produce a detailed report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/handoff.md`.
+Update your `progress.md` with your status.
+You are a read-only exploration agent. Do NOT modify source code files. Recommend concrete fix and implementation strategies.
+When complete, send a message to orchestrator with your findings and path to handoff.md.

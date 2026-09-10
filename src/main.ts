@@ -32,6 +32,7 @@ export class GrimHarvestGame {
   public static readonly VIRTUAL_WIDTH = 960;
   public static readonly VIRTUAL_HEIGHT = 540;
   public static readonly FIXED_TIMESTEP = 1 / 60; // 0.01667s
+  public static readonly MAX_SUB_STEPS = 5;
 
   public readonly player: Player;
   public readonly hordeManager: HordeManager;
@@ -52,16 +53,33 @@ export class GrimHarvestGame {
   private ctx: CanvasRenderingContext2D | null = null;
   private isRunning: boolean = false;
   private animationFrameId: number | null = null;
+  private loopEpoch: number = 0;
 
   private lastTime: number = 0;
   private accumulator: number = 0;
   public elapsedTime: number = 0;
   public killCount: number = 0;
+  public deathTimer: number = 0;
+  public isVictory: boolean = false;
 
   public isPaused: boolean = false;
   private pendingLevelUps: number = 0;
 
+  public get isGameOver(): boolean {
+    return !this.player.isAlive;
+  }
+
+  public get deathDebounceTimer(): number {
+    return this.deathTimer;
+  }
+
+  private readonly boundOnKeyDown: (e: KeyboardEvent) => void;
+  private readonly boundOnCanvasClick: (e: MouseEvent) => void;
+
   constructor(container?: HTMLElement) {
+    this.boundOnKeyDown = this.handleKeyDown.bind(this);
+    this.boundOnCanvasClick = this.handleCanvasClick.bind(this);
+
     // 1. Core Simulation Systems
     this.player = new Player(0, 0, {
       maxHealth: 100,
@@ -169,6 +187,7 @@ export class GrimHarvestGame {
 
   public handlePlayerLevelUp(newLevel: number): void {
     this.pendingLevelUps++;
+    this.vfx.emitLevelUpRune(this.player.position.x, this.player.position.y, 72, 2.4);
     if (!this.upgradeModal.getIsOpen()) {
       this.openNextLevelUp(newLevel);
     }
@@ -197,34 +216,68 @@ export class GrimHarvestGame {
       typeof window !== 'undefined' &&
       ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     this.touchPad.setVisible(isTouchDevice);
+
+    if (this.canvas) {
+      this.canvas.removeEventListener('click', this.boundOnCanvasClick);
+      this.canvas.addEventListener('click', this.boundOnCanvasClick);
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this.boundOnKeyDown);
+      window.addEventListener('keydown', this.boundOnKeyDown);
+    }
+  }
+
+  public destroy(): void {
+    this.stop();
+    if (this.canvas) {
+      this.canvas.removeEventListener('click', this.boundOnCanvasClick);
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this.boundOnKeyDown);
+    }
+    this.keyboard.detach();
+    this.upgradeModal.close();
   }
 
   public start(): void {
     if (this.isRunning) return;
     this.isRunning = true;
+    const currentEpoch = ++this.loopEpoch;
     this.lastTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
     this.accumulator = 0;
 
     const tickFrame = (now: number) => {
-      if (!this.isRunning) return;
+      if (!this.isRunning || this.loopEpoch !== currentEpoch) return;
 
-      const dt = Math.min((now - this.lastTime) / 1000, 0.1);
+      const rawDt = (now - this.lastTime) / 1000;
+      const dt = Math.max(0, Math.min(rawDt, 0.1));
       this.lastTime = now;
 
-      if (!this.isPaused) {
+      if (!this.isPaused && this.player.isAlive && !this.isVictory) {
         this.accumulator += dt;
-        while (this.accumulator >= GrimHarvestGame.FIXED_TIMESTEP) {
+        let subSteps = 0;
+        while (
+          this.accumulator >= GrimHarvestGame.FIXED_TIMESTEP &&
+          subSteps < GrimHarvestGame.MAX_SUB_STEPS
+        ) {
           this.step(GrimHarvestGame.FIXED_TIMESTEP);
           this.accumulator -= GrimHarvestGame.FIXED_TIMESTEP;
+          subSteps++;
         }
-      } else {
+        if (subSteps >= GrimHarvestGame.MAX_SUB_STEPS) {
+          this.accumulator = 0; // Prevent infinite freeze death spiral
+        }
+      } else if (this.upgradeModal.getIsOpen()) {
         // Continue updating modal animations while simulation is frozen
         this.upgradeModal.update(dt);
+      } else if (!this.player.isAlive || this.isVictory) {
+        this.deathTimer += dt;
+        this.vfx.update(dt);
       }
 
       this.render();
 
-      if (typeof requestAnimationFrame !== 'undefined') {
+      if (this.isRunning && this.loopEpoch === currentEpoch && typeof requestAnimationFrame !== 'undefined') {
         this.animationFrameId = requestAnimationFrame(tickFrame);
       }
     };
@@ -236,9 +289,103 @@ export class GrimHarvestGame {
 
   public stop(): void {
     this.isRunning = false;
+    this.loopEpoch++;
     if (this.animationFrameId !== null && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
+    }
+  }
+
+  public canResurrect(): boolean {
+    return (
+      (!this.player.isAlive || this.isVictory) &&
+      !this.upgradeModal.getIsOpen() &&
+      this.deathTimer >= 0.5
+    );
+  }
+
+  private handleKeyDown(e: KeyboardEvent): void {
+    if (e.repeat) return;
+    if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') {
+      if (this.canResurrect()) {
+        if (typeof e.preventDefault === 'function') {
+          e.preventDefault();
+        }
+        this.restart();
+      }
+    }
+  }
+
+  private handleCanvasClick(e: MouseEvent): void {
+    if (this.canResurrect()) {
+      if (typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
+      this.restart();
+    }
+  }
+
+  public restart(): void {
+    const wasRunning = this.isRunning;
+    this.stop();
+
+    // 1. Simulation clock & loop state
+    this.elapsedTime = 0;
+    this.killCount = 0;
+    this.isPaused = false;
+    this.isVictory = false;
+    this.pendingLevelUps = 0;
+    this.deathTimer = 0;
+    this.accumulator = 0;
+    this.lastTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
+    // 2. Upgrade modal reset
+    this.upgradeModal.reset();
+
+    // 3. Player entity reset
+    this.player.reset(0, 0);
+
+    // 4. Horde manager & spatial grid reset
+    this.hordeManager.reset();
+
+    // 5. Loot drops purge
+    this.lootManager.reset();
+
+    // 6. Weapons reset (starter Rank 1 Arcane Scythe)
+    this.weaponManager.reset('scythe', 1);
+
+    // 7. Upgrade system reset (starter Rank 1 Arcane Scythe)
+    this.upgradeSystem.reset('weapon_scythe', 1);
+
+    // 8. Wave director reset (Phase 1, 0:00)
+    this.waveDirector.reset();
+
+    // 9. Camera & screen shake zeroing
+    this.camera.reset(0, 0);
+    this.camera.update(0, 0, 0);
+
+    // 10. Particle VFX clear
+    this.vfx.clear();
+
+    // 11. HUD reset
+    this.hud.reset();
+
+    // 12. Input controllers reset
+    this.keyboard.reset();
+    this.touchPad.left = false;
+    this.touchPad.right = false;
+    this.touchPad.up = false;
+    this.touchPad.down = false;
+    this.touchPad.fire = false;
+    this.touchPad.jump = false;
+    this.touchPad.grenade = false;
+
+    // 13. Re-spawn initial perimeter swarm
+    this.spawnInitialSwarm();
+
+    // 14. Restart simulation loop if active or mounted
+    if (wasRunning || !!this.canvas) {
+      this.start();
     }
   }
 
@@ -247,6 +394,32 @@ export class GrimHarvestGame {
   }
 
   public step(dt: number = GrimHarvestGame.FIXED_TIMESTEP): void {
+    if (!this.player.isAlive) {
+      this.deathTimer += dt;
+      const kbSnap = this.keyboard.getSnapshot();
+      if ((kbSnap.jumpPressed || kbSnap.jumpHeld || this.keyboard.jump) && this.canResurrect()) {
+        this.restart();
+        return;
+      }
+      this.vfx.update(dt);
+      this.hud.update(dt, {
+        player: {
+          stats: this.player.stats,
+          level: this.player.level,
+          currentXP: this.player.currentXP,
+          xpToNextLevel: this.player.xpToNextLevel,
+          isAlive: this.player.isAlive,
+          invulnerabilityTimer: this.player.invulnerabilityTimer,
+          weapons: this.upgradeSystem.getWeaponsInventory(),
+          passives: this.upgradeSystem.getPassivesInventory(),
+        },
+        hordeManager: this.hordeManager,
+        elapsedTime: this.elapsedTime,
+        killCount: this.killCount || this.hordeManager.totalKilled,
+      });
+      return;
+    }
+
     this.elapsedTime += dt;
 
     // 1. Player Input
@@ -301,6 +474,7 @@ export class GrimHarvestGame {
       if (enemy && enemy.active && enemy.isAlive) {
         this.player.takeDamage(enemy.damage);
         this.vfx.emitBloodBurst(this.player.position.x, this.player.position.y, 3);
+        this.vfx.emitBloodSplatter(this.player.position.x, this.player.position.y, 4);
       }
     }
 
@@ -342,9 +516,20 @@ export class GrimHarvestGame {
     this.backdrop.render(ctx, camX, camY, this.elapsedTime);
 
     // 2. Ground VFX (Decals, Persistent Spell Circles)
+    this.vfx.renderDecals(ctx, this.camera);
     this.vfx.renderGround(ctx, this.camera);
 
-    // 3. Draw Loot Drops (Soul Gems) via DarkFantasySprites
+    // 3. Contact Drop Shadows (Pre-Entity Grounded Shadows Pass)
+    this.vfx.renderContactDropShadows(
+      ctx,
+      this.camera,
+      this.player,
+      this.hordeManager,
+      this.lootManager,
+      this.elapsedTime
+    );
+
+    // 4. Draw Loot Drops (Soul Gems) via DarkFantasySprites
     const activeLoot = this.lootManager.getActiveItems();
     for (const item of activeLoot) {
       if (!item.isAlive) continue;
@@ -354,7 +539,7 @@ export class GrimHarvestGame {
       DarkFantasySprites.drawLoot(ctx, item, this.camera, this.elapsedTime);
     }
 
-    // 4. Draw Undead Horde Entities via DarkFantasySprites
+    // 5. Draw Undead Horde Entities via DarkFantasySprites
     const activeEnemies = this.hordeManager.getActiveEnemies();
     for (const enemy of activeEnemies) {
       if (!enemy.isAlive) continue;
@@ -364,19 +549,27 @@ export class GrimHarvestGame {
       DarkFantasySprites.drawEnemy(ctx, enemy, this.camera, this.elapsedTime);
     }
 
-    // 5. Draw Player (Dark Sorcerer) via DarkFantasySprites
+    // 6. Draw Player (Dark Sorcerer) via DarkFantasySprites
     DarkFantasySprites.drawPlayer(ctx, this.player, this.camera, this.elapsedTime);
 
-    // 5.5 Draw Occult Weapon Effects (Scythe slashes, Skulls, Lightning, Bone spears, Sigils)
+    // 7. Occult Weapon Effects (Scythe slashes, Skulls, Lightning, Bone spears, Sigils)
     this.weaponManager.render(ctx, this.camera);
 
-    // 6. Air VFX (Flying blood, bone chips, rising soul sparks, spell trails, glints)
+    // 8. Air VFX (Flying blood, bone chips, rising soul sparks, spell trails, glints)
     this.vfx.renderAir(ctx, this.camera);
 
-    // 7. Foreground Atmospheric Mist Pass
+    // 9. Foreground Atmospheric Mist Pass
     this.backdrop.renderForegroundMist(ctx, camX, camY, this.elapsedTime);
 
-    // 8. Gothic HUD Overlay (Cracked Iron Vitality, XP Bar, Timer, Skull Kills, Inventory, Plaque)
+    // 10. Dynamic Lighting Pass (Dual-Pass Offscreen Carving + Additive Bloom)
+    this.vfx.lighting.render(ctx, this.camera, {
+      player: this.player,
+      weaponManager: this.weaponManager,
+      lootManager: this.lootManager,
+      elapsedTime: this.elapsedTime,
+    });
+
+    // 11. Gothic HUD Overlay (Cracked Iron Vitality, XP Bar, Timer, Skull Kills, Inventory, Plaque)
     const hudSnapshot: HUDStateSnapshot = {
       player: {
         stats: this.player.stats,
@@ -394,7 +587,7 @@ export class GrimHarvestGame {
     };
     this.hud.render(ctx, hudSnapshot, GrimHarvestGame.FIXED_TIMESTEP);
 
-    // 9. Gothic Level-Up Card Selection Modal Overlay
+    // 12. Gothic Level-Up Card Selection Modal Overlay
     if (this.upgradeModal.getIsOpen()) {
       this.upgradeModal.render(ctx, w, h);
     }
@@ -403,13 +596,20 @@ export class GrimHarvestGame {
 
 // Auto-bootstrap when loaded in browser
 if (typeof document !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', () => {
+  const bootstrap = () => {
+    if ((window as any).__game) return;
     const container = document.getElementById('game-container') ?? document.body;
     const game = new GrimHarvestGame(container);
     game.start();
     (window as any).__game = game;
     (window as any).__GAME__ = game;
-  });
+  };
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', bootstrap);
+  } else {
+    bootstrap();
+  }
 }
 
 // Backwards compatibility alias for old test suites or imports

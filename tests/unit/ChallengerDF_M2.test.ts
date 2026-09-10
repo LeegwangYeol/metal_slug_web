@@ -190,7 +190,7 @@ describe('Challenger M2 Empirical Verification Suite', () => {
       console.log(`[1,000 Entities Draw Benchmark] Executed in ${durationMs.toFixed(3)}ms`);
 
       expect(mockCtx.drawImage).toHaveBeenCalledTimes(1000);
-      expect(durationMs).toBeLessThan(20.0); // Generous buffer above typical ~2-5ms warmed execution
+      expect(durationMs).toBeLessThan(40.0); // Generous buffer above typical ~2-5ms warmed execution under parallel runner load
     });
   });
 

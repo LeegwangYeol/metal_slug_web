@@ -1,66 +1,63 @@
-# BRIEFING — 2026-09-08T02:47:30Z
+# BRIEFING — 2026-09-10T16:02:00Z
 
 ## Mission
-Conduct comprehensive quality review and adversarial challenge for Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons).
+Perform an independent, adversarial code review and verification of Milestone 2 (DarkFantasySprites rendering system).
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_reviewer
-- Roles: reviewer, critic
+- Archetype: reviewer / critic
+- Roles: High-Reliability Reviewer, reviewer, critic
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M2 (Autonomous Ally NPCs & Diverse Items/Weapons)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 2
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Evidence-based verdicts: APPROVE or REQUEST_CHANGES
-- Check for integrity violations (hardcoded outputs, dummy logic, shortcuts, fabricated logs)
-- Check all M2 review focus requirements
+- Respect system prompt protection & decoy rules
+- Independent adversarial review: detect integrity violations, facade implementations, hardcoding
+- Mandatory reads: ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m2_1/handoff.md
+- Run verification commands independently (`npx vitest run tests/unit/DarkFantasySprites.spec.ts`, `npm test`, `npx tsc --noEmit`)
+- Handoff report in /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/handoff.md
+- Send message to parent with verdict
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: not yet
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-10T15:59:44Z
 
 ## Review Scope
-- **Files to review**: Worker M2 code changes in src/entities/, src/types/, src/events/, tests/
-- **Interface contracts**: PROJECT.md, SCOPE.md, COLLABORATION.md
-- **Review criteria**: Interface contracts, type safety, cross-system integration, test coverage, adversarial robustness
+- **Files to review**: src/render/sprites/DarkFantasySprites.ts, tests/unit/DarkFantasySprites.spec.ts, and related files
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md
+- **Review criteria**: Headless node / browser fallback safety, directional flipping, damage flash mask generation, composite operations hygiene, integrity, test coverage, TypeScript safety
+
+## Key Decisions Made
+- Confirmed zero integrity violations: no hardcoded outputs, no facade implementations, genuine procedural vector artwork across all 5 entities.
+- Confirmed headless fallback safety: `safeLinearGradient`, `safeRadialGradient`, and `safeBezierCurveTo` cleanly handle null/missing gradient APIs without throwing.
+- Confirmed directional flipping symmetry around center origin (dims.ox, dims.oy) preventing sprite displacement or canvas clipping.
+- Confirmed damage flash masking with synchronized silhouette geometry across normal, white, and crimson states.
+- Confirmed composite operations hygiene: all 'lighter' blocks restore and explicitly reset to 'source-over'.
+- Verified test suite: 22/22 in `DarkFantasySprites.spec.ts`, 269/269 in `npm test`, 0 errors in `npx tsc --noEmit`, clean production build in `npm run build`.
+- Verdict: APPROVE.
+
+## Artifact Index
+- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/DISPATCH.md — task input record
+- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/BRIEFING.md — situational awareness
+- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/progress.md — liveness heartbeat
+- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/handoff.md — review report
 
 ## Review Checklist
 - **Items reviewed**:
-  - `src/core/entities/pow/PowEntity.ts` & `src/core/entities/pow/PrisonerEntity.ts`
-  - `src/core/entities/allies/AllyNPC.ts`, `AllyKiBlast.ts`, `AllyManager.ts`
-  - `src/core/entities/items/ItemPickup.ts`
-  - `src/core/weapons/ShotgunWeapon.ts`, `LaserGunWeapon.ts`, `RocketLauncherWeapon.ts`
-  - `src/core/player/PlayerController.ts` & `WeaponManager.ts`
-  - `src/render/sprites/ProceduralSpriteFactory.ts` (164 baseline keys invariant)
-  - Full test suite: 30 test files, 373 tests
+  - `src/render/sprites/DarkFantasySprites.ts` (1,753 lines)
+  - `tests/unit/DarkFantasySprites.spec.ts` (546 lines)
+  - `tests/unit/DarkFantasySprites.test.ts`
+  - `tests/unit/ChallengerM2_2.test.ts`
 - **Verdict**: APPROVE
-- **Unverified claims**: None. All claims independently verified.
+- **Unverified claims**: none; all independently verified via CLI and code inspection
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - 164 sprite key cache invariant regression: Passed (164 keys verified)
-  - Shotgun 7-pellet spread cone and kinetic knockback: Passed
-  - Laser continuous piercing beam and 0.1s tick immunity: Passed
-  - Rocket launcher accelerating homing and 48px explosive AOE: Passed
-  - Shield 2-hit damage absorption and medkit overheal to extra lives: Passed
-  - Prisoner alias and spawnsAlly event dispatch: Passed
-  - Full suite TypeScript build and vitest regression checks: Passed (373/373 green)
-- **Vulnerabilities found**:
-  - Minor: `AllyNPC.findBestTarget` substring match `typeStr.includes('BOSS')` matches `MID_BOSS` before checking `MID_BOSS_VEHICLE`, though both have higher priority than standard minions.
-  - Minor: `PowEntity.spawnsAlly` triggers `spawn_ally` event on both `freeHostage` / state change and `markSaved`. Recommend latching `hasSpawnedAlly`.
-- **Untested angles**:
-  - Playwright visual presentation with canvas rendering for crates/allies (deferred to M3/M4 E2E).
-
-## Key Decisions Made
-- Confirmed zero integrity violations across all changes.
-- Validated that `ProceduralSpriteFactory.getAllKeys()` default call strictly returns 164 keys.
-- Confirmed 100% green pass rate across all 30 unit test suites (373/373 tests passed).
-- Final Verdict: APPROVE.
-
-## Artifact Index
-- DISPATCH.md — Incoming dispatch record
-- BRIEFING.md — Situational awareness
-- progress.md — Liveness heartbeat
-- handoff.md — Final review report
+  - Headless node / missing gradient API crash? Defended by safeLinearGradient / safeRadialGradient fallbacks.
+  - Scale(-1, 1) clipping or displacement? Defended by center-origin translation (dims.ox, dims.oy).
+  - Unbounded cache map growth? Defended by modulo 4 indexing and 120 canonical permutations.
+  - GlobalCompositeOperation leakage? Defended by save/restore + explicit 'source-over' resets.
+- **Vulnerabilities found**: none
+- **Untested angles**: none remaining within Milestone 2 scope

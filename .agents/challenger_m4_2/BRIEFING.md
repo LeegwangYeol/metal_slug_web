@@ -1,54 +1,56 @@
-# BRIEFING — 2026-09-10T02:12:30Z
+# BRIEFING — 2026-09-10T19:05:00Z
 
 ## Mission
-Adversarially stress-test full project regression invariants and test suites (Vitest, Playwright, tsc, vite build).
+Adversarially verify the 15-second survival loop and visual buffer fidelity for Milestone 4 (m4_2).
 
 ## 🔒 My Identity
 - Archetype: challenger
 - Roles: critic, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2
-- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Milestone: M4
-- Instance: 2 of 2
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: m4_2
+- Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Run all verification code yourself; do NOT trust claims or logs
-- Empirical challenger: must execute tests directly to verify regressions/pass rates
-- Never place source code or tests into .agents/
+- Run all verification code and tests ourselves; do not trust claims or logs blindly
+- Empirically verify 15-second survival loop, kinematic safety of 8-way steering bot, XP/gem mechanics, and visual screenshot buffer fidelity
 
 ## Current Parent
-- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Updated: not yet
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-10T19:05:00Z
 
 ## Review Scope
-- **Files to review**: Vitest unit test suite, Playwright E2E test suite, TypeScript config and build scripts
-- **Interface contracts**: /Users/user/teamwork_projects/metal_slug_web/PROJECT.md, COLLABORATION.md, ORIGINAL_REQUEST.md, .agents/worker_m4_e2e_artifacts/handoff.md
-- **Review criteria**: 100% pass across Vitest (42 files / 596 tests), Playwright E2E (6 spec files / 33 tests), tsc --noEmit, npm run build
-
-## Key Decisions Made
-- Executed empirical test suites across Vitest and Playwright.
-- Validated cold-start behavior of preview server in Playwright and confirmed 100% pass rate (33/33 tests green).
-- Stress-tested Vitest with multi-worker parallelism; 42/42 files and 596/596 tests passed in 2.65s.
-- Inspected generated visual artifacts (`screen_terrain.png`, `respawn_tutorial.png`, `continue_countdown.png`) — confirmed valid 960x540 PNGs, vibrant art, charming chibi proportions, clear HUD, and informative tutorial overlay.
-- Verdict: APPROVE.
-
-## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2/DISPATCH.md — Incoming dispatch
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2/BRIEFING.md — Situational awareness
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2/progress.md — Liveness heartbeat
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2/handoff.md — Final verdict report
+- **Files to review**:
+  - ORIGINAL_REQUEST.md
+  - COLLABORATION.md
+  - PROJECT.md
+  - .agents/worker_m4_2/handoff.md
+  - tests/e2e/restart_survival.spec.ts
+  - artifacts/dark_fantasy/*.png
+- **Interface contracts**: PROJECT.md
+- **Review criteria**: Kinematic safety, 15-second survival, auto-firing & XP/gem drop mechanics, visual screenshot buffer fidelity (960x540, non-blank, color histogram)
 
 ## Attack Surface
 - **Hypotheses tested**:
-  1. Did M1/M2/M3 level overhaul break any of the 42 Vitest test files or 596 unit tests? -> FALSE. All 596 tests pass cleanly.
-  2. Does the Playwright E2E browser suite suffer from race conditions or cold-start preview server failures? -> Analyzed initial webServer startup timing; subsequent cold runs pass 100% (33/33 tests).
-  3. Does parallel thread execution introduce race conditions or memory corruption? -> FALSE. Stress-tested with multi-thread pool; 596/596 passed.
-  4. Are the visual overhaul artifacts fake or empty? -> FALSE. Directly inspected PNGs: valid 960x540 dimensions, proper magic bytes, >27KB size each.
+  - H1: Dynamic steering bot may get cornered or take lethal burst damage during Phase 1 waves -> Rejected. Bot maintained min HP 45.31 across 15+ seconds.
+  - H2: Weapons may fail to engage or slash buffers leak in memory -> Rejected. 29 kills registered, active slashes cleanly expired to 0.
+  - H3: Soul gems may accumulate without collection causing entity pool leak -> Rejected. 100% of drops picked up, LootManager pool capacity strictly conserved at 1,500.
+  - H4: Screenshots may be blank, solid black, corrupted, or undersized -> Rejected. Valid PNGs, exact 960x540, 203KB-336KB (>50KB threshold), 7k-53k unique colors, active 16/16 histogram bins.
 - **Vulnerabilities found**:
-  - Initial cold-start of Playwright webServer can experience a transient connection race if Vite preview takes >50ms to bind, but Playwright automatically recovers / subsequent runs succeed. No functional bug in game code.
+  - None in core game engine or restart lifecycle. All invariants preserved.
 - **Untested angles**:
-  - Git push to origin/main and live Vercel deployment (reserved for M5).
+  - Survival beyond 60+ seconds (covered in general horde tests).
 
 ## Loaded Skills
-- None specified in dispatch
+- None requested
+
+## Key Decisions Made
+- Executed empirical Python PNG scanline & histogram analyzer on all 3 visual proof artifacts.
+- Executed Playwright adversarial stress harness testing kinematic safety, weapon engagement, gem drops, and zero-leak pool invariants.
+- Verdict: APPROVE.
+
+## Artifact Index
+- handoff.md — Final challenger evaluation and verdict (APPROVE)
+- progress.md — Liveness and task execution log
+- tests/e2e/challenger_m4_2_stress.spec.ts — Adversarial stress test harness

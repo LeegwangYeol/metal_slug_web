@@ -1,20 +1,29 @@
-## 2026-09-08T02:31:49Z
-You are a Reviewer subagent (teamwork_preview_reviewer) for Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+## 2026-09-10T15:59:44Z
+You are reviewer_m2_1 (role: High-Reliability Reviewer).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Worker Handoff: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md
 
-REVIEW FOCUS:
-Review the code changes made in `src/core/entities/allies/AllyNPC.ts`, `src/core/weapons/RocketLauncherWeapon.ts`, `src/core/entities/items/ItemPickup.ts`, `src/core/entities/pow/PowEntity.ts`, `src/core/entities/pow/PrisonerEntity.ts`, and test files.
-1. Check code quality, robustness, correct physics kinematics, and absence of regressions.
-2. Run `npx tsc --noEmit` and `npx vitest run tests/unit/allies_system.test.ts tests/unit/diverse_weapons_items.test.ts tests/unit/pow_system.test.ts`.
-3. Provide an explicit verdict: APPROVE or REQUEST_CHANGES.
-4. Write your full review to:
-/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1/handoff.md
-5. Send a message to parent with your verdict and brief summary.
+Review Mission:
+Evaluate Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul):
+1. Examine code in `src/render/sprites/DarkFantasySprites.ts` and `tests/unit/DarkFantasySprites.spec.ts`.
+2. Verify visual fidelity elevation across all 5 archetypes:
+   - Player (Grim Sorcerer): Hooded cowl, layered flowing robes with crimson borders, ethereal bone scythe with purple runes, glowing eyes.
+   - Skeleton: Weathered ivory bone gradients, anatomic ribs, deep orbits with crimson ember pinpoints, skull fractures, rusted iron blade.
+   - Ghoul: Feral quadruped prowl, necrotic rotting flesh gradients, pulsating boils with specular highlights, bone talons, needle fangs with toxic bile.
+   - Banshee: Translucent spectral apparition, weeping veil, additive blending.
+   - Death Knight: Heavy obsidian plate armor, horned helm, gold/blood filigree, runic greatsword.
+3. Verify atlas caching invariants (120 cached canvases, zero heap allocations at runtime).
+4. Run verification commands:
+   - `npx vitest run tests/unit/DarkFantasySprites.spec.ts`
+   - `npm test`
+   - `npx tsc --noEmit`
+
+Write your comprehensive evaluation in `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1/handoff.md`.
+Explicitly state your verdict as either `APPROVE` or `REQUEST_CHANGES`.
+When complete, send a message to orchestrator with your verdict.

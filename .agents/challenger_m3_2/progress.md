@@ -1,17 +1,18 @@
 # Progress — challenger_m3_2
 
-Last visited: 2026-09-10T01:58:00Z
-Status: COMPLETED
+Last visited: 2026-09-11T03:35:30Z
+Status: COMPLETED (REQUEST_CHANGES)
 
 ## Steps
-- [x] Step 1: Record dispatch message
-- [x] Step 2: Read mandatory context (ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker handoff)
-- [x] Step 3: Create BRIEFING.md and progress.md
-- [x] Step 4: Investigate codebase implementations for KeyboardController, HUDOverlay, main.ts, PlayerController
-- [x] Step 5: Adversarial Challenge 1: Tutorial toggle edge-latching (KeyH repeat/hold behavior) -> PASS (0 oscillations across 200 hold frames, 0 state flips across 120 game ticks)
-- [x] Step 6: Adversarial Challenge 2: Tutorial alpha fade math (extreme dt, NaN, negative opacity, bounds) -> PASS (strict [0.0, 1.0] clamp, smooth 1.0s fade)
-- [x] Step 7: Adversarial Challenge 3: HUD glyph lookup, unknown glyphs fallback, text measurement -> PASS ('/', '[', ']', '*', '★' confirmed; graceful space fallback for Hangul, emojis, symbols)
-- [x] Step 8: Adversarial Challenge 4: HUD rendering performance and CanvasRenderer stress -> PASS (16,366 FPS, 0.061ms/frame, balanced save/restore symmetry)
-- [x] Step 9: Regression Verification: Run full Vitest suite (578/578 verified initially; 595/596 with peer challenger suite)
-- [x] Step 10: Regression Verification: Run Playwright E2E suites (29/29 passing across gameplay_controls, ultimate_and_crisis_expansion, etc.)
-- [x] Step 11: Document empirical findings, write handoff.md with explicit APPROVE verdict, notify parent.
+- [x] Step 1: Record dispatch message in `DISPATCH.md`
+- [x] Step 2: Read mandatory files (`ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`, `worker_m3_2/handoff.md`)
+- [x] Step 3: Initialize `BRIEFING.md` and preserve append-only 🔒 sections
+- [x] Step 4: Investigate codebase implementations (`main.ts`, `DarkFantasyVFX.ts`, `DarkFantasySprites.ts`, `LootManager.ts`, `Enemy.ts`, `WaveDirector.ts`)
+- [x] Step 5: Adversarial Challenge 1: Verify `GrimHarvestGame.restart()` clears decals, particles, ground runes, and lighting state -> PASS
+- [x] Step 6: Adversarial Challenge 2: Verify Drop Shadow Scaling across Player, Enemies, Gems -> FAIL (Found Bug 1: Enemy type lowercase casing mismatch; Found Bug 2: Gem/Chest `item.type` vs `item.dropType` mismatch)
+- [x] Step 7: Adversarial Challenge 3: Verify Banshee floating shadow modulation -> FAIL (Found Bug 3: Radius and opacity have opposing gradients with respect to displacement)
+- [x] Step 8: Adversarial Challenge 4: Verify Lighting Buffer viewport dimensions and blitting cleanliness -> PASS
+- [x] Step 9: Regression Verification: Run unit test suite (336/336 vitest tests passing) and Playwright E2E tests
+- [x] Step 10: Build Verification: `npm run build` / `tsc -b` -> FAIL (Found Bug 4: TS6133 errors in peer test file)
+- [x] Step 11: Document empirical findings in `handoff.md` with explicit `REQUEST_CHANGES` verdict
+- [x] Step 12: Send message to orchestrator with verdict and action items

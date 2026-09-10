@@ -1,4 +1,4 @@
-# BRIEFING — 2026-09-11T00:00:27+09:00
+# BRIEFING — 2026-09-11T00:03:45+09:00
 
 ## Mission
 Milestone M5: Full Suite Pre-Flight Verification, Update PROJECT.md milestones, Git Commit and Push to origin/main, and Production/Vercel Verification for "Grim Harvest: Undead Siege".
@@ -24,26 +24,31 @@ Milestone M5: Full Suite Pre-Flight Verification, Update PROJECT.md milestones, 
 
 ## Current Parent
 - Conversation ID: 6bab7276-2b23-4494-b27b-d0a93584d82f
-- Updated: 2026-09-11T00:00:27+09:00
+- Updated: 2026-09-11T00:03:45+09:00
 
 ## Task Summary
-- **What to build**: Verification, Milestone documentation update, Git commit & push, Vercel deployment verification
-- **Success criteria**: 0 TS errors, 100% passing unit & E2E tests, clean production build, valid screenshot artifacts, git push succeeded, Vercel production verified
+- **What to build**: Full pre-flight verification, milestone updates, git commit & push, Vercel verification
+- **Success criteria**: 100% completed and verified
 - **Interface contracts**: /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
 - **Code layout**: /Users/user/teamwork_projects/metal_slug_web/PROJECT.md § Code Layout
 
 ## Key Decisions Made
-- [TBD]
+- Confirmed git commit hash `f77f1c783d9f1f2337977991a36331d307b159f8`
+- Confirmed Vercel production deployment `dpl_AffYY6XYZpqLxYUbYrSAeJonq2p8` is `● Ready`
+- Confirmed live URL `https://metal-slug-web-lovat.vercel.app` loads canvas with 0 errors
 
 ## Change Tracker
-- **Files modified**: None yet
-- **Build status**: Pending verification
+- **Files modified**: `PROJECT.md`, `COLLABORATION.md`
+- **Build status**: PASS (`tsc --noEmit`, `npm test` 210/210, `npm run build`, `npm run test:e2e` 9/9)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: Pending verification
-- **Lint status**: 0 errors expected
-- **Tests added/modified**: Verification only
+- **Build/test result**: 100% green
+- **Lint status**: 0 errors
+- **Tests added/modified**: All verified
 
 ## Artifact Index
-- handoff.md — Final handoff report
+- `.agents/worker_df_m5_deploy/handoff.md` — Final handoff report
+- `artifacts/dark_fantasy/horde_swarm.png` — 290,520 bytes
+- `artifacts/dark_fantasy/level_up_modal.png` — 217,461 bytes
+- `artifacts/dark_fantasy/survival_gameplay.png` — 371,118 bytes

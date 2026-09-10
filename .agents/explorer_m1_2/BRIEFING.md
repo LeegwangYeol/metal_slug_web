@@ -1,49 +1,56 @@
-# BRIEFING — 2026-09-04T01:50:50+09:00
+# BRIEFING — 2026-09-10T15:32:00Z
 
 ## Mission
-Investigate the Boss and Crisis Engine architecture, contract conformance, bounds collapse, platform removal, hazard spawning, and telegraphed attacks for Milestone 1.
+Investigate Milestone 1 (Restart State Engine & Lifecycle Architecture) with focus on Player, HordeManager, SpatialHashGrid, and LootManager reset mechanics.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: investigation, synthesis
+- Roles: Codebase Researcher / Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2
-- Original parent: f3526e56-fca6-4e0a-9a39-1b1c3f42580e
-- Milestone: M1_2 (Boss and Crisis Engine architecture)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 1 - Restart State Engine & Lifecycle Architecture
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Only write within /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2/
-- Follow Handoff Protocol (5 sections in handoff.md)
+- Do NOT modify source code files
+- Recommend concrete fix and implementation strategies
+- Communicate all reports/results to parent via send_message
+- Follow 5-Component Handoff Protocol in handoff.md
 
 ## Current Parent
-- Conversation ID: f3526e56-fca6-4e0a-9a39-1b1c3f42580e
-- Updated: not yet
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-10T15:32:00Z
 
 ## Investigation State
 - **Explored paths**:
-  - ORIGINAL_REQUEST.md and PROJECT.md
-  - src/core/entities/boss/CrisisEventManager.ts
-  - src/core/entities/boss/IronNokanaBoss.ts
-  - src/core/entities/boss/EnvironmentalHazard.ts
-  - src/core/entities/boss/BossTypes.ts
-  - src/core/engine/GameEngine.ts
-  - src/core/engine/StageManager.ts
-  - src/core/player/PlayerController.ts
-  - tests/unit/boss_crisis_events.test.ts
-  - tests/unit/iron_nokana_boss.test.ts
-  - tests/unit/challenger_2_empirical_stress.test.ts
+  - `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`
+  - `src/core/entities/Player.ts`
+  - `src/core/player/PlayerStats.ts`, `src/core/progression/PlayerProgression.ts`
+  - `src/core/HordeManager.ts`
+  - `src/core/entities/Enemy.ts`, `src/core/entities/EnemyTypes.ts`
+  - `src/core/SpatialHashGrid.ts`
+  - `src/core/systems/LootManager.ts`
+  - `src/core/weapons/WeaponManager.ts`, `src/core/systems/UpgradeSystem.ts`
+  - `src/core/systems/WaveDirector.ts`
+  - `src/core/engine/GameEngine.ts`
+  - `src/render/Camera.ts`, `src/render/vfx/DarkFantasyVFX.ts`
+  - `src/ui/GothicHUD.ts`, `src/ui/UpgradeModal.ts`
+  - `src/main.ts`
+  - `tests/unit/*.ts` and `tests/e2e/*.ts`
 - **Key findings**:
-  - `CrisisEventManager`, `IronNokanaBoss`, and `EnvironmentalHazard` interfaces align well with `PROJECT.md` specifications.
-  - Three critical compilation / execution defects identified:
-    1. Missing module import `InputManager` and nonexistent helper `createPlatform` in `boss_crisis_events.test.ts`.
-    2. Premature telegraph state in `IronNokanaBoss.transitionToPhase2()` causing `boss_flame_telegraph` test to fail.
-    3. Severe contract conflict between burst clamping in `IronNokanaBoss.takeDamage()` (clamping at 300 HP in Phase 1) and test assertions in `boss_crisis_events.test.ts` (lines 77, 91, 162, 188, 211) and `iron_nokana_boss.test.ts` (line 178).
-    4. Player health respawn logic in `PlayerController.takeDamage()` breaks `expect(player.health).toBeLessThan(initialHealth)` in hazard collision test.
-- **Unexplored areas**: None. All core contracts, files, and edge cases investigated.
+  1. `Player.ts` lacks any `reset()` method; `progression.reset()` resets XP but leaves listeners intact; mutated stats persist unless re-initialized.
+  2. `HordeManager.ts` current `clear()` calls `despawn()`, which increments `totalKilled++` during cleanup and fails to reset `totalSpawned` and `totalKilled` to 0. Shuffled freeIndices and dirty entity state linger.
+  3. `SpatialHashGrid.ts` `clear()` clears buckets (`cellHeads` and `entityNext` to -1), but leaves `entityX` and `entityY` caches un-zeroed.
+  4. `LootManager.ts` `clear()` recycles active items but does not reset `nextId`, leaves kinematic properties dirty on pooled items, and does not enforce strict pool size invariants.
+  5. `GrimHarvestGame` in `main.ts` completely lacks `restart()`, has no Spacebar/Click listener for resurrection, and duplicate RAF loops explode accumulators if re-instantiated.
+- **Unexplored areas**: None within Milestone 1 scope; all 4 target systems and their lifecycle caller have been thoroughly mapped.
 
 ## Key Decisions Made
-- Reconciled burst clamping design with existing `TetsuyukiBoss` and `challenger_2_empirical_stress.test.ts` precedents.
-- Formulated concrete remediation plan for Worker M1.
+- Recommend in-place `reset()` methods on `Player`, `HordeManager`, `SpatialHashGrid`, and `LootManager`.
+- In-place reset preserves object references across `WeaponManager`, `UpgradeSystem`, and HUD, eliminating stale pointer and listener re-wiring hazards.
+- Specify exact implementation of `GrimHarvestGame.restart()` with clean RAF teardown, clock reset, modal closure, initial swarm respawn, and resurrection event listeners.
 
 ## Artifact Index
-- handoff.md — Comprehensive M1 Boss and Crisis investigation report
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2/DISPATCH.md — Incoming mission dispatch log
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2/progress.md — Progress log and liveness heartbeat
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2/handoff.md — Final 5-component handoff report

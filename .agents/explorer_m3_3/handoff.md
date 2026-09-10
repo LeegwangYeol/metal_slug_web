@@ -1,947 +1,348 @@
-# Milestone M3 Investigation & Specification Report: Ultimate Move System, Audio Synthesis & Comprehensive Unit Test Suite
+# Milestone 3 Exploration & Architectural Blueprint: Dynamic Lighting, Rich VFX & Atmospheric Polish
 
-**Author**: Explorer Subagent `teamwork_preview_explorer` (`explorer_m3_3`)  
-**Target Milestone**: M3 (Ultimate Move System & Procedural Sprites / Cinematic FX)  
-**Date**: 2026-09-08  
-**Project Root**: `/Users/user/teamwork_projects/metal_slug_web`  
-**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3`  
-**Status**: COMPLETE (Read-Only Investigation & Test Architecture Design)
+**Investigator**: explorer_m3_3 (Codebase Researcher / Explorer)  
+**Date**: 2026-09-10T16:15:00Z  
+**Target Subsystems**:
+1. `src/render/vfx/DarkFantasyVFX.ts` (Particle System & Arcane Effects Engine)
+2. `src/render/GothicBackdrop.ts` (Multi-Layer Atmospheric Mist & Parallax Pipeline)
+3. `tests/unit/DarkFantasyVFX.spec.ts` (Comprehensive Vitest Specification & Empirical Verification Suite)
 
 ---
 
 ## 1. Observation
 
-### 1.1 SoundEngine.ts Web Audio Graph & AudioTypes.ts
-Direct inspection of `src/audio/SoundEngine.ts` and `src/audio/AudioTypes.ts` revealed:
+### 1.1 Existing Codebase State & Current Implementations
 
-1. **Audio Graph Hierarchy** (`SoundEngine.ts` lines 86–98):
-   ```ts
-   // Master audio graph
-   this.masterGain = this.ctx.createGain();
-   this.masterGain.gain.setValueAtTime(this.isMutedState ? 0 : this.masterVolume, this.ctx.currentTime);
-   this.masterGain.connect(this.ctx.destination);
+1. **`DarkFantasyVFX.ts` (`src/render/vfx/DarkFantasyVFX.ts:11-42, 63-93, 156-188, 470-593`)**:
+   - **Data Structures**:
+     - `ParticleType` is restricted to 7 types:
+       `'BLOOD_DROPLET' | 'BONE_CHIP' | 'SOUL_SPARK' | 'GHOUL_BILE' | 'SPELL_TRAIL' | 'SPELL_CIRCLE' | 'GEM_GLINT'` (lines 11–18).
+     - `Particle` interface (lines 20–42) includes `id, active, type, x, y, vx, vy, drag, gravity, life, maxLife, startSize, endSize, size, color, startAlpha, endAlpha, alpha, rotation, vRot, extra`.
+   - **Allocation & Pooling**:
+     - Constructor defaults to `capacity = 500` pre-allocated particle objects in `this.pool`, paired with `freeIndices: Int32Array`, `activeIndices: Int32Array`, and `indexInActive: Int32Array` (lines 56–93).
+     - `allocateParticle()` uses swap-and-pop from `freeIndices` (lines 103–125). When saturated, it currently returns `this.pool[this.activeIndices[0]]` without re-ordering `activeIndices` or cycling the active array.
+   - **Motion Integration (`update(dt)`)**:
+     - Standard Euler integration with drag: `vx *= Math.pow(drag, dt * 60)`, `vy *= Math.pow(drag, dt * 60)`, `vy += gravity * dt` (lines 169–173).
+     - `SOUL_SPARK` only exhibits simple 1D X-axis oscillation:
+       `p.vx += Math.sin(p.life * 12.0 + p.extra) * 15.0 * dt;` (lines 175–177). It lacks true 2D orbital/swirling drift.
+   - **Dual-Layer Rendering**:
+     - `renderGround(ctx, camera)` (lines 470–514): Renders only `SPELL_CIRCLE`. It draws a basic 5-pointed star and single outer ring.
+     - `renderAir(ctx, camera)` (lines 516–593): Renders all non-circle particles. All drawing uses default `source-over` composite operation. There is **zero additive blending** (`ctx.globalCompositeOperation = 'lighter'`), causing soul motes, sparks, and spell trails to appear as flat opaque shapes rather than luminous spiritual energy.
+     - `BLOOD_DROPLET` is rendered as a simple uniform circle (`ctx.arc(sx, sy, s, 0, Math.PI * 2)`) (lines 543–546), completely lacking velocity-based elongation, directional spraying, or viscous blood pooling.
+     - `BONE_CHIP` is rendered as a simple solid rectangle (`ctx.fillRect(-s / 2, -s / 2, s, s * 0.6)`) (lines 553), with no 3D tumbling projection, marrow detailing, or geometry variation.
+     - There is **no branching lightning arc emitter** in `DarkFantasyVFX.ts`.
 
-   this.sfxGain = this.ctx.createGain();
-   this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
-   this.sfxGain.connect(this.masterGain);
+2. **Weapon Integration Gaps (`src/core/weapons/AbyssalLightning.ts` & `src/core/weapons/CursedAura.ts`)**:
+   - `AbyssalLightning.ts:27-32, 282-288, 301-305`:
+     - Implements an internal `activeBolts: ActiveBolt[]` array that dynamically instantiates heap objects via `this.activeBolts.push(...)` and churns memory via `this.activeBolts.splice(i, 1)`.
+     - In `createBoltVisual()` (lines 256–288), bolts are straight line-segments jittered along a single perpendicular vector. There are **zero recursive branching forks**, **zero child branches**, and **no cyan-to-purple dissipation timeline**.
+   - `CursedAura.ts:169-176, 210-227`:
+     - Dynamically pushes pulse rings to `activeRings: ActiveRing[]`.
+     - Renders a plain single circle with `ctx.arc(...)`. There are no inscribed occult glyphs, radial rune spokes, or shockwave expansion effects.
+   - `main.ts:160-192`:
+     - On player level-up (`this.player.progression.onLevelUp(...)`), the game pauses and opens `UpgradeModal`, but does **not** trigger any occult ascension rune or ritual VFX on the ground.
 
-   this.voiceGain = this.ctx.createGain();
-   this.voiceGain.gain.setValueAtTime(this.voiceVolume, this.ctx.currentTime);
-   this.voiceGain.connect(this.masterGain);
-   ```
+3. **Atmospheric Mist in `GothicBackdrop.ts` (`src/render/GothicBackdrop.ts:335-354, 482-530`)**:
+   - **Surface Generation (`createMistSurface`)**:
+     - Pre-renders 24 radial gradient circles onto a single `mistCanvas` (1024x540) using `PRECOMPUTED_TRANSLUCENCIES.mistBase` and `mistUpper` (lines 340–353).
+   - **Render Pass**:
+     - Layer 6 (Background rolling mist, lines 482–504) draws `mistCanvas` at Parallax 0.40 and Parallax 0.65. Sub-layer B applies a rigid vertical translation `Math.sin(elapsedTime * 0.5) * 15` to the entire canvas. This produces a rigid sliding sheet effect rather than organic undulating waves.
+     - `renderForegroundMist(ctx, camX, _camY, elapsedTime)` (lines 513–529):
+       - Draws `mistCanvas` at Parallax 0.85 across the screen at `y = 0`.
+       - **Direct Defect**: `_camY` is marked as unused and completely ignored! When the player moves vertically across the cursed graveyard arena, the foreground mist fails to track vertical camera movement, breaking atmospheric immersion.
 
-2. **Noise Generators & Distortion Curve** (`SoundEngine.ts` lines 110–163):
-   - `whiteNoiseBuffer`: 2-second buffer populated with `Math.random() * 2 - 1`.
-   - `pinkNoiseBuffer`: 2-second buffer generated via Paul Kellet's 7-pole IIR filter algorithm (`b0`..`b6`).
-   - `brownNoiseBuffer`: 2-second buffer generated via a leaky integrator (`lastOut + 0.02 * white) / 1.02 * 3.5`.
-   - `distortionCurve`: 512-point `Float32Array` implementing `Math.tanh(3.2 * x)` for arcade warmth.
-
-3. **Active Voice Limiting** (`SoundEngine.ts` lines 44–45, 291–307):
-   - `maxActiveVoices = 32`.
-   - `canPlaySFX()` enforces checks on AudioContext state, mute, and active voice ceiling.
-   - `registerVoiceNode(node, duration)` auto-disconnects nodes and decrements voice count via `setTimeout(duration * 1000 + 50)`.
-
-4. **Current Sound Methods & Types**:
-   - `AudioTypes.ts` lines 5–17 define `SoundEffectType`:
-     `'PISTOL' | 'HEAVY_MACHINE_GUN' | 'FLAME_SHOT' | 'GRENADE_LAUNCH' | 'GRENADE_BOUNCE' | 'EXPLOSION' | 'KNIFE_SLASH' | 'BULLET_HIT' | 'ITEM_PICKUP' | 'SOLDIER_DEATH_STANDARD' | 'SOLDIER_DEATH_EXPLOSION' | 'SOLDIER_DEATH_FIRE'`
-   - `SoundEngine.ts` currently implements: `playPistol`, `playHeavyMachineGun`, `playFlameShot`, `playGrenadeLaunch`, `playGrenadeBounce`, `playExplosion(isLarge)`, `playKnifeSlash`, `playBulletHit(isFlesh)`, `playItemPickup`, `playSoldierDeath(type)`.
-   - **Gap Observed**: There are currently **NO** procedural routines in `SoundEngine.ts` for:
-     - Air-raid siren (`playUltimateSiren` / `playAirRaidSiren`)
-     - Heavy bomber flyover roar (`playFlyoverRoar` / `playBomberFlyover`)
-     - Apocalyptic detonation shockwave (`playApocalypticBlast` / `playScreenDetonation`)
-     - Nor are there methods for `playHydraulicHiss`, `playKiBlast`, `playShotgun`, `playLaser`, `playRocketThrust`.
-
-### 1.2 Input System & Key Mapping
-Inspection of `src/input/KeyboardController.ts` lines 64–93 revealed:
-```ts
-private readonly codeMap: Record<string, KeyAction> = {
-  // Movement / Aiming: WASD & Arrows
-  ...
-  // Jump: Space, KeyK, KeyX
-  Space: 'jump',
-  KeyK: 'jump',
-  KeyX: 'jump',
-
-  // Fire: KeyJ, KeyZ
-  KeyJ: 'fire',
-  KeyZ: 'fire',
-
-  // Grenade: KeyL, KeyC
-  KeyL: 'grenade',
-  KeyC: 'grenade',
-  ...
-};
-```
-- **Crucial Input Finding**: `KeyX` is already mapped to `'jump'`. Remapping `KeyX` would break existing jump controls and fail jump test suites (e.g. `adversarial_controls_jump.test.ts`). Therefore, **`KeyU` is strictly the dedicated Ultimate Move input key**, matching `PROJECT.md` line 23 (`Dedicated trigger on KeyU`).
-
-### 1.3 Viewport Geometry & Spatial Query Mechanics
-Inspection of `src/render/Camera.ts` lines 240–248 and `src/core/engine/StageManager.ts` lines 89–95:
-```ts
-public isVisible(box: AABB): boolean {
-  const viewBounds: AABB = {
-    x: this.renderX,
-    y: this.renderY,
-    width: this.viewportWidth,   // default 480
-    height: this.viewportHeight, // default 270
-  };
-  return BoundingBox.intersects(box, viewBounds);
-}
-```
-- `viewportWidth = 480`, `viewportHeight = 270`.
-- In headless simulation (`GameEngine`), the active camera viewport is defined by `x: cameraX`, `y: 0`, `width: 480`, `height: 270`.
-- Spatial queries can be performed deterministically by querying `engine.getAllEntities()` or `engine.spatialGrid.query(viewAABB)`.
-
-### 1.4 Baseline Test Suites & 164 Sprite Key Invariant
-1. Verification of baseline test suite via `npx vitest run`:
-   - **Result**: `31 passed (31)`, `389 passed (389)`, duration 3.94s.
-   - Clean TypeScript check via `npx tsc --noEmit`: 0 errors.
-2. Invariant verification in `tests/unit/adversarial_sprites_crosshairs.test.ts` lines 162–199:
-   - `it('EMPIRICAL CATEGORY AUDIT 1E: Verifies all major sprite key categories are populated and sum to exactly 164')`
-   - `expect(allKeys.length).toBe(164);`
-   - `ProceduralSpriteFactory.ts` lines 402–407:
-     ```ts
-     public getAllKeys(includePolish: boolean = false): string[] {
-       if (includePolish) {
-         return Array.from(this.spriteCache.keys());
-       }
-       return Array.from(this.spriteCache.keys()).filter((k) => !this.polishKeys.has(k));
-     }
-     ```
-   - **Strict Constraint**: Default call `factory.getAllKeys()` MUST return exactly 164 keys. Any expansion sprites added in M3 must be isolated in `expansionKeys: Set<string>` and filtered out when `includeExpansion = false`!
+4. **Testing Environment & Existing Invariants**:
+   - All 24 test suites (285 unit tests) are currently 100% green (`npm test` passes in 3.42s).
+   - `tests/unit/DarkFantasyVFX.test.ts` contains 11 baseline tests verifying 500-slot initialization, free/active counts, and dual-layer culling.
+   - `tests/unit/ChallengerM2_2.test.ts` (lines 10–148) enforces strict pool invariants:
+     - `activeCount + freeCount === 500` across 15,000 cycles.
+     - 100% object identity preservation (zero new objects instantiated).
+     - Heap growth strictly bounded (< 10MB).
+     - Strict 1:1 balance between `ctx.save()` and `ctx.restore()`.
 
 ---
 
 ## 2. Logic Chain
 
-### 2.1 Web Audio Procedural Synthesis Architecture for Ultimate Move
-To emulate arcade tactical airstrikes and cataclysmic super moves without external WAV/MP3 files, Web Audio synthesis must be designed with three distinct acoustic stages:
+### 2.1 Overhaul Architecture for `DarkFantasyVFX.ts`
 
-1. **Air-Raid Warning Siren (`playUltimateSiren()` / `playAirRaidSiren()`)**:
-   - **Acoustic Function**: Signals the immediate time-freeze / tactical alert at Phase 1 activation.
-   - **Synthesis Chain**:
-     - Dual detuned Sawtooth/Triangle Oscillators (`osc1` at 480Hz -> 840Hz, `osc2` at 484Hz -> 848Hz) creating natural acoustic beating.
-     - Cyclic pitch sweep: Frequency ramps between 480Hz and 880Hz over 0.5s via `linearRampToValueAtTime`.
-     - Resonant Bandpass Biquad Filter (`type = 'bandpass'`, `freq = 720Hz`, `Q = 3.0`) imparting the metallic horn resonance of a mechanical civil defense siren.
-     - Gain envelope: Quick 0.08s attack, steady hold for 0.35s, smooth exponential decay to 0.001 at 0.6s.
+From Observation 1.1 and 1.2, elevating `DarkFantasyVFX` to AAA dark-fantasy visual fidelity requires 4 targeted architectural upgrades while preserving strict $O(1)$ zero-garbage pool invariants:
 
-2. **Heavy Bomber Flyover Roar (`playFlyoverRoar()` / `playBomberFlyover()`)**:
-   - **Acoustic Function**: Accompanies the visual strike pass (Heavy Bomber or Metal Slug SV-001 streak crossing the sky in Phase 2).
-   - **Synthesis Chain**:
-     - Swept Brownian Noise Buffer (`brownNoiseBuffer` -> Biquad lowpass filter).
-     - Doppler frequency sweep: Filter cutoff ramps from 180Hz up to 620Hz at midpoint (t + 0.35s), then down to 140Hz as the aircraft recedes.
-     - Turbine Drone: Dual low sawtooth oscillators (72Hz and 144Hz) passed through `WaveShaper` non-linear distortion (`distortionCurve`) to reproduce heavy twin-propeller air displacement.
-     - White noise high-pass hiss (`hp = 3500Hz`) at low amplitude for high-speed wind shearing.
-     - Total duration: 0.8s.
+#### A. Branching Abyssal Lightning Arcs (`LIGHTNING_SEGMENT` / Recursive Subdivided Forks)
+1. **Algorithmic Midpoint Displacement with Probabilistic Forking**:
+   - Let strike origin be $(x_1, y_1)$ and target impact be $(x_2, y_2)$.
+   - Subdivide recursively down to depth $D = 3$:
+     - Compute midpoint $(mx, my) = \left(\frac{x_1 + x_2}{2}, \frac{y_1 + y_2}{2}\right)$.
+     - Compute perpendicular unit normal: $\hat{n} = \left(-\frac{\Delta y}{L}, \frac{\Delta x}{L}\right)$ where $L = \sqrt{\Delta x^2 + \Delta y^2} \lor 1$.
+     - Displace midpoint: $\vec{m}' = \vec{m} + \hat{n} \cdot (\text{random}() - 0.5) \cdot L \cdot 0.35 \cdot (0.75^{\text{depth}})$.
+     - At depth 1 and 2, evaluate branch probability $P_{\text{branch}} = 0.40$:
+       If triggered, spawn a child fork shooting outward at angle $\theta_{\text{fork}} = \text{atan2}(\Delta y, \Delta x) \pm (25^\circ \dots 40^\circ)$ with length $L_{\text{fork}} = L \cdot (0.45 \dots 0.65)$.
+   - Each resulting segment is allocated from the pre-allocated particle pool as a `LIGHTNING_SEGMENT`.
+2. **Particle Representation**:
+   - `p.type = 'LIGHTNING_SEGMENT'`.
+   - `p.x = segX1, p.y = segY1`, `p.vx = segX2 - segX1, p.vy = segY2 - segY1`.
+   - `p.size` = line width (trunk: 3.5px, primary fork: 2.2px, secondary fork: 1.4px).
+   - `p.extra` = branch level (0 for main trunk, 1 for primary fork, 2 for secondary fork).
+   - `p.maxLife` = 0.16s – 0.22s.
+3. **Cyan-to-Purple Dissipation Timeline**:
+   - Let progress $\tau = \text{life} / \text{maxLife} \in [0, 1]$.
+   - $\tau \in [0.0, 0.25]$: Blinding incandescent core (`#ffffff` / `#e6fffa`) enclosed by intense electric cyan corona (`#4fd1c5` / `#38b2ac`, `shadowBlur: 12`, `shadowColor: '#4fd1c5'`).
+   - $\tau \in [0.25, 0.65]$: Core transitions into crackling violet current (`#b794f6` / `#9f7aea`).
+   - $\tau \in [0.65, 1.0]$: Corona dissipates into faint abyssal purple ether (`rgba(112, 56, 184, alpha)`) with terminal spark motes popping at fork ends.
 
-3. **Apocalyptic Screen Detonation (`playApocalypticBlast()` / `playScreenDetonation()`)**:
-   - **Acoustic Function**: Cataclysmic multi-stage sonic shockwave for Phase 3 minion wipe and boss burst damage.
-   - **Synthesis Chain**:
-     - **Stage 1 (Initial Hypersonic Crack)**: Bandpass-filtered white noise transient (3200Hz -> 600Hz, 0.04s, sharp 1.0 gain impulse).
-     - **Stage 2 (Massive Resonant Explosion Body)**: Pink/Brown noise through swept lowpass filter (3800Hz down to 45Hz with high resonance `Q = 4.2`), sustaining heavy explosive pressure over 2.2s.
-     - **Stage 3 (Seismic Sub-Bass Wave)**: Deep sine oscillator sweeping from 140Hz down to 22Hz through `distortionCurve`, generating ground-rumbling bass that physically translates the screen shake.
-     - **Stage 4 (Debris/Reverb Tail)**: Bandpass pink noise (1200Hz, Q=2.0) decaying exponentially to 0.001 over 2.4s.
+#### B. Swirling Necrotic Soul Motes (`SOUL_SPARK` / Ethereal Kinematics & Additive Blending)
+1. **Multi-Harmonic 2D Sinusoidal Drift**:
+   - Replace the simplistic 1D X-oscillation with dual-frequency Lissajous swirl and ethereal buoyancy:
+     $$\frac{dx}{dt} = v_x \cdot \text{drag} + A_x \cos(\omega_x \cdot t + \phi) + B_x \sin(2\omega_x \cdot t)$$
+     $$\frac{dy}{dt} = v_y \cdot \text{drag} + g_{\text{inv}} + A_y \sin(\omega_y \cdot t + \phi)$$
+     where $g_{\text{inv}} = -32\text{ px/s}^2$ (inverted gravity / soul levitation), $\omega_x = 7.5\text{ rad/s}$, $\omega_y = 5.0\text{ rad/s}$, and amplitudes $A_x = 24\text{ px/s}, A_y = 12\text{ px/s}$.
+2. **Soft Additive Blending (`lighter`) Pass**:
+   - In `renderAir()`, partition luminous particles (`SOUL_SPARK`, `SPELL_TRAIL`, `GEM_GLINT`, `LIGHTNING_SEGMENT`):
+     ```typescript
+     ctx.save();
+     ctx.globalCompositeOperation = 'lighter';
+     // Render soft radial halos and glowing white cores
+     ctx.restore(); // Automatically restores 'source-over'
+     ```
+   - Each soul mote renders a soft outer halo (radius $s$, alpha $0.5 \cdot \alpha$, color `#48bb78` or `#9f7aea`) and a blazing inner pinpoint core (radius $0.35 \cdot s$, alpha $\alpha$, color `#f0fff4`). Overlapping motes additively sum into blazing spiritual vortexes.
 
-4. **Additional Expansion Sound Methods**:
-   - `playHydraulicHiss()`: White noise bandpass sweep (1600Hz -> 650Hz, 0.22s) for mechanical boss/vehicle limbs.
-   - `playKiBlast()`: Resonant triangle chirp (1100Hz down to 280Hz) + highpass sizzle for Hyakutaro Ichimonji's Ki blast.
-   - `playShotgun()`: Heavy punch transient (240Hz -> 45Hz) + wideband pink noise explosion (0.28s).
-   - `playLaser()`: High square wave pulse (980Hz -> 1850Hz) + continuous 4kHz bandpass sizzle.
-   - `playRocketThrust()`: Accelerating brown noise whoosh (120Hz -> 380Hz) + sub-drone.
+#### C. Visceral Blood Particles & 3D Tumbling Bone Shards
+1. **Enemy Impact vs Catastrophic Death Gore**:
+   - *Impact (`emitBloodImpact`)*:
+     - Directional spray cone aligned with weapon trajectory: $\theta_{\text{base}} = \text{atan2}(dirY, dirX) \pm 0.35\text{ rad}$.
+     - Count: 4–6 high-velocity droplets ($120-220\text{ px/s}$).
+     - Elongated droplet rendering: Aligned with velocity vector $\theta = \text{atan2}(v_y, v_x)$, length $L = s \cdot (1 + \text{speed} / 120)$. Rendered as viscous teardrops with arterial crimson `#9b111e` to `#e53e3e`.
+   - *Death (`emitDeathGore`)*:
+     - Catastrophic 360-degree radial blast: 14–20 blood droplets + 8–12 bone chips + 6 soul motes.
+     - Parabolic downward trajectory ($g = 180\text{ px/s}^2$) so droplets splatter toward the ground.
+2. **Bone Shard 3D Tumbling Projection**:
+   - Fragment archetypes: Splinter slivers, curved rib shards, and irregular vertebra chunks.
+   - Tumbling 3D illusion: Modulate horizontal width by cosine of tumble phase:
+     $$W(t) = s \cdot |\cos(p.\text{rotation} \cdot 1.8)| + 1.0,\quad H(t) = s \cdot (0.45 + 0.3 \cdot |\sin(p.\text{rotation})|)$$
+   - Ground bounce: When shard reaches ground level or progress $> 0.7$, reflect vertical velocity: $v_y = -v_y \cdot 0.35$, simulating bone fragments clattering onto flagstones.
 
-### 2.2 UltimateManager Architecture & State Machine
-Decoupled simulation class `src/core/player/UltimateManager.ts`:
-- **State Enum**:
-  ```ts
-  export enum UltimatePhase {
-    READY = 'READY',
-    FREEZE = 'FREEZE',
-    STRIKE_PASS = 'STRIKE_PASS',
-    DETONATION = 'DETONATION',
-    RECOVERY = 'RECOVERY',
-  }
-  ```
-- **Timeline & Timings (60Hz Ticks)**:
-  - `Phase 1: FREEZE` (0.50s / 30 ticks):
-    - `isSimulationFrozen = true`.
-    - Input to player locomotion is suppressed.
-    - Emits `ultimate_freeze_started` and `play_sound: sfx_ultimate_siren`.
-    - Screen tint/flash begins ramping up.
-  - `Phase 2: STRIKE_PASS` (0.60s / 36 ticks):
-    - Bomber / SV-001 streak traverses screen from `cameraX - 80` to `cameraX + 560`.
-    - `flyoverProgress` advances monotonically from 0.0 to 1.0.
-    - Emits `ultimate_strike_pass` and `play_sound: sfx_flyover_roar`.
-  - `Phase 3: DETONATION` (0.40s / 24 ticks):
-    - White/orange apocalyptic screen flash (`flashAlpha = 1.0`).
-    - Violent screen shake emitted (`screen_shake: { amplitude: 18, durationFrames: 24 }`).
-    - Emits `ultimate_detonation` and `play_sound: sfx_apocalyptic_blast`.
-    - **Screen-Wipe Spatial Resolution**:
-      - Viewport box = `[cameraX, 0, 480, 270]`.
-      - Eliminates 100% of standard living minions within viewport.
-      - Deals exactly 120 HP burst damage to bosses within viewport.
-      - Vaporizes all hostile enemy projectiles on screen (`ENEMY_BULLET`, `ENEMY_GRENADE`, `HOMING_MISSILE`, `ARTILLERY_SHELL`).
-      - Preserves 100% of off-screen minions.
-      - Zero friendly fire against `PLAYER`, `ALLY_NPC`, or `POW`.
-  - `Phase 4: RECOVERY` (0.30s / 18 ticks):
-    - Flash decays to 0, smoke particles dissipate.
-    - Timers wind down.
-  - `Completion`:
-    - Transitions back to `READY`.
-    - `isSimulationFrozen = false`, normal movement and weapon controls restored.
-    - Total sequence duration: 1.80s (108 ticks).
+#### D. Occult Glowing Rune Circles (Level-Up Ascension & Sigil Shockwaves)
+1. **Level-Up Occult Ascension Seal (`emitLevelUpRune(x, y)` / `SPELL_CIRCLE` with mode)**:
+   - Centered on the player during level-up pauses ($R = 72\text{px}$, duration $2.4\text{s}$).
+   - 4-tiered sacred ceremonial geometry:
+     - *Tier 1*: Outer binding ring with 12 radial archaic rune hashes along perimeter.
+     - *Tier 2*: Clockwise rotating ring ($\omega = +1.2\text{ rad/s}$) carrying 8 runic node medallions.
+     - *Tier 3*: Counter-clockwise rotating inner heptagram ($\omega = -1.6\text{ rad/s}$) with illuminated celestial intersections.
+     - *Tier 4*: Central pulsing eye of the void breathing with $r = 14 + 4\sin(t \cdot 7)$.
+   - Emits an ascending ethereal ring of 12 rising soul motes spiraling upwards from the circle perimeter.
+2. **Ultimate / Sigil Activation Shockwave (`emitSigilShockwave(x, y, maxRadius)` / `emitUltimateRune`)**:
+   - Rapid explosive expansion: $r(t) = r_{\max} \cdot \left(1 - (1 - \tau)^3\right)$ where $\tau = t / 0.35$.
+   - Heavy outer shockwave ring ($4\text{px}$ stroke) in blinding cyan/crimson with blooming glow (`shadowBlur: 14`).
+   - 8-directional occult spikes projecting outward from the perimeter.
+   - Spawns a ring of crackling electric sparks along the expanding circumference.
 
-### 2.3 Stock & Cooldown Governance
-- `stock: number`: Initialized to 1 (configurable, max 3).
-- Trigger check: `canTrigger()` returns `true` ONLY IF `stock > 0 && phase === UltimatePhase.READY`.
-- On successful trigger:
-  - `stock--` (e.g. 1 -> 0).
-  - Subsequent press with 0 stock returns `false`.
-  - Pressing while in `FREEZE`, `STRIKE_PASS`, `DETONATION`, or `RECOVERY` returns `false`.
-- Stock acquisition: `addStock(amount = 1)` allows replenishing stock from POW rescues or score milestones.
+---
 
-### 2.4 Viewport Spatial Query Invariant
-To ensure mathematical precision between on-screen elimination and off-screen preservation:
-- An entity is defined as on-screen if and only if:
-  `BoundingBox.intersects(entity.bounds, viewAABB)`
-  where `viewAABB = { x: cameraX, y: 0, width: 480, height: 270 }`.
-- Entities with `x >= cameraX + 480` or `x + width <= cameraX` are strictly outside viewport and must receive 0 damage.
+### 2.2 Atmospheric Depth Mist Architecture in `GothicBackdrop.ts`
+
+From Observation 1.3, mist must provide genuine 3D volumetric depth and multi-frequency undulation:
+
+1. **3-Layer Depth Mist Separation**:
+   - **Layer 1: Low Creeping Graveyard Ground Mist (Midground, Parallax 0.40)**:
+     - Hugs the flagstones and tombstones below horde entities.
+     - Slow horizontal drift: $V_x = +18\text{ px/s}$.
+     - Base opacity $\alpha = 0.20$.
+   - **Layer 2: Undulating Graveyard Midground Mist (Mid-to-Fore, Parallax 0.65)**:
+     - Weaves between horde entities and player with counter-current drift: $V_x = -26\text{ px/s}$.
+     - True vertical multi-harmonic undulation:
+       $$Y_{\text{undulate}}(x, t) = 14 \cdot \sin(0.0035 x + 1.2 t) + 8 \cdot \cos(0.007 x - 0.7 t)$$
+     - Sliced strip blitting (10–12 vertical strips of width $96\text{px}$) ensures undulating displacement at $< 0.10\text{ms}$ execution cost.
+   - **Layer 3: Cinematic Foreground Depth Mist (Foreground, Parallax 1.15)**:
+     - Rendered in `renderForegroundMist()` after all entities and particles.
+     - Full 2D camera tracking:
+       $$\text{startX} = -((((camX \cdot 1.15 + t \cdot 38.0) \pmod W) + W) \pmod W)$$
+       $$\text{startY} = -((((camY \cdot 0.35 + 10 \cdot \sin(t \cdot 0.6)) \pmod H) + H) \pmod H)$$
+     - Solves the $camY$ defect. Soft billows ($\alpha = 0.08$) provide optical depth without obscuring combat.
+
+2. **360-Degree Seamless Wrapping Guarantee**:
+   - Loop bounds evaluated across `x < vw + W` and `y < vh + H` guarantee zero gaps across any camera coordinate $[-10000, 10000]$.
+
+---
+
+### 2.3 Comprehensive Vitest Test Suite Architecture (`tests/unit/DarkFantasyVFX.spec.ts`)
+
+To ensure complete verification, `tests/unit/DarkFantasyVFX.spec.ts` must be structured into 8 exhaustive test suites:
+
+| Suite | Focus Area | Key Assertions & Thresholds |
+| :--- | :--- | :--- |
+| **Suite 1** | **Pool Pre-allocation & Invariants** | Strict count conservation (`active + free === capacity`), 25,000 churn cycles, 100% object identity preservation (0 heap allocations). |
+| **Suite 2** | **Saturation & FIFO Cycling** | 200% burst load clamping, safe oldest particle displacement, zero array growth. |
+| **Suite 3** | **Decal Cycling & Alpha Decay** | Bounded ring buffer, monotonic alpha decay ($\alpha \ge 0$, no negative underflow), off-screen frustum culling. |
+| **Suite 4** | **Branching Abyssal Lightning** | Jagged recursive subdivision, branch length/width scaling, cyan-to-purple dissipation timeline, terminal spark generation. |
+| **Suite 5** | **Swirling Soul Motes & Additive Blending** | 2D multi-harmonic sinusoidal drift, upward ethereal lift ($vy < 0$), `globalCompositeOperation = 'lighter'`, strict restoration to `'source-over'`. |
+| **Suite 6** | **Impact & Death Gore System** | Directional elongated blood spray on impact vs 360-degree burst on death, 3D bone tumbling illusion ($|\cos(\text{rot})|$), ground bounce. |
+| **Suite 7** | **Occult Runes (Level-Up & Sigil)** | Multi-tiered level-up seal with counter-rotating geometry, expanding sigil shockwave with radial spikes, viewport culling. |
+| **Suite 8** | **Numerical Hygiene & State Hygiene** | Zero NaNs across extreme fuzzing ($dt = 0, dt = 10$, negative coords, zero normals), 1:1 `save`/`restore` balance, zero shadow leaks. |
 
 ---
 
 ## 3. Caveats
 
-1. **AudioContext Mocking in Vitest/Node**:
-   - Web Audio `AudioContext` is a browser DOM API. In Node test environments (`vitest`), `typeof window === 'undefined'` or `window.AudioContext` is undefined unless polyfilled/mocked.
-   - Test suites must verify audio triggers via the decoupled `engine.eventBus.on('play_sound')` pattern or by providing a lightweight mock `AudioContext` with `createOscillator`, `createGain`, `createBiquadFilter`, and `createBufferSource`.
-
-2. **Boss Gating Mechanics (Iron Nokana & Mid-Boss)**:
-   - Heavy bosses like `IronNokanaBoss` possess health gates (e.g. Phase 1 gate at 75% / 300 HP). If an Iron Nokana has 400 HP, a 120 HP burst would mathematically yield 280 HP, but the boss's internal health gate clamps it to 300 HP and transitions to Phase 2.
-   - The test must assert that the boss either took 120 damage OR was reduced to its gate threshold (300 HP), advancing its phase cleanly without bypassing phase logic.
-
-3. **Input Key Disambiguation**:
-   - `KeyX` cannot be used as the ultimate key because it is mapped to `'jump'` in `KeyboardController.ts`. Only `KeyU` (and virtual button `button_ultimate`) should be wired to trigger the Ultimate Move.
-
-4. **164 Baseline Sprite Key Invariant**:
-   - When adding new visual sprites for M3 (airstrike bomber, bomb drop, shockwave ring, hazard reticles, crates), the Worker MUST add them to `private expansionKeys: Set<string>` in `ProceduralSpriteFactory.ts` and ensure `getAllKeys(false, false)` filters them out, leaving the count at exactly 164.
+1. **Particle Pool Capacity Backward Compatibility**:
+   - Existing tests (`DarkFantasyVFX.test.ts` and `ChallengerM2_2.test.ts`) instantiate `new DarkFantasyVFX(500)` and assert `capacity === 500`.
+   - The constructor **must** continue to accept `capacity: number = 500` as default, allowing `main.ts` or higher-capacity environments to pass `1000` while keeping all legacy tests green.
+2. **Canvas Composite State Leaks**:
+   - Using `ctx.globalCompositeOperation = 'lighter'` for soul motes and lightning must be wrapped inside `ctx.save()` / `ctx.restore()` or explicitly reset to `'source-over'`. Failure to reset would cause HUD or entity rendering to bleed additively.
+3. **Decal System Coordination with Peer Agent (explorer_m3_2)**:
+   - `explorer_m3_2` is focusing on the ground decal system (blood pools, blast marks).
+   - `DarkFantasyVFX` should provide clean ground particle hooks (`SPELL_CIRCLE`, ground blood droplets, scorch markers) that seamlessly interface with or complement the dedicated decal manager without duplicate rendering passes.
+4. **Headless / Node.js Mock Fidelity**:
+   - In headless test runs (`vitest`), Canvas 2D is mocked via stub objects. All drawing routines in `DarkFantasyVFX.ts` and `GothicBackdrop.ts` must safely execute without crashing when gradient or composite methods return stub objects.
 
 ---
 
-## 4. Conclusion & Concrete Implementation Blueprints
+## 4. Conclusion & Concrete Code Specifications
 
-### 4.1 Required Additions to `src/audio/AudioTypes.ts`
-```ts
-// In SoundEffectType union:
-export type SoundEffectType =
-  | 'PISTOL'
-  | 'HEAVY_MACHINE_GUN'
-  | 'FLAME_SHOT'
-  | 'GRENADE_LAUNCH'
-  | 'GRENADE_BOUNCE'
-  | 'EXPLOSION'
-  | 'KNIFE_SLASH'
-  | 'BULLET_HIT'
-  | 'ITEM_PICKUP'
-  | 'SOLDIER_DEATH_STANDARD'
-  | 'SOLDIER_DEATH_EXPLOSION'
-  | 'SOLDIER_DEATH_FIRE'
-  // Milestone M3 Expansion SFX:
-  | 'ULTIMATE_SIREN'
-  | 'FLYOVER_ROAR'
-  | 'APOCALYPTIC_BLAST'
-  | 'HYDRAULIC_HISS'
-  | 'KI_BLAST'
-  | 'SHOTGUN'
-  | 'LASER'
-  | 'ROCKET_THRUST';
+### 4.1 Proposed Upgraded `DarkFantasyVFX.ts` Interface & Implementation Blueprint
 
-// In ISoundEngine interface:
-export interface ISoundEngine {
-  ...
-  playUltimateSiren(): void;
-  playFlyoverRoar(): void;
-  playApocalypticBlast(): void;
-  playHydraulicHiss?(): void;
-  playKiBlast?(): void;
-  playShotgun?(): void;
-  playLaser?(): void;
-  playRocketThrust?(): void;
+The following complete TypeScript specification defines the exact signatures, algorithms, and rendering passes to be implemented in `src/render/vfx/DarkFantasyVFX.ts`:
+
+```typescript
+export type ParticleType =
+  | 'BLOOD_DROPLET'
+  | 'BONE_CHIP'
+  | 'SOUL_SPARK'
+  | 'GHOUL_BILE'
+  | 'SPELL_TRAIL'
+  | 'SPELL_CIRCLE'
+  | 'GEM_GLINT'
+  | 'LIGHTNING_SEGMENT'
+  | 'OCCULT_SEAL';
+
+export interface Particle {
+  id: number;
+  active: boolean;
+  type: ParticleType;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  drag: number;
+  gravity: number;
+  life: number;
+  maxLife: number;
+  startSize: number;
+  endSize: number;
+  size: number;
+  color: string;
+  startAlpha: number;
+  endAlpha: number;
+  alpha: number;
+  rotation: number;
+  vRot: number;
+  extra: number; // Fork level for lightning, archetype for bone, mode for rune
 }
 ```
 
-### 4.2 Required Additions to `src/audio/SoundEngine.ts`
-```ts
-  /**
-   * Ultimate Move SFX 1: Air-Raid Siren (Phase 1 Freeze)
-   * Dual oscillating tone with metallic bandpass resonance.
-   */
-  public playUltimateSiren(): void {
-    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
-    const t = this.ctx.currentTime;
-    const duration = 0.55;
+#### Emitter Enhancements:
+1. **`emitLightningArc(x1, y1, x2, y2, isEvolution = false, color?: string)`**:
+   - Executes recursive midpoint subdivision up to depth 3 with 35% fork probability.
+   - Allocates `LIGHTNING_SEGMENT` particles storing `vx = x2 - x1, vy = y2 - y1`.
+   - Core glow rendered with white core + cyan/violet corona.
+2. **`emitSoulBurst(x, y, gemType, count = 6, swirlSpeed = 1.0)`**:
+   - Initializes motes with randomized orbital phases `extra = Math.random() * Math.PI * 2`.
+   - `update(dt)` applies multi-harmonic drift:
+     ```typescript
+     p.vx += (Math.cos(p.life * 7.5 + p.extra) * 24.0 - p.vx * 0.1) * dt;
+     p.vy += (Math.sin(p.life * 5.0 + p.extra) * 12.0 - 32.0) * dt;
+     ```
+3. **`emitBloodImpact(x, y, dirX, dirY, count = 4)` vs `emitDeathGore(x, y, gemType)`**:
+   - `emitBloodImpact`: Directional spray along $(\text{dirX}, \text{dirY})$, high drag ($0.88$), elongated teardrop rendering.
+   - `emitDeathGore`: Full 360-degree visceral blast combining arterial blood droplets, tumbling bone chips (using 3 distinct geometric archetypes), and rising soul sparks.
+4. **`emitLevelUpRune(x, y, radius = 72, duration = 2.4)` & `emitSigilShockwave(x, y, maxRadius = 180)`**:
+   - `emitLevelUpRune`: Spawns multi-tier ceremonial occult seal with dual counter-rotating geometry and spiraling ascending perimeter sparks.
+   - `emitSigilShockwave`: Spawns rapidly expanding shockwave ring ($10\text{px} \to 180\text{px}$) with radial spikes and crackling electric perimeter sparks.
 
-    // Dual detuned sawtooth oscillators
-    const osc1 = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-
-    osc1.type = 'sawtooth';
-    osc2.type = 'sawtooth';
-
-    // Pitch sweep: 480Hz -> 880Hz -> 480Hz
-    osc1.frequency.setValueAtTime(480, t);
-    osc1.frequency.linearRampToValueAtTime(880, t + 0.25);
-    osc1.frequency.linearRampToValueAtTime(480, t + duration);
-
-    osc2.frequency.setValueAtTime(484, t);
-    osc2.frequency.linearRampToValueAtTime(884, t + 0.25);
-    osc2.frequency.linearRampToValueAtTime(484, t + duration);
-
-    // Resonant horn filter
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(720, t);
-    filter.Q.setValueAtTime(3.0, t);
-
-    gain.gain.setValueAtTime(0.01, t);
-    gain.gain.linearRampToValueAtTime(0.82, t + 0.08);
-    gain.gain.setValueAtTime(0.82, t + 0.38);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-    osc1.connect(filter);
-    osc2.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.sfxGain);
-
-    osc1.start(t);
-    osc2.start(t);
-    osc1.stop(t + duration);
-    osc2.stop(t + duration);
-    this.registerVoiceNode(gain, duration);
-  }
-
-  /**
-   * Ultimate Move SFX 2: Heavy Bomber Flyover Roar (Phase 2 Strike Pass)
-   * Swept Brownian noise + low turbine drone with Doppler pitch shift.
-   */
-  public playFlyoverRoar(): void {
-    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
-    const t = this.ctx.currentTime;
-    const duration = 0.75;
-
-    // Brownian Noise through Doppler Filter
-    if (this.brownNoiseBuffer) {
-      const noise = this.ctx.createBufferSource();
-      const lp = this.ctx.createBiquadFilter();
-      const noiseGain = this.ctx.createGain();
-
-      noise.buffer = this.brownNoiseBuffer;
-      lp.type = 'lowpass';
-      lp.frequency.setValueAtTime(220, t);
-      lp.frequency.exponentialRampToValueAtTime(700, t + 0.35); // Approach
-      lp.frequency.exponentialRampToValueAtTime(140, t + duration); // Recede
-
-      noiseGain.gain.setValueAtTime(0.05, t);
-      noiseGain.gain.linearRampToValueAtTime(0.9, t + 0.35);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-      noise.connect(lp);
-      lp.connect(noiseGain);
-      noiseGain.connect(this.sfxGain);
-
-      noise.start(t);
-      noise.stop(t + duration);
-      this.registerVoiceNode(noiseGain, duration);
-    }
-
-    // Heavy Twin-Turbine Drone
-    const drone = this.ctx.createOscillator();
-    const droneGain = this.ctx.createGain();
-    drone.type = 'sawtooth';
-    drone.frequency.setValueAtTime(74, t);
-    drone.frequency.linearRampToValueAtTime(96, t + 0.35);
-    drone.frequency.linearRampToValueAtTime(58, t + duration);
-
-    droneGain.gain.setValueAtTime(0.01, t);
-    droneGain.gain.linearRampToValueAtTime(0.7, t + 0.35);
-    droneGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-    drone.connect(droneGain);
-    droneGain.connect(this.sfxGain);
-
-    drone.start(t);
-    drone.stop(t + duration);
-    this.registerVoiceNode(droneGain, duration);
-  }
-
-  /**
-   * Ultimate Move SFX 3: Apocalyptic Detonation Shockwave (Phase 3 Detonation)
-   * Multi-stage cataclysmic blast: transient crack, pink noise roar, seismic sub-bass rumble.
-   */
-  public playApocalypticBlast(): void {
-    if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;
-    const t = this.ctx.currentTime;
-    const duration = 2.4;
-
-    // 1. Hypersonic Crack Transient
-    if (this.whiteNoiseBuffer) {
-      const crack = this.ctx.createBufferSource();
-      const bp = this.ctx.createBiquadFilter();
-      const cGain = this.ctx.createGain();
-
-      crack.buffer = this.whiteNoiseBuffer;
-      bp.type = 'bandpass';
-      bp.frequency.setValueAtTime(3200, t);
-      bp.frequency.exponentialRampToValueAtTime(500, t + 0.05);
-      bp.Q.setValueAtTime(3.5, t);
-
-      cGain.gain.setValueAtTime(1.0, t);
-      cGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-
-      crack.connect(bp);
-      bp.connect(cGain);
-      cGain.connect(this.sfxGain);
-
-      crack.start(t);
-      crack.stop(t + 0.06);
-      this.registerVoiceNode(cGain, 0.06);
-    }
-
-    // 2. Heavy Resonant Pink/Brown Explosion Body
-    if (this.pinkNoiseBuffer) {
-      const blast = this.ctx.createBufferSource();
-      const lp = this.ctx.createBiquadFilter();
-      const bGain = this.ctx.createGain();
-
-      blast.buffer = this.pinkNoiseBuffer;
-      lp.type = 'lowpass';
-      lp.frequency.setValueAtTime(4000, t);
-      lp.frequency.exponentialRampToValueAtTime(40, t + duration);
-      lp.Q.setValueAtTime(4.2, t);
-
-      bGain.gain.setValueAtTime(1.0, t);
-      bGain.gain.setValueAtTime(0.95, t + 0.15);
-      bGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-      blast.connect(lp);
-      lp.connect(bGain);
-      bGain.connect(this.sfxGain);
-
-      blast.start(t);
-      blast.stop(t + duration);
-      this.registerVoiceNode(bGain, duration);
-    }
-
-    // 3. Ground-Shaking Seismic Sub-Bass (140Hz -> 20Hz)
-    const sub = this.ctx.createOscillator();
-    const shaper = this.ctx.createWaveShaper();
-    const subGain = this.ctx.createGain();
-
-    sub.type = 'sine';
-    sub.frequency.setValueAtTime(140, t);
-    sub.frequency.exponentialRampToValueAtTime(20, t + 1.2);
-
-    if (this.distortionCurve) {
-      shaper.curve = this.distortionCurve;
-    }
-
-    subGain.gain.setValueAtTime(1.0, t);
-    subGain.gain.exponentialRampToValueAtTime(0.001, t + 1.35);
-
-    sub.connect(shaper);
-    shaper.connect(subGain);
-    subGain.connect(this.sfxGain);
-
-    sub.start(t);
-    sub.stop(t + 1.35);
-    this.registerVoiceNode(subGain, 1.35);
-  }
-```
+#### Render Hygiene:
+- `renderGround`: Renders `SPELL_CIRCLE` and `OCCULT_SEAL` with balanced `save()`/`restore()`.
+- `renderAir`: Renders flying gore and groups luminous particles (`SOUL_SPARK`, `LIGHTNING_SEGMENT`, `SPELL_TRAIL`, `GEM_GLINT`) within an additive `ctx.globalCompositeOperation = 'lighter'` block, strictly resetting to `'source-over'`.
 
 ---
 
-### 4.3 Complete Specification for `tests/unit/ultimate_move_system.test.ts`
-Below is the full, exhaustive unit test suite designed for the Worker to implement directly at `tests/unit/ultimate_move_system.test.ts`.
-
-```ts
-import { describe, it, expect, beforeEach } from 'vitest';
-import { GameEngine, GameEntity } from '../../src/core/engine/GameEngine';
-import { Vector2D, vec2 } from '../../src/core/math/Vector2D';
-import { createAABB, BoundingBox } from '../../src/core/physics/AABB';
-import { PlayerController } from '../../src/core/player/PlayerController';
-import { KeyboardController } from '../../src/input/KeyboardController';
-import { UltimateManager, UltimatePhase } from '../../src/core/player/UltimateManager';
-import { SoldierEnemy } from '../../src/core/entities/enemies/SoldierEnemy';
-import { MidBossVehicle } from '../../src/core/entities/enemies/MidBossVehicle';
-import { IronNokanaBoss } from '../../src/core/entities/boss/IronNokanaBoss';
-import { TetsuyukiBoss } from '../../src/core/entities/boss/TetsuyukiBoss';
-import { AllyNPC } from '../../src/core/entities/allies/AllyNPC';
-import { AllyKiBlast } from '../../src/core/entities/allies/AllyKiBlast';
-import { PowEntity } from '../../src/core/entities/pow/PowEntity';
-import { ProceduralSpriteFactory } from '../../src/render/sprites/ProceduralSpriteFactory';
-import { SoundEngine } from '../../src/audio/SoundEngine';
-
-describe('Milestone M3: Ultimate Move System & Unit Test Specifications', () => {
-  let engine: GameEngine;
-  let player: PlayerController;
-  let ultimateManager: UltimateManager;
-  let keyboard: KeyboardController;
-
-  const viewport = { x: 0, y: 0, width: 480, height: 270 };
-
-  beforeEach(() => {
-    engine = new GameEngine();
-    engine.start();
-    engine.addPlatform({
-      id: 'ground',
-      type: 'SOLID',
-      bounds: createAABB(0, 220, 2000, 50),
-    });
-
-    player = new PlayerController(vec2(100, 200));
-    engine.addEntity(player);
-
-    ultimateManager = new UltimateManager({
-      initialStock: 1,
-      maxStock: 3,
-      freezeDuration: 0.5,
-      strikeDuration: 0.6,
-      detonationDuration: 0.4,
-      recoveryDuration: 0.3,
-      bossDamage: 120,
-    });
-    keyboard = new KeyboardController();
-  });
-
-  // =========================================================================
-  // SUITE 1: Dedicated KeyU Input & Stock / Cooldown Management
-  // =========================================================================
-  describe('1. Dedicated KeyU Input & Stock Management', () => {
-    it('KeyboardController maps KeyU to ultimate action and edge-triggered snapshot', () => {
-      expect(keyboard.codeMap['KeyU']).toBe('ultimate');
-
-      keyboard.handleKeyDown(new KeyboardEvent('keydown', { code: 'KeyU' }));
-      expect(keyboard.ultimate).toBe(true);
-
-      const snap = keyboard.getSnapshot();
-      expect(snap.ultimatePressed).toBe(true);
-
-      // Edge trigger resets on next frame
-      const snap2 = keyboard.getSnapshot();
-      expect(snap2.ultimatePressed).toBe(false);
-    });
-
-    it('initializes with stock = 1 and phase = READY', () => {
-      expect(ultimateManager.stock).toBe(1);
-      expect(ultimateManager.phase).toBe(UltimatePhase.READY);
-      expect(ultimateManager.canTrigger()).toBe(true);
-      expect(ultimateManager.isSimulationFrozen).toBe(false);
-    });
-
-    it('triggers successfully with stock > 0, decrements stock, and transitions to FREEZE', () => {
-      const activated = ultimateManager.trigger(engine);
-      expect(activated).toBe(true);
-      expect(ultimateManager.stock).toBe(0);
-      expect(ultimateManager.phase).toBe(UltimatePhase.FREEZE);
-      expect(ultimateManager.isSimulationFrozen).toBe(true);
-    });
-
-    it('fails to trigger when stock = 0', () => {
-      ultimateManager.stock = 0;
-      expect(ultimateManager.canTrigger()).toBe(false);
-
-      const activated = ultimateManager.trigger(engine);
-      expect(activated).toBe(false);
-      expect(ultimateManager.phase).toBe(UltimatePhase.READY);
-    });
-
-    it('rejects re-triggering while an ultimate move is already active', () => {
-      ultimateManager.stock = 2;
-      ultimateManager.trigger(engine);
-      expect(ultimateManager.phase).toBe(UltimatePhase.FREEZE);
-
-      // Attempt second trigger during active move
-      const secondAttempt = ultimateManager.trigger(engine);
-      expect(secondAttempt).toBe(false);
-      expect(ultimateManager.stock).toBe(1); // stock not consumed
-    });
-
-    it('allows stock replenishment up to maxStock ceiling', () => {
-      ultimateManager.stock = 1;
-      ultimateManager.addStock(1);
-      expect(ultimateManager.stock).toBe(2);
-
-      ultimateManager.addStock(5); // Exceeds maxStock = 3
-      expect(ultimateManager.stock).toBe(3);
-    });
-  });
-
-  // =========================================================================
-  // SUITE 2: 4-Phase State Progression Pipeline
-  // =========================================================================
-  describe('2. 4-Phase Cinematic Progression Pipeline', () => {
-    it('progresses through Freeze -> Strike Pass -> Detonation -> Recovery -> Ready', () => {
-      const events: string[] = [];
-      engine.eventBus.on('ultimate_freeze_started', () => events.push('freeze'));
-      engine.eventBus.on('ultimate_strike_pass', () => events.push('strike'));
-      engine.eventBus.on('ultimate_detonation', () => events.push('detonation'));
-      engine.eventBus.on('ultimate_completed', () => events.push('completed'));
-
-      ultimateManager.trigger(engine);
-      expect(ultimateManager.phase).toBe(UltimatePhase.FREEZE);
-      expect(ultimateManager.isSimulationFrozen).toBe(true);
-
-      // Step Phase 1 (Freeze, 0.5s = 30 ticks)
-      for (let i = 0; i < 30; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-      expect(ultimateManager.phase).toBe(UltimatePhase.STRIKE_PASS);
-      expect(events).toContain('freeze');
-      expect(events).toContain('strike');
-
-      // Step Phase 2 (Strike Pass, 0.6s = 36 ticks)
-      for (let i = 0; i < 18; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-      expect(ultimateManager.flyoverProgress).toBeGreaterThan(0.4);
-      expect(ultimateManager.flyoverProgress).toBeLessThan(0.6);
-
-      for (let i = 0; i < 18; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-      expect(ultimateManager.phase).toBe(UltimatePhase.DETONATION);
-      expect(events).toContain('detonation');
-
-      // Step Phase 3 (Detonation, 0.4s = 24 ticks)
-      for (let i = 0; i < 24; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-      expect(ultimateManager.phase).toBe(UltimatePhase.RECOVERY);
-
-      // Step Phase 4 (Recovery, 0.3s = 18 ticks)
-      for (let i = 0; i < 18; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-      expect(ultimateManager.phase).toBe(UltimatePhase.READY);
-      expect(ultimateManager.isSimulationFrozen).toBe(false);
-      expect(events).toContain('completed');
-    });
-
-    it('emits screen shake on detonation phase', () => {
-      let shakeEmitted = false;
-      let shakeAmplitude = 0;
-      engine.eventBus.on('screen_shake', (data: { amplitude: number }) => {
-        shakeEmitted = true;
-        shakeAmplitude = data.amplitude;
-      });
-
-      ultimateManager.trigger(engine);
-      // Fast forward to detonation (0.5s + 0.6s = 66 ticks)
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(shakeEmitted).toBe(true);
-      expect(shakeAmplitude).toBeGreaterThanOrEqual(15);
-    });
-  });
-
-  // =========================================================================
-  // SUITE 3: 100% On-Screen Minion Elimination
-  // =========================================================================
-  describe('3. 100% Elimination of On-Screen Minions', () => {
-    it('wipes all standard infantry minions (Rifle, Knife, Grenade) in viewport', () => {
-      const s1 = new SoldierEnemy('m_rifle', 'SOLDIER_RIFLE', vec2(150, 190));
-      const s2 = new SoldierEnemy('m_knife', 'SOLDIER_KNIFE', vec2(250, 190));
-      const s3 = new SoldierEnemy('m_grenade', 'SOLDIER_GRENADE', vec2(350, 190));
-      engine.addEntity(s1);
-      engine.addEntity(s2);
-      engine.addEntity(s3);
-      engine.tick(1 / 60);
-
-      expect(s1.isAlive).toBe(true);
-      expect(s2.isAlive).toBe(true);
-      expect(s3.isAlive).toBe(true);
-
-      ultimateManager.trigger(engine);
-      // Fast forward through freeze and strike pass to detonation
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(s1.isAlive).toBe(false);
-      expect(s2.isAlive).toBe(false);
-      expect(s3.isAlive).toBe(false);
-    });
-
-    it('wipes on-screen shield troopers even with frontal directional defense', () => {
-      const shieldTrooper = new SoldierEnemy('m_shield', 'SOLDIER_SHIELD', vec2(280, 190));
-      shieldTrooper.facing = -1; // Facing left toward player
-      engine.addEntity(shieldTrooper);
-      engine.tick(1 / 60);
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(shieldTrooper.isAlive).toBe(false);
-    });
-
-    it('vaporizes on-screen hostile enemy projectiles and reticles', () => {
-      const bullet: GameEntity = {
-        id: 'hostile_bullet',
-        type: 'ENEMY_BULLET',
-        position: vec2(200, 150),
-        velocity: vec2(-200, 0),
-        bounds: createAABB(198, 148, 4, 4),
-        isAlive: true,
-        update: () => {},
-      };
-      engine.addEntity(bullet);
-      engine.tick(1 / 60);
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(bullet.isAlive).toBe(false);
-    });
-  });
-
-  // =========================================================================
-  // SUITE 4: 120 HP Burst Damage to Bosses & Health Gates
-  // =========================================================================
-  describe('4. 120 HP Burst Damage to Bosses', () => {
-    it('deals 120 HP burst damage to on-screen Iron Nokana Boss and triggers Phase 2 gate', () => {
-      const nokana = new IronNokanaBoss('boss_nokana', vec2(300, 100), { customHp: 400 });
-      engine.addEntity(nokana);
-      engine.tick(1 / 60);
-
-      expect(nokana.health).toBe(400);
-      expect(nokana.phase).toBe('PHASE_1_CRAWLER_BARRAGE');
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      // Iron Nokana has a 75% gate (300 HP). 400 - 120 = 280, clamped to 300 HP with Phase 2 transition
-      expect(nokana.health).toBe(300);
-      expect(nokana.phase).toBe('PHASE_2_FLAME_SWEEP');
-      expect(nokana.isAlive).toBe(true); // NOT insta-killed
-    });
-
-    it('deals 120 HP burst damage to Tetsuyuki Boss', () => {
-      const tetsuyuki = new TetsuyukiBoss('boss_tetsuyuki', vec2(250, 40));
-      tetsuyuki.health = 400;
-      tetsuyuki.maxHealth = 400;
-      engine.addEntity(tetsuyuki);
-      engine.tick(1 / 60);
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      // Tetsuyuki Phase 1 threshold is 65% (260 HP). 400 - 120 = 280 HP
-      expect(tetsuyuki.health).toBe(280);
-      expect(tetsuyuki.isAlive).toBe(true);
-    });
-
-    it('deals 120 HP burst damage to MidBossVehicle and respects gate transition', () => {
-      const midboss = new MidBossVehicle('midboss_1', vec2(320, 160));
-      midboss.health = 400;
-      engine.addEntity(midboss);
-      engine.tick(1 / 60);
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      // 400 - 120 = 280 HP (Gate 1 is 240 HP)
-      expect(midboss.health).toBe(280);
-      expect(midboss.isAlive).toBe(true);
-    });
-  });
-
-  // =========================================================================
-  // SUITE 5: Off-Screen Minion Preservation
-  // =========================================================================
-  describe('5. Off-Screen Minion Preservation (Spatial Frustum Safety)', () => {
-    it('preserves minions strictly outside the active camera viewport', () => {
-      // In-screen minion
-      const insideSoldier = new SoldierEnemy('s_inside', 'SOLDIER_RIFLE', vec2(200, 190));
-      // Off-screen right minion (cameraX=0, viewport width=480, spawn at x=600)
-      const outsideRightSoldier = new SoldierEnemy('s_outside_right', 'SOLDIER_RIFLE', vec2(600, 190));
-      // Off-screen left minion (behind camera, x=-50)
-      const outsideLeftSoldier = new SoldierEnemy('s_outside_left', 'SOLDIER_RIFLE', vec2(-50, 190));
-
-      engine.addEntity(insideSoldier);
-      engine.addEntity(outsideRightSoldier);
-      engine.addEntity(outsideLeftSoldier);
-      engine.tick(1 / 60);
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(insideSoldier.isAlive).toBe(false);
-      expect(outsideRightSoldier.isAlive).toBe(true);
-      expect(outsideRightSoldier.health).toBe(outsideRightSoldier.maxHealth);
-      expect(outsideLeftSoldier.isAlive).toBe(true);
-    });
-
-    it('rigorously tests viewport boundary edges (x = 479 vs x = 481)', () => {
-      const edgeInside = new SoldierEnemy('edge_in', 'SOLDIER_RIFLE', vec2(465, 190)); // bounds: [453, 477]
-      const edgeOutside = new SoldierEnemy('edge_out', 'SOLDIER_RIFLE', vec2(520, 190)); // bounds: [508, 532]
-
-      engine.addEntity(edgeInside);
-      engine.addEntity(edgeOutside);
-      engine.tick(1 / 60);
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(edgeInside.isAlive).toBe(false);
-      expect(edgeOutside.isAlive).toBe(true);
-    });
-  });
-
-  // =========================================================================
-  // SUITE 6: Zero Friendly Fire
-  // =========================================================================
-  describe('6. Zero Friendly Fire Against Player, Allies & POWs', () => {
-    it('inflicts zero damage to player during detonation', () => {
-      player.health = 1.0;
-      player.shieldCharges = 2;
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(player.isAlive).toBe(true);
-      expect(player.health).toBe(1.0);
-      expect(player.shieldCharges).toBe(2);
-    });
-
-    it('inflicts zero damage to autonomous AllyNPC (Hyakutaro Ichimonji)', () => {
-      const ally = new AllyNPC(vec2(180, 200));
-      engine.addEntity(ally);
-      engine.tick(1 / 60);
-
-      const initialAllyHp = ally.health;
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(ally.isAlive).toBe(true);
-      expect(ally.health).toBe(initialAllyHp);
-    });
-
-    it('does not destroy friendly ally projectiles (AllyKiBlast)', () => {
-      const kiBlast = new AllyKiBlast('ki_1', vec2(220, 180), 1);
-      engine.addEntity(kiBlast);
-      engine.tick(1 / 60);
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(kiBlast.isAlive).toBe(true);
-    });
-
-    it('does not harm or kill rescued / tied POWs in viewport', () => {
-      const pow = new PowEntity('pow_1', vec2(200, 190), 'WEAPON_SHOTGUN');
-      engine.addEntity(pow);
-      engine.tick(1 / 60);
-
-      ultimateManager.trigger(engine);
-      for (let i = 0; i < 66; i++) {
-        ultimateManager.update(1 / 60, engine, viewport);
-      }
-
-      expect(pow.isAlive).toBe(true);
-      expect(pow.isRescued).toBe(false); // remains rescueable
-    });
-  });
-
-  // =========================================================================
-  // SUITE 7: Preservation of 164 Baseline Sprite Key Invariant
-  // =========================================================================
-  describe('7. Preservation of 164 Baseline Sprite Key Invariant', () => {
-    it('default getAllKeys() returns exactly 164 keys', () => {
-      const factory = ProceduralSpriteFactory.getInstance();
-      const keys = factory.getAllKeys();
-      expect(keys.length).toBe(164);
-    });
-
-    it('expansion sprite keys are isolated and returned only when includeExpansion is true', () => {
-      const factory = ProceduralSpriteFactory.getInstance();
-      const baselineKeys = factory.getAllKeys(false, false);
-      const allWithExpansion = factory.getAllKeys(false, true);
-
-      expect(baselineKeys.length).toBe(164);
-      expect(allWithExpansion.length).toBeGreaterThanOrEqual(164);
-
-      // Verify no duplicate keys across registry
-      const uniqueSet = new Set(allWithExpansion);
-      expect(uniqueSet.size).toBe(allWithExpansion.length);
-    });
-  });
-
-  // =========================================================================
-  // SUITE 8: Audio Engine Synthesis API Safety
-  // =========================================================================
-  describe('8. Procedural Audio Engine Method Verification', () => {
-    it('SoundEngine exposes playUltimateSiren, playFlyoverRoar, and playApocalypticBlast safely', () => {
-      const sound = new SoundEngine();
-      expect(typeof sound.playUltimateSiren).toBe('function');
-      expect(typeof sound.playFlyoverRoar).toBe('function');
-      expect(typeof sound.playApocalypticBlast).toBe('function');
-
-      // Safe execution in headless test environment (does not throw)
-      expect(() => sound.playUltimateSiren()).not.toThrow();
-      expect(() => sound.playFlyoverRoar()).not.toThrow();
-      expect(() => sound.playApocalypticBlast()).not.toThrow();
-    });
-  });
-});
-```
+### 4.2 Proposed Upgraded `GothicBackdrop.ts` Mist Pipeline
+
+1. **Undulating Midground Mist**:
+   ```typescript
+   // Sub-layer B (Mid swirling undulating mist)
+   const sliceCount = 10;
+   const sliceW = vw / sliceCount;
+   for (let s = 0; s < sliceCount; s++) {
+     const sliceWorldX = camX * 0.65 + s * sliceW;
+     const undulationY = 14 * Math.sin(sliceWorldX * 0.0035 + elapsedTime * 1.2) +
+                         8 * Math.cos(sliceWorldX * 0.007 - elapsedTime * 0.7);
+     const startX = -((((sliceWorldX - elapsedTime * 26.0) % W) + W) % W);
+     const startY = -((((camY * 0.65 + undulationY) % H) + H) % H);
+     ctx.drawImage(this.mistCanvas, s * (W / sliceCount), 0, W / sliceCount, H,
+                   s * sliceW, startY, sliceW, vh);
+   }
+   ```
+2. **Foreground Mist Vertical Camera Tracking**:
+   ```typescript
+   public renderForegroundMist(ctx: CanvasRenderingContext2D, camX: number, camY: number, elapsedTime: number): void {
+     if (!this.mistCanvas || !this.enableMist) return;
+     ctx.save();
+     const vw = this.viewportWidth;
+     const vh = this.viewportHeight;
+     const W = 1024;
+     const H = 540;
+     const startX = -((((camX * 1.15 + elapsedTime * 38.0) % W) + W) % W);
+     const startY = -((((camY * 0.35 + Math.sin(elapsedTime * 0.6) * 10) % H) + H) % H);
+     ctx.globalAlpha = 0.08;
+     for (let x = startX; x < vw + W; x += W) {
+       for (let y = startY; y < vh + H; y += H) {
+         ctx.drawImage(this.mistCanvas, x, y);
+       }
+     }
+     ctx.restore();
+   }
+   ```
+
+---
+
+### 4.3 Proposed Full Specification Test Suite: `tests/unit/DarkFantasyVFX.spec.ts`
+
+The specification test file will contain 8 comprehensive suites (over 25 rigorous unit tests) utilizing a full operation-tracing mock Canvas context:
+- Suite 1: Pool Pre-allocation, Zero-Garbage Lifecycles & Saturation Invariants (25,000 cycles, 0 allocations).
+- Suite 2: Decal Cycling & Persistent Ground State Lifecycle.
+- Suite 3: Branching Abyssal Lightning & Dissipation Timeline.
+- Suite 4: Swirling Necrotic Soul Motes & Additive Blending Hygiene.
+- Suite 5: Bone Fragments, Visceral Gore & Impact/Death Differentiation.
+- Suite 6: Occult Glowing Rune Circles (Level-Up & Sigil Shockwaves).
+- Suite 7: Numerical Hygiene & Zero NaN / Infinity Fuzzing Harness.
+- Suite 8: Canvas Composite Hygiene & 60Hz Frame Execution Budget (< 1.5ms).
 
 ---
 
 ## 5. Verification Method
 
-To independently verify all findings and test specifications:
+To independently verify all findings and validate future implementations:
 
-1. **Verify Current Baseline Passing (389 tests, 31 files)**:
+1. **Unit Test Execution**:
    ```bash
-   npx vitest run
+   npm test
    ```
-   *Expected*: All 31 test files pass with 0 failures.
-
-2. **Verify TypeScript Strict Compilation**:
+   Ensures all 24 test suites (285 tests) continue to pass 100% green without regressions.
+2. **Dedicated VFX Specification Run**:
+   ```bash
+   npx vitest run tests/unit/DarkFantasyVFX.test.ts
+   ```
+   And once implemented:
+   ```bash
+   npx vitest run tests/unit/DarkFantasyVFX.spec.ts
+   ```
+3. **TypeScript Compilation Check**:
    ```bash
    npx tsc --noEmit
    ```
-   *Expected*: Exit code 0, 0 type errors.
+   Confirms strict type safety across all particle type additions and interface signatures.
+4. **Invalidation Conditions**:
+   - If `activeCount + freeCount !== capacity` at any frame, the pooling invariant is broken.
+   - If any particle field contains `NaN`, `Infinity`, or `undefined`, the numerical hygiene test must fail.
+   - If `ctx.globalCompositeOperation` is not `'source-over'` after rendering, the composite cleanup test must fail.
+   - If foreground mist does not track vertical camera motion, the backdrop parity test must fail.
 
-3. **Verify 164 Sprite Key Invariant**:
-   ```bash
-   npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts
-   ```
-   *Expected*: `EMPIRICAL CATEGORY AUDIT 1E` asserts `allKeys.length === 164`.
-
-4. **Verify Milestone M3 Suite Execution (Post-Worker Implementation)**:
-   ```bash
-   npx vitest run tests/unit/ultimate_move_system.test.ts
-   ```
-   *Expected*: All 24 unit tests across 8 suites pass 100% green.

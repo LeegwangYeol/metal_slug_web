@@ -1,24 +1,23 @@
-## 2026-09-08T02:31:50Z
+## 2026-09-10T15:59:44Z
 
-You are a Challenger subagent (teamwork_preview_challenger) for Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+You are challenger_m2_1 (role: Adversarial Verifier / Challenger).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Worker Handoff: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md
 
-CHALLENGE FOCUS:
-Adversarially stress-test Ally NPC and Rocket Launcher kinematics and targeting:
-1. Write and run stress test assertions (or temporary test scripts) testing:
-   - Ally target acquisition with 0 enemies, 50 enemies, dead enemies, out-of-range enemies.
-   - Ally jump impulse and gravity trajectory over 120 frames to ensure landing and no floating bugs.
-   - Rocket launcher homing behavior when enemies move, when enemies die mid-flight, and when rocket reaches lifetime.
-2. Check for memory leaks, NaN coordinates, or infinite loops.
-3. Provide an explicit verdict: APPROVE or REQUEST_CHANGES.
-4. Write your full report to:
-/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1/handoff.md
-5. Send a message to parent with your verdict and summary.
+Mission:
+Adversarially challenge and stress-test the Milestone 2 sprite engine:
+1. Empirically verify 60Hz rendering performance:
+   - Test blitting 1,000 entities across 120 frames using a headless simulation harness.
+   - Assert 0 NaN coordinates, zero canvas rendering exceptions, and stable frame execution times.
+   - Validate 100% offscreen atlas caching hit rate (zero dynamic re-rasterizations during gameplay).
+2. Run tests.
+
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1/handoff.md`.
+Explicitly state your verdict: `APPROVE` or `REQUEST_CHANGES`.
+When complete, send a message to orchestrator with your verdict.

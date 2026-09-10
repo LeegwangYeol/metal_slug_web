@@ -1,74 +1,55 @@
-# BRIEFING — 2026-09-08T02:44:30Z
+# BRIEFING — 2026-09-10T16:02:00Z
 
 ## Mission
-Perform comprehensive review and adversarial challenge for Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons), verifying implementation correctness, edge cases, physics kinematics, and test validity, providing an objective verdict.
+Evaluate Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul) implementation and test coverage.
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_reviewer
+- Archetype: reviewer_critic
 - Roles: reviewer, critic
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M2 - Autonomous Ally NPCs & Diverse Items/Weapons
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul)
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Check for integrity violations (hardcoded test results, facade implementations, bypassed tasks, fabricated verifications)
-- Must execute build and tests independently: `npx tsc --noEmit` and `npx vitest run ...`
-- Write comprehensive handoff.md following the 5-component format
-- Communicate verdict and summary to parent via send_message
+- Evidence-based review; do not write subjective opinions without proof
+- Actively check for integrity violations (hardcoded test results, facade logic, shortcuts, fabricated verification)
+- Stress-test assumptions and find failure modes
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T02:44:30Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-10T16:02:00Z
 
 ## Review Scope
-- **Files to review**:
-  - `src/core/entities/allies/AllyNPC.ts`
-  - `src/core/weapons/RocketLauncherWeapon.ts`
-  - `src/core/entities/items/ItemPickup.ts`
-  - `src/core/entities/pow/PowEntity.ts`
-  - `src/core/entities/pow/PrisonerEntity.ts`
-  - `tests/unit/allies_system.test.ts`
-  - `tests/unit/diverse_weapons_items.test.ts`
-  - `tests/unit/pow_system.test.ts`
-- **Interface contracts**:
-  - `/Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md`
-  - `/Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md`
-  - `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md`
-  - `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md`
-- **Review criteria**:
-  - Correctness, physics kinematics, robustness, integrity, absence of regressions, test coverage and quality.
+- **Files to review**: `src/render/sprites/DarkFantasySprites.ts`, `tests/unit/DarkFantasySprites.spec.ts`, `.agents/worker_m2_1/handoff.md`
+- **Interface contracts**: `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`
+- **Review criteria**: Visual fidelity elevation (5 archetypes), atlas caching invariants (120 canvases, zero runtime heap allocations), correctness, test suite passing, type checks
+
+## Key Decisions Made
+- Confirmed full implementation of all 5 dark fantasy archetypes in `DarkFantasySprites.ts`
+- Verified empirical test results: 22/22 tests pass in `DarkFantasySprites.spec.ts`, 269/269 pass in `npm test`
+- Verified clean type check via `npx tsc --noEmit` and clean build via `npm run build`
+- Completed adversarial review and verified zero integrity violations
+- Issued verdict: APPROVE
+
+## Artifact Index
+- `handoff.md` — Comprehensive evaluation report with observations, logic chain, caveats, conclusion, verification method
+- `progress.md` — Liveness heartbeat
+- `DISPATCH.md` — Inbound dispatch log
 
 ## Review Checklist
-- **Items reviewed**:
-  - `AllyNPC.ts` — Verified state machine, jump takeoff, target scoring, and ki blast dispatch.
-  - `RocketLauncherWeapon.ts` — Verified steering, acceleration, obstacle detonation, blast damage falloff.
-  - `ItemPickup.ts` — Verified vertical gravity, platform landing, and bobbing timer.
-  - `PowEntity.ts` / `PrisonerEntity.ts` — Verified 6-state machine, loot sampling, ally spawn event, and PrisonerEntity aliases.
-  - `tests/unit/allies_system.test.ts` (10 tests) — 100% PASS.
-  - `tests/unit/diverse_weapons_items.test.ts` (12 tests) — 100% PASS.
-  - `tests/unit/pow_system.test.ts` (3 tests) — 100% PASS.
-  - `tests/unit/m2_challenger_stress.test.ts` (17 tests) — 100% PASS.
-  - `tests/unit/m2_ally_rocket_empirical_challenge.test.ts` — 4 failures analyzed and traced to concrete logic/boundary defects.
-- **Verdict**: REQUEST_CHANGES (3 precise, surgical remediations required)
-- **Unverified claims**: Zero unverified claims. All claims empirically tested.
+- **Items reviewed**: `DarkFantasySprites.ts`, `DarkFantasySprites.spec.ts`, `DarkFantasySprites.test.ts`, `ChallengerDF_M2.test.ts`, `worker_m2_1/handoff.md`
+- **Verdict**: APPROVE
+- **Unverified claims**: None (all claims verified empirically via independent test runs and source code inspection)
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Threat priority calculation with multiple boss/minion types: CONFIRMED BUG — `'MID_BOSS_VEHICLE'.includes('BOSS')` matches first branch, dead-coding the mid-boss branch and assigning weight 100 instead of 50.
-  - Rocket maximum lifetime boundary at 60Hz: CONFIRMED BUG — IEEE 754 precision `2.5 - 150 * (1/60) = 3.878e-15 > 0` delays detonation to frame 151.
-  - Pending player entity resolution: CONFIRMED GAP — `engine.getEntity('player')` in `AllyNPC.update` does not check `entitiesToAdd`, while `findBestTarget` does.
-  - Ballistic jump trajectory: CONFIRMED ASYMMETRY — `justJumped` flag skips gravity on frame 0, increasing apex height by ~2.8 px.
-- **Vulnerabilities found**: 2 Major findings, 2 Minor findings.
-- **Untested angles**: Full long-run browser rendering with canvas assets (deferred to M3/M4).
-
-## Key Decisions Made
-- Confirmed zero integrity violations (no cheats, facades, or fabrications).
-- Issued REQUEST_CHANGES due to genuine logic bug in target priority scoring and boundary condition issues.
-
-## Artifact Index
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1/DISPATCH.md` — Inbound instructions
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1/BRIEFING.md` — Situational awareness
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1/progress.md` — Heartbeat & execution log
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1/handoff.md` — Final review report
+  - Cache size & permutation completeness (120 entries) -> PASS
+  - Balanced canvas save/restore stack -> PASS
+  - Headless/node-canvas execution without document -> PASS
+  - Modulo frame wrapping and negative bounds -> PASS
+  - Zero heap allocation in hot blit loop -> PASS (1,000 entities in 0.571ms)
+  - Zero NaN / non-finite coordinates -> PASS
+- **Vulnerabilities found**: None
+- **Untested angles**: WebGL-accelerated canvas fallback (software 2D Canvas context verified)

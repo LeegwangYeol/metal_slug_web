@@ -1,262 +1,519 @@
-# M1_3 Diagnostic Baseline & Verification Report
+# Milestone 1 Investigation Report: Restart State Engine & Lifecycle Architecture
 
-**Author**: Explorer M1_3  
-**Date**: 2026-09-03T16:50:00Z  
-**Workspace**: `/Users/user/teamwork_projects/metal_slug_web/`  
-**Target Milestone**: M1_BOSS_CRISIS Diagnostic Baseline  
+**Agent**: `explorer_m1_3` (Codebase Researcher / Explorer)  
+**Date**: 2026-09-10T15:33:00Z  
+**Target Milestone**: Milestone 1 (Restart State Engine & Lifecycle Architecture)  
+**Status**: Read-Only Investigation Complete — Ready for Implementation  
 
 ---
 
 ## 1. Observation
 
-### 1.1 TypeScript Build & Typecheck (`npm run build` / `npx tsc --noEmit`)
-Command executed: `npx tsc --noEmit` / `npm run build` (`tsc -b && vite build`)  
-Exit code: 2 / 1  
-Verbatim output:
-```text
-tests/unit/boss_crisis_events.test.ts(13,30): error TS2307: Cannot find module '../../src/input/InputManager' or its corresponding type declarations.
-tests/unit/boss_crisis_events.test.ts(15,10): error TS2305: Module '"../../src/core/physics/Platform"' has no exported member 'createPlatform'.
-tests/unit/boss_crisis_events.test.ts(231,74): error TS2554: Expected 0-2 arguments, but got 4.
-```
-- **Source Code Health**: All production source files in `src/` (`src/core/`, `src/render/`, `src/audio/`, `src/input/`, `src/ui/`) compile with **0 errors**. All 3 errors are exclusively confined to `tests/unit/boss_crisis_events.test.ts`.
+Direct examination of the codebase reveals the architectural state and exact defect locations responsible for the game restart failure and state leakage:
 
-### 1.2 Vitest Unit Test Suite (`npx vitest run`)
-Command executed: `npx vitest run`  
-Exit code: 1  
-Summary Metrics:
-- **Total Test Files**: 26 files (24 passed, 2 failed)
-- **Total Test Cases**: 307 collected (305 passed, 2 failed, 10 unexecuted due to import error in `boss_crisis_events.test.ts`)
-- **Pre-existing Test Suites**: 24 files, 294 test cases — **294 / 294 PASSED (100% green)**. Zero regressions in pre-existing test files.
+### 1.1 `src/main.ts` (Lines 31–413)
+- **Defect 1: Total Absence of `restart()` Lifecycle Method**: `GrimHarvestGame` defines `constructor()`, `start()`, `stop()`, `update()`, `step()`, and `render()`, but has **no** `restart()` or `reinitialize()` method.
+- **Defect 2: Missing Game Over Event Listeners**: In `src/ui/GothicHUD.ts` (lines 927–928), the HUD renders:
+  ```ts
+  ctx.fillText('PRESS [SPACE] OR CLICK TO RESURRECT', width / 2, py + plaqueH - 30);
+  ```
+  However, in `src/main.ts`, no event listeners on canvas `click` or keyboard `Space` are wired to trigger any resurrection or restart action when `!this.player.isAlive`. The game loop remains frozen on the Game Over screen indefinitely.
+- **Defect 3: Unbounded Accumulator Loop (Main Thread Hang)**: In `src/main.ts` lines 214–219:
+  ```ts
+  if (!this.isPaused) {
+    this.accumulator += dt;
+    while (this.accumulator >= GrimHarvestGame.FIXED_TIMESTEP) {
+      this.step(GrimHarvestGame.FIXED_TIMESTEP);
+      this.accumulator -= GrimHarvestGame.FIXED_TIMESTEP;
+    }
+  }
+  ```
+  Unlike `GameEngine.ts` (line 144) which caps sub-steps at `maxSubSteps = 5`, `GrimHarvestGame.start()` has no sub-step ceiling. When restarting after a long idle period or after external re-instantiation, if `lastTime` is stale or `accumulator` spikes, this `while` loop runs thousands of iterations on a single frame, causing the browser tab to hang in an infinite execution freeze.
 
-#### Failed Suite 1: `tests/unit/boss_crisis_events.test.ts`
-Suite failed to load during transform/import due to unresolved dependency:
-```text
-Error: Cannot find module '../../src/input/InputManager' imported from '/Users/user/src/fullmetalslug/tests/unit/boss_crisis_events.test.ts'
- ❯ tests/unit/boss_crisis_events.test.ts:13:1
-     11| } from '../../src/core/entities/boss/EnvironmentalHazard';
-     12| import { PlayerController } from '../../src/core/player/PlayerController';
-     13| import { InputManager } from '../../src/input/InputManager';
-       | ^
-     14| import { SoundEngine } from '../../src/audio/SoundEngine';
-     15| import { createPlatform } from '../../src/core/physics/Platform';
-```
-Due to the import failure, all 10 unit test cases defined within `boss_crisis_events.test.ts` were unable to execute.
+### 1.2 `src/core/weapons/WeaponManager.ts` (Lines 27–215)
+- **Defect 1: Incomplete `clear()`**: Lines 211–214:
+  ```ts
+  public clear(): void {
+    this.weapons.clear();
+    this.projectilePool.clear();
+  }
+  ```
+- **Defect 2: Local Weapon Projectile Pools Leak**: `BoneSpear.ts` (line 26) maintains its own `public readonly projectilePool: ProjectilePool = new ProjectilePool(256)`. Merely clearing `WeaponManager.projectilePool` does not clear `BoneSpear.projectilePool` if weapon instances are retained or referenced.
+- **Defect 3: Residual Weapon Manager State**: `simulationTime` (line 40) and `hitCooldownBuffer` (line 38) are not reset in `clear()`.
+- **Defect 4: Weapons Map Left Empty**: After `clear()`, `this.weapons.size === 0`. The game initializes with Rank 1 Arcane Scythe (`this.weaponManager.addWeapon('scythe', 1)` in `main.ts` line 139), but `clear()` leaves the player completely unarmed.
 
-#### Failed Suite 2: `tests/unit/iron_nokana_boss.test.ts`
-Command executed: `npx vitest run tests/unit/iron_nokana_boss.test.ts`  
-Results: 13 tests total: 11 passed, 2 failed.
-- **Failure 2A**: `Milestone M1: Iron Nokana Multi-Phase Boss Encounter Suite > 3. Telegraphed Attacks & Visual Warning Mechanics > flame sweep attack has 0.8s telegraph period and emits telegraph event`
-```text
-AssertionError: expected false to be true // Object.is equality
+### 1.3 `src/core/systems/UpgradeSystem.ts` (Lines 307–329) & `src/ui/UpgradeModal.ts` (Lines 22–73)
+- In `UpgradeSystem.ts`:
+  ```ts
+  public reset(): void {
+    this.weapons.clear();
+    this.passives.clear();
+    this.evolvedWeapons.clear();
+  }
+  ```
+  `reset()` clears all weapon and passive records, but does not re-add the starter weapon (`weapon_scythe` Rank 1).
+- In `UpgradeModal.ts`:
+  - `close()` (lines 63–73) sets `this.isOpen = false` and removes mouse/keyboard listeners, but does **not** clear `this.cards = []`, `this.hoveredIndex`, or `this.selectedIndex`.
+  - In `main.ts`, `this.pendingLevelUps` and `this.isPaused` are maintained on the `GrimHarvestGame` instance. If a player restarts while the modal is open or with pending level-ups, `pendingLevelUps` remains non-zero and `isPaused` remains `true`, keeping the simulation frozen.
 
-- Expected
-+ Received
+### 1.4 `src/core/systems/WaveDirector.ts` (Lines 454–462)
+- `WaveDirector` **already** implements a clean `reset()` method:
+  ```ts
+  public reset(): void {
+    this.elapsedTime = 0;
+    this.spawnTimer = 0;
+    this.lastPeriodicBossMinute = 2;
+    for (let i = 0; i < this.milestones.length; i++) {
+      this.milestones[i].triggered = false;
+    }
+  }
+  ```
+  Calling `waveDirector.reset()` cleanly restores `elapsedTime = 0`, phase `AWAKENING` (0:00–0:30), 100% skeleton weight, baseline HP/speed/cadence multipliers, and all milestone triggers.
 
-- true
-+ false
+### 1.5 `src/render/Camera.ts` (Lines 85–97) & `src/ui/GothicHUD.ts` (Lines 148–168)
+- `Camera.reset(x = 0, y = 0)` is **already** implemented in `src/render/Camera.ts`:
+  ```ts
+  public reset(x: number = 0, y: number = 0): void {
+    this.x = x;
+    this.y = y;
+    this.maxReachedX = x;
+    this.renderX = x;
+    this.renderY = y;
+    this.shakeIntensity = 0;
+    this.shakeDuration = 0;
+    this.shakeTimer = 0;
+    this.shakeOffsetX = 0;
+    this.shakeOffsetY = 0;
+    this.clampToBounds();
+  }
+  ```
+  This zeroes screen shake trauma and resets coordinates.
+- `GothicHUD.reset()` is **already** implemented in `src/ui/GothicHUD.ts` (lines 148–168), resetting XP, current level, health, ghost drain timers, kill count, and timer string to `'00:00'`.
 
- ❯ tests/unit/iron_nokana_boss.test.ts:107:30
-    105| 
-    106|       expect(boss.isFlameTelegraphing).toBe(true);
-    107|       expect(telegraphFired).toBe(true);
-       |                              ^
-    108| 
-    109|       // Advance 0.7s (still telegraphing)
-```
-- **Failure 2B**: `Milestone M1: Iron Nokana Multi-Phase Boss Encounter Suite > 5. Death Demolition Chain & Final Destruction > executes 3.6s chain demolition and emits boss_destroyed and mission_complete`
-```text
-AssertionError: expected 'PHASE_2_FLAME_SWEEP' to be 'DEATH_EXPLODING' // Object.is equality
-
-Expected: "DEATH_EXPLODING"
-Received: "PHASE_2_FLAME_SWEEP"
-
- ❯ tests/unit/iron_nokana_boss.test.ts:179:26
-    177| 
-    178|       boss.takeDamage(400);
-    179|       expect(boss.phase).toBe('DEATH_EXPLODING');
-       |                          ^
-    180|       expect(boss.isAlive).toBe(true);
-    181| 
-```
-
-### 1.3 Playwright E2E Suite (`npx playwright test`)
-Command executed: `npx playwright test`  
-Exit code: 0  
-Results:
-- **Total E2E Files**: 4 files
-  1. `tests/e2e/death_animations_screenshots.spec.ts` (3 tests)
-  2. `tests/e2e/game_initialization.spec.ts` (3 tests)
-  3. `tests/e2e/gameplay_controls.spec.ts` (5 tests)
-  4. `tests/e2e/visual_verification.spec.ts` (6 tests)
-- **Total E2E Tests**: 17 tests
-- **Passed**: 17 passed (100% green)
-- **Failed**: 0 failed
-- **Duration**: 35.6s
-- **Screenshot Artifacts Verified**:
-  - `death_standard.png` (20,621 bytes)
-  - `death_explosion_blowback.png` (21,632 bytes)
-  - `death_burning.png` (20,917 bytes)
-  - `screenshot_01_idle_crosshair.png` (20,336 bytes, 960x540)
-  - `screenshot_02_aim_up_forward.png` (20,653 bytes, 960x540)
-  - `screenshot_03_jump_arc.png` (20,362 bytes, 960x540)
-  - `screenshot_04_enemy_smooth_spawn.png` (20,725 bytes, 960x540)
-  - `screenshot_05_combat_upgraded_sprites.png` (22,152 bytes, 960x540)
-
-### 1.4 Critical Invariants Verification
-- **164-Key Procedural Sprite Invariant**:
-  - Command: `npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts`
-  - Output: 17 passed (100% green).
-  - Exact category key breakdown:
-    - Player: 67
-    - Rebel: 21
-    - POW: 9
-    - Iron Technical: 7
-    - Tetsuyuki: 8
-    - Projectile: 13
-    - Casings: 4
-    - Explosions: 18
-    - HUD: 17
-    - **Total Registered Keys**: exactly 164. Defective buffers: 0. Stress render passes: 164/164 passed.
-- **Player Kinematics & Jump Invariant**:
-  - `tests/unit/adversarial_controls_jump.test.ts`: 21 passed (100% green).
-  - Verifies monotonic ascent, parabolic descent, landing at Y=230, variable short-hop apex cut.
-- **Out-of-Bounds Enemy Spawning Contract**:
-  - `tests/unit/spawning_contract.test.ts` (7 passed), `tests/unit/challenger_2_empirical_stress.test.ts` (15 passed), `tests/unit/adversarial_diverse_spawning_kinematics.test.ts` (16 passed).
-  - Guarantees wave spawnX >= cameraX + 480 across all camera scroll speeds up to 2000 px/s.
-- **Boss Max HP Threshold**:
-  - `tests/unit/boss_rebalance.test.ts` (9 passed) and `IronNokanaBoss` default (400 HP <= 500 threshold).
+### 1.6 `src/core/entities/Player.ts` (Lines 32–89) & `src/core/HordeManager.ts` (Lines 456–461)
+- `Player.ts`: Does not have a `reset()` method. Its `progression` instance (`PlayerProgression.ts` line 101) does have `reset()`, but `Player` properties (`position`, `velocity`, `bounds`, `isAlive`, `stats`, `invulnerabilityTimer`) are not reset in a single call.
+- `HordeManager.ts`: `clear()` (line 456) despawns all active enemies and clears `spatialGrid`, but leaves `totalSpawned` and `totalKilled` unreset.
 
 ---
 
 ## 2. Logic Chain
 
-### 2.1 Root Cause of `boss_crisis_events.test.ts` Compilation & Execution Failure
-1. **Observation 1.1**: Lines 13, 15, and 231 of `tests/unit/boss_crisis_events.test.ts` trigger TS errors TS2307, TS2305, and TS2554.
-2. In `src/input/`, only `KeyboardController.ts` and `TouchVirtualPad.ts` exist. No `InputManager` file exists in the repository.
-3. In `src/core/physics/Platform.ts`, `Platform` is an interface (`{ id, bounds, type, friction? }`). The file exports `PlatformPhysics`, not a function called `createPlatform`.
-4. In `src/core/player/PlayerController.ts`, the constructor signature is `constructor(position?: Vector2D, config?: PlayerKinematicsConfig)`. Line 231 passed 4 arguments (`'player'`, `{ x: 1900, y: 200 }`, `input`, `sound`).
-5. **Deduction**: `boss_crisis_events.test.ts` was authored with fictitious constructor parameters and helper imports rather than matching the actual project codebase. Fixing the imports (defining platform objects directly or via a local helper, using `new PlayerController(vec2(1900, 200))`, and removing the unused `InputManager` import) will resolve all TypeScript errors and permit all 10 crisis unit tests to run.
-
-### 2.2 Root Cause of `iron_nokana_boss.test.ts` Failure 2A (Flame Sweep Telegraph)
-1. **Observation 1.2 (Failure 2A)**: Line 107 asserts `expect(telegraphFired).toBe(true)` after `boss.update(1 / 60, engine)`.
-2. Inspecting `IronNokanaBoss.ts` line 265: `this.phase = config.initialPhase ?? 'PHASE_1_CRAWLER_BARRAGE'`.
-3. Inspecting `IronNokanaBoss.ts` line 310-318:
-   - When `this.phase === 'PHASE_1_CRAWLER_BARRAGE'`, `update` calls `updateCannonAttack` and `updateRocketAttack`.
-   - `updateFlameSweep` is ONLY called when `this.phase === 'PHASE_2_FLAME_SWEEP'` (or Phase 4).
-4. In `iron_nokana_boss.test.ts` line 92, the boss was instantiated with default configuration:
-   `const boss = new IronNokanaBoss('nokana_telegraph', vec2(2050, 90));`
-   Consequently, `boss.phase` is `PHASE_1_CRAWLER_BARRAGE`.
-5. **Deduction**: Because the boss is in Phase 1, `boss.update` never enters the Phase 2 flame branch, leaving `isFlameTelegraphing = false` and emitting no event. The test or boss instantiation must set `boss.phase = 'PHASE_2_FLAME_SWEEP'` (or pass `{ initialPhase: 'PHASE_2_FLAME_SWEEP' }`) to test the Phase 2 flame sweep telegraph.
-
-### 2.3 Root Cause of `iron_nokana_boss.test.ts` Failure 2B (Death Demolition Phase)
-1. **Observation 1.2 (Failure 2B)**: Line 178 does `boss.takeDamage(400);` followed by line 179 `expect(boss.phase).toBe('DEATH_EXPLODING')`. Received: `'PHASE_2_FLAME_SWEEP'`.
-2. Inspecting `IronNokanaBoss.ts` lines 559-569 (`takeDamage`):
-   ```ts
-   const p1Threshold = Math.round(this.maxHealth * 0.75); // 300 HP
-   if (this.phase === 'PHASE_1_CRAWLER_BARRAGE') {
-     this.health = Math.max(p1Threshold, this.health - effectiveDamage);
-     if (this.health <= p1Threshold) {
-       this.transitionToPhase2();
-     }
-     return;
-   }
-   ```
-3. `IronNokanaBoss` intentionally implements **per-phase health clamping** (as verified by passing test cases in `iron_nokana_boss.test.ts:40-75` where dealing 200 damage in Phase 1 clamps at 300 HP).
-4. When `boss.takeDamage(400)` is called while in Phase 1, health is clamped to 300 HP (75%), transitioning the boss to `PHASE_2_FLAME_SWEEP`, and returning immediately.
-5. **Deduction**: To transition to `DEATH_EXPLODING`, the boss must either progress through each phase sequentially (`boss.takeDamage(100)` 4 times), or be initialized in Phase 4 (`{ initialPhase: 'PHASE_4_OVERDRIVE_RAGE', customHp: 100 }` or `boss.phase = 'PHASE_4_OVERDRIVE_RAGE'`). The test author incorrectly assumed a single 400 damage call in Phase 1 would bypass all phase clamping.
-
-### 2.4 Sequential Clamping Interaction in `boss_crisis_events.test.ts`
-1. In `boss_crisis_events.test.ts` line 201-224 (Test 5: "Robustness Under Massive Burst Damage"), the test executes:
-   ```ts
-   const boss = new IronNokanaBoss('boss_burst', vec2(2050, 90), { customHp: 400 });
-   crisisManager.setBoss(boss);
-   boss.takeDamage(5000);
-   crisisManager.update(1 / 60);
-   expect(crisisManager.isCrisisTriggered('CRISIS_ARTILLERY_STRIKE')).toBe(true);
-   expect(crisisManager.isCrisisTriggered('CRISIS_TERRAIN_COLLAPSE')).toBe(true);
-   expect(crisisManager.isCrisisTriggered('CRISIS_RAGE_OVERDRIVE')).toBe(true);
-   ```
-2. Because `IronNokanaBoss.takeDamage` currently clamps to 300 HP in Phase 1, `boss.takeDamage(5000)` only lowers HP to 300 (75%).
-3. `CrisisEventManager.update` calculates `currentRatio = 300 / 400 = 0.75`. It will fire `CRISIS_ARTILLERY_STRIKE` (0.75 <= 0.75), but will NOT fire `CRISIS_TERRAIN_COLLAPSE` (0.75 <= 0.50 is false) or `CRISIS_RAGE_OVERDRIVE` (0.75 <= 0.25 is false).
-4. **Deduction**: For `CrisisEventManager` to test sequential crisis handling under burst damage, `IronNokanaBoss.takeDamage` must either allow damage overflow to cascade through phases, or the test should use `TetsuyukiBoss` (which has continuous HP reduction without phase gating), or `takeDamage` should accept an optional bypass/overflow flag.
+1. **Root Cause of the Infinite Loop / Freeze**:
+   - When a session ends (player HP = 0), `isAlive = false`. The simulation continues to call `step()` and `render()`.
+   - If an external caller or UI attempted to re-instantiate `new GrimHarvestGame()`, the prior instance's RAF loop was never stopped (`cancelAnimationFrame` was never called), resulting in dual concurrent RAF loops competing for canvas and input.
+   - If `restart()` is triggered after any real-world delay, `now - this.lastTime` can be large. Without an accumulator sub-step clamp and without an immediate clock reset (`this.lastTime = performance.now(); this.accumulator = 0`), the `while (this.accumulator >= FIXED_TIMESTEP)` loop executes an enormous batch of ticks synchronously, freezing the browser.
+2. **State Leakage Across Subsystems**:
+   - In `HordeManager`, if enemies are not despawned back to the pool, their IDs remain registered in `SpatialHashGrid`, leading to collision against phantom entities in the restarted session.
+   - In `LootManager`, uncollected soul gems must be recycled to prevent pool starvation and unexpected instant XP collection on resurrection.
+   - In `WeaponManager`, any lingering projectiles from `BoneSpear` or slashes from `ArcaneScythe` must be removed, and the arsenal must be strictly reset to Rank 1 Arcane Scythe.
+   - In `UpgradeSystem` & `UpgradeModal`, an open modal or pending level-up counter pauses the engine (`isPaused = true`). Calling `restart()` must close the modal, detach DOM listeners, reset `pendingLevelUps = 0`, and set `isPaused = false`.
+   - In `WaveDirector`, if `elapsedTime` is not reset, the game will spawn late-game Nightfall/Abyssal Siege enemies with high HP multipliers against a Level 1 player with Rank 1 starter weapon.
+   - In `Camera`, residual `shakeIntensity` or trauma timer would cause the camera to violently jitter upon resurrection.
+3. **Synthesis**:
+   A deterministic, single-point `GrimHarvestGame.restart()` method that sequentially coordinates the reset of every subsystem guarantees 100% clean resurrection with zero memory leaks, zero accumulator drift, and zero stale state.
 
 ---
 
 ## 3. Caveats
-1. **Playwright against `dist/`**: The 17 Playwright E2E tests ran against the existing `dist/` build served via Vite preview. Since `npm run build` failed due to the test file typecheck, the `dist/` bundle reflects the prior build. However, since all `src/` files compile cleanly with 0 errors, rebuilding `dist/` once `boss_crisis_events.test.ts` is fixed will maintain full compatibility.
-2. **Read-Only Explorer Scope**: Explorer M1_3 has read-only permissions and has not modified any source code or test files. The required fixes are documented below as actionable proposals for the implementation agents.
+
+1. **DOM vs Headless Node Testing**:
+   In unit tests (Vitest under Node.js), `window`, `document`, and `HTMLCanvasElement` are undefined unless polyfilled or mocked. `GrimHarvestGame`'s constructor and lifecycle methods must remain completely safe when instantiated without DOM arguments (`new GrimHarvestGame()` without `container`).
+2. **Spacebar Key Event Contention**:
+   Spacebar is used both for in-game jump/action during gameplay and for resurrection when dead. The resurrection listener must strictly guard on `!this.player.isAlive` to prevent accidental restarts during normal gameplay.
+3. **No Modification Rule for Explorer**:
+   As `explorer_m1_3`, this report contains recommended code and unit test designs only. Source code modifications must be executed by implementation workers after user authorization.
 
 ---
 
-## 4. Conclusion
+## 4. Conclusion & Actionable Implementation Recommendations
 
-### Summary Baseline
-- **Build Status**: 3 compilation errors, strictly localized in `tests/unit/boss_crisis_events.test.ts`. `src/` has **0 errors**.
-- **Vitest Unit Tests**:
-  - Total: 26 files (24 passed, 2 failed).
-  - Tests: 307 tests (305 passed, 2 failed).
-  - Pre-existing: 24 files, 294 tests — **100% PASS (0 regressions)**.
-- **Playwright E2E Tests**: 4 files, 17 tests — **100% PASS (0 regressions)**.
-- **Invariants**: 164-key sprite invariant is **100% intact** (164/164 keys verified). Jump physics, out-of-bounds spawning, and boss balance thresholds are all intact.
+### 4.1 Changes to `src/core/weapons/WeaponManager.ts`
+Implement `WeaponManager.reset(starterWeaponId = 'scythe', starterRank = 1)`:
+```ts
+public reset(starterWeaponId: string = 'scythe', starterRank: number = 1): void {
+  // 1. Purge weapon-specific projectile pools and active visuals
+  for (const weapon of this.weapons.values()) {
+    if ((weapon as any).projectilePool?.clear) {
+      (weapon as any).projectilePool.clear();
+    }
+    if (Array.isArray((weapon as any).activeSlashes)) {
+      (weapon as any).activeSlashes.length = 0;
+    }
+    if (Array.isArray((weapon as any).skulls)) {
+      (weapon as any).skulls.length = 0;
+    }
+    if (Array.isArray((weapon as any).activeBolts)) {
+      (weapon as any).activeBolts.length = 0;
+    }
+    if (Array.isArray((weapon as any).activeRings)) {
+      (weapon as any).activeRings.length = 0;
+    }
+    weapon.timer = 0;
+  }
 
-### Required Actions for M1 Implementation
-1. **Fix `tests/unit/boss_crisis_events.test.ts`**:
-   - Remove `import { InputManager } from '../../src/input/InputManager';`
-   - Remove `import { createPlatform } from '../../src/core/physics/Platform';`
-   - Define a local helper or inline platform objects:
-     ```ts
-     const makePlat = (id: string, x: number, y: number, width: number, height: number): Platform => ({
-       id,
-       bounds: { x, y, width, height },
-       type: 'SOLID',
-     });
-     ```
-   - In Line 231, update player instantiation:
-     ```ts
-     const player = new PlayerController(vec2(1900, 200));
-     ```
-2. **Fix `tests/unit/iron_nokana_boss.test.ts`**:
-   - In Test 3 (flame sweep telegraph): Initialize boss in Phase 2:
-     ```ts
-     const boss = new IronNokanaBoss('nokana_telegraph', vec2(2050, 90), {
-       initialPhase: 'PHASE_2_FLAME_SWEEP',
-     });
-     ```
-   - In Test 5 (death demolition): Progress boss to Phase 4 before dealing lethal damage, or deal damage sequentially:
-     ```ts
-     const boss = new IronNokanaBoss('nokana_death', vec2(2050, 90), {
-       initialPhase: 'PHASE_4_OVERDRIVE_RAGE',
-       customHp: 100,
-     });
-     boss.takeDamage(100);
-     ```
-3. **Align `IronNokanaBoss.takeDamage` Burst Handling or Test 5**:
-   - In `IronNokanaBoss.ts`, permit residual damage in `takeDamage` to cascade down through phases if `amount` exceeds the phase clamping threshold, OR in `boss_crisis_events.test.ts` line 211, test burst damage using sequential hits or `TetsuyukiBoss`.
+  // 2. Clear weapon map and central projectile pool
+  this.weapons.clear();
+  this.projectilePool.clear();
 
----
+  // 3. Reset manager clocks and scratch buffers
+  this.simulationTime = 0;
+  this.hitCooldownBuffer.fill(-999);
+  this.scratchEnemyIds.fill(0);
 
-## 5. Verification Method
-
-### 5.1 Independent Reproduction Commands
-To independently verify the findings of this report:
-```bash
-# 1. Typecheck: Confirm 3 errors in boss_crisis_events.test.ts and 0 errors in src/
-npx tsc --noEmit
-
-# 2. Unit tests: Confirm 305 passed, 2 failed, 24/26 files passed
-npx vitest run
-
-# 3. Sprite key invariant: Confirm exactly 164 registered keys
-npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts
-
-# 4. Specific M1 boss failures: Confirm the 2 exact assertion failures
-npx vitest run tests/unit/iron_nokana_boss.test.ts
-
-# 5. Playwright E2E: Confirm 17/17 passed
-npx playwright test
+  // 4. Re-equip Rank 1 starter weapon
+  if (starterWeaponId) {
+    this.addWeapon(starterWeaponId, starterRank);
+  }
+}
 ```
 
-### 5.2 Invalidation Conditions
-- If any test in the 24 pre-existing test files fails, the zero-regression claim is invalidated.
-- If `adversarial_sprites_crosshairs.test.ts` reports any number other than 164 keys, the sprite invariant claim is invalidated.
-- If TypeScript compilation fails on any file under `src/`, the clean source compilation claim is invalidated.
+### 4.2 Changes to `src/core/systems/UpgradeSystem.ts` & `src/ui/UpgradeModal.ts`
+1. In `UpgradeSystem.ts`:
+```ts
+public reset(starterWeaponId: string = 'weapon_scythe', starterRank: number = 1): void {
+  this.weapons.clear();
+  this.passives.clear();
+  this.evolvedWeapons.clear();
+  if (starterWeaponId) {
+    this.addWeapon(starterWeaponId, starterRank);
+  }
+}
+```
+2. In `UpgradeModal.ts`:
+```ts
+public reset(): void {
+  this.close();
+  this.cards = [];
+  this.level = 1;
+  this.hoveredIndex = null;
+  this.selectedIndex = 0;
+  this.pulseTimer = 0;
+  this.cardBounds = [];
+}
+```
+
+### 4.3 Changes to `src/core/entities/Player.ts`
+Implement `Player.reset(startX = 0, startY = 0)`:
+```ts
+public reset(startX: number = 0, startY: number = 0): void {
+  this.position.x = startX;
+  this.position.y = startY;
+  this.velocity.x = 0;
+  this.velocity.y = 0;
+  this.bounds.x = startX - Player.COLLISION_RADIUS;
+  this.bounds.y = startY - Player.COLLISION_RADIUS;
+  this.isAlive = true;
+  this.facingAngle = 0;
+  this.facingDirection = 1;
+  this.invulnerabilityTimer = 0;
+
+  // Reset stats to initial baseline
+  this.stats.maxHealth = DEFAULT_PLAYER_STATS.maxHealth;
+  this.stats.currentHealth = DEFAULT_PLAYER_STATS.currentHealth;
+  this.stats.healthRegen = DEFAULT_PLAYER_STATS.healthRegen;
+  this.stats.armor = DEFAULT_PLAYER_STATS.armor;
+  this.stats.moveSpeed = 200;
+  this.stats.might = DEFAULT_PLAYER_STATS.might;
+  this.stats.area = DEFAULT_PLAYER_STATS.area;
+  this.stats.projSpeed = DEFAULT_PLAYER_STATS.projSpeed;
+  this.stats.cooldownReduction = DEFAULT_PLAYER_STATS.cooldownReduction;
+  this.stats.magnetRadius = 100;
+  this.stats.luck = DEFAULT_PLAYER_STATS.luck;
+
+  // Reset XP progression curve
+  this.progression.reset();
+}
+```
+
+### 4.4 Changes to `src/core/HordeManager.ts`
+Implement `HordeManager.reset()`:
+```ts
+public reset(): void {
+  this.clear();
+  this.totalSpawned = 0;
+  this.totalKilled = 0;
+}
+```
+
+### 4.5 Changes to `src/main.ts` (`GrimHarvestGame`)
+1. Implement `restart()`:
+```ts
+public restart(): void {
+  // 1. Simulation clock & loop state
+  this.elapsedTime = 0;
+  this.killCount = 0;
+  this.isPaused = false;
+  this.pendingLevelUps = 0;
+  this.accumulator = 0;
+  this.lastTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
+  // 2. Upgrade modal reset
+  this.upgradeModal.reset();
+
+  // 3. Player entity reset
+  this.player.reset(0, 0);
+
+  // 4. Horde manager & spatial grid reset
+  this.hordeManager.reset();
+
+  // 5. Loot drops purge
+  this.lootManager.clear();
+
+  // 6. Weapons reset (starter Rank 1 Arcane Scythe)
+  this.weaponManager.reset('scythe', 1);
+
+  // 7. Upgrade system reset (starter Rank 1 Arcane Scythe)
+  this.upgradeSystem.reset('weapon_scythe', 1);
+
+  // 8. Wave director reset (Phase 1, 0:00)
+  this.waveDirector.reset();
+
+  // 9. Camera & screen shake zeroing
+  this.camera.reset(0, 0);
+  this.camera.update(0, 0, 0);
+
+  // 10. Particle VFX clear
+  this.vfx.clear();
+
+  // 11. HUD reset
+  this.hud.reset();
+
+  // 12. Input controllers reset
+  this.keyboard.reset();
+  this.touchPad.reset();
+
+  // 13. Re-spawn initial perimeter swarm
+  this.spawnInitialSwarm();
+}
+```
+
+2. Add accumulator safety clamp in `tickFrame` (`start()` method):
+```ts
+if (!this.isPaused) {
+  this.accumulator += dt;
+  let subSteps = 0;
+  const maxSubSteps = 5;
+  while (this.accumulator >= GrimHarvestGame.FIXED_TIMESTEP && subSteps < maxSubSteps) {
+    this.step(GrimHarvestGame.FIXED_TIMESTEP);
+    this.accumulator -= GrimHarvestGame.FIXED_TIMESTEP;
+    subSteps++;
+  }
+  if (subSteps >= maxSubSteps) {
+    this.accumulator = 0; // Discard backlogged time to prevent death spiral
+  }
+}
+```
+
+3. Wire Canvas Click & Spacebar Listeners in `mount()` and `step()`:
+```ts
+// In mount(container):
+canvas.addEventListener('click', () => {
+  if (!this.player.isAlive) {
+    this.restart();
+  }
+});
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (!this.player.isAlive && (e.code === 'Space' || e.key === ' ')) {
+      e.preventDefault();
+      this.restart();
+    }
+  });
+}
+
+// In step(dt):
+if (!this.player.isAlive) {
+  const kbSnap = this.keyboard.getSnapshot();
+  if (kbSnap.jumpPressed) {
+    this.restart();
+    return;
+  }
+}
+```
+
+---
+
+## 5. Verification Method & Concrete Plan for `tests/unit/restart.spec.ts`
+
+The test suite for `tests/unit/restart.spec.ts` should be structured as follows:
+
+```ts
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { GrimHarvestGame } from '../../src/main';
+import { WavePhaseId } from '../../src/core/systems/WaveDirector';
+import { LootDropType } from '../../src/core/systems/LootManager';
+
+describe('GrimHarvestGame Restart Lifecycle & State Engine Suite (Milestone 1)', () => {
+  let game: GrimHarvestGame;
+
+  beforeEach(() => {
+    // Headless instantiation (no container/DOM required)
+    game = new GrimHarvestGame();
+  });
+
+  describe('Suite 1: Clock & Accumulator Reset', () => {
+    it('resets elapsedTime, killCount, and unpauses simulation', () => {
+      // Simulate 45s of active gameplay
+      for (let i = 0; i < 45 * 60; i++) {
+        game.step(1 / 60);
+      }
+      expect(game.elapsedTime).toBeGreaterThan(40);
+
+      game.restart();
+      expect(game.elapsedTime).toBe(0);
+      expect(game.killCount).toBe(0);
+      expect(game.isPaused).toBe(false);
+    });
+
+    it('prevents accumulator freeze and advances 60 ticks without error', () => {
+      game.restart();
+      expect(() => {
+        for (let i = 0; i < 60; i++) {
+          game.step(1 / 60);
+        }
+      }).not.toThrow();
+      expect(game.elapsedTime).toBeCloseTo(1.0, 2);
+    });
+  });
+
+  describe('Suite 2: Player Entity State Restoration', () => {
+    it('resurrects deceased player with 100 HP at origin (0, 0)', () => {
+      game.player.position.x = 450;
+      game.player.position.y = -300;
+      game.player.takeDamage(9999);
+      expect(game.player.isAlive).toBe(false);
+      expect(game.player.stats.currentHealth).toBe(0);
+
+      game.restart();
+      expect(game.player.isAlive).toBe(true);
+      expect(game.player.stats.currentHealth).toBe(100);
+      expect(game.player.position.x).toBe(0);
+      expect(game.player.position.y).toBe(0);
+      expect(game.player.invulnerabilityTimer).toBe(0);
+    });
+
+    it('resets player level and XP progression back to Level 1 / 0 XP', () => {
+      game.player.gainXP(250);
+      expect(game.player.level).toBeGreaterThan(1);
+      expect(game.player.currentXP).toBeGreaterThan(0);
+
+      game.restart();
+      expect(game.player.level).toBe(1);
+      expect(game.player.currentXP).toBe(0);
+      expect(game.player.totalXPEarned).toBe(0);
+    });
+  });
+
+  describe('Suite 3: WeaponManager & Projectile Pool Reset', () => {
+    it('purges non-starter weapons and restores Rank 1 starter Arcane Scythe', () => {
+      game.weaponManager.addWeapon('orbiters', 3);
+      game.weaponManager.addWeapon('spear', 2);
+      game.weaponManager.addWeapon('lightning', 4);
+      expect(game.weaponManager.getEquippedCount()).toBe(4);
+
+      game.restart();
+      expect(game.weaponManager.getEquippedCount()).toBe(1);
+      expect(game.weaponManager.hasWeapon('scythe')).toBe(true);
+      expect(game.weaponManager.getWeapon('scythe')?.rank).toBe(1);
+      expect(game.weaponManager.getWeapon('scythe')?.isEvolution).toBe(false);
+      expect(game.weaponManager.hasWeapon('orbiters')).toBe(false);
+      expect(game.weaponManager.hasWeapon('spear')).toBe(false);
+    });
+
+    it('clears active projectiles and resets simulation timer', () => {
+      game.weaponManager.addWeapon('spear', 1);
+      const spear = game.weaponManager.getWeapon('spear') as any;
+      if (spear?.fireProjectile) {
+        spear.fireProjectile(1, 0);
+      }
+      game.weaponManager.update(1.0);
+
+      game.restart();
+      expect(game.weaponManager.projectilePool.getActiveCount()).toBe(0);
+      expect(game.weaponManager.simulationTime).toBe(0);
+    });
+  });
+
+  describe('Suite 4: UpgradeSystem & UpgradeModal Reset', () => {
+    it('clears passives, closes modal, and resets pending level ups', () => {
+      game.upgradeSystem.addPassive('passive_might', 3);
+      game.upgradeSystem.addPassive('passive_chalice', 2);
+      expect(game.upgradeSystem.getPassiveSlotsCount()).toBe(2);
+
+      // Force open modal
+      game.handlePlayerLevelUp(2);
+      expect(game.isPaused).toBe(true);
+
+      game.restart();
+      expect(game.upgradeSystem.getPassiveSlotsCount()).toBe(0);
+      expect(game.upgradeSystem.getWeaponSlotsCount()).toBe(1);
+      expect(game.upgradeModal.getIsOpen()).toBe(false);
+      expect(game.isPaused).toBe(false);
+    });
+  });
+
+  describe('Suite 5: WaveDirector & Swarm Reset', () => {
+    it('resets timeline to Phase 1 (Awakening), resets multipliers, and re-spawns initial swarm', () => {
+      // Fast forward wave director to Nightfall (>60s)
+      game.waveDirector.update(75, 0, 0, 0, 0);
+      expect(game.waveDirector.getCurrentPhase().id).toBe(WavePhaseId.NIGHTFALL);
+      expect(game.waveDirector.getHPMultiplier()).toBeGreaterThan(1.2);
+
+      game.restart();
+      expect(game.waveDirector.elapsedTime).toBe(0);
+      expect(game.waveDirector.getCurrentPhase().id).toBe(WavePhaseId.AWAKENING);
+      expect(game.waveDirector.getHPMultiplier()).toBeCloseTo(1.0, 4);
+
+      // Initial swarm: 25 skeletons + 10 ghouls = 35 enemies
+      expect(game.hordeManager.getActiveCount()).toBe(35);
+      expect(game.hordeManager.totalKilled).toBe(0);
+    });
+  });
+
+  describe('Suite 6: LootManager & Drop Pool Purge', () => {
+    it('clears all lingering soul shards and pickups', () => {
+      game.lootManager.spawnDrop(LootDropType.EMERALD_SHARD, 50, 50);
+      game.lootManager.spawnDrop(LootDropType.RUBY_GEM, 100, 100);
+      expect(game.lootManager.getActiveCount()).toBe(2);
+
+      game.restart();
+      expect(game.lootManager.getActiveCount()).toBe(0);
+    });
+  });
+
+  describe('Suite 7: Camera & Screen Shake Reset', () => {
+    it('zeroes camera shake trauma and resets view position', () => {
+      game.camera.shake(30, 2.5);
+      game.camera.x = 800;
+      game.camera.y = 600;
+
+      game.restart();
+      expect(game.camera.shakeIntensity).toBe(0);
+      expect(game.camera.shakeTimer).toBe(0);
+      expect(game.camera.shakeOffsetX).toBe(0);
+      expect(game.camera.shakeOffsetY).toBe(0);
+    });
+  });
+
+  describe('Suite 8: Resurrection Trigger via Jump/Space Input', () => {
+    it('triggers restart and resurrection when player dies and jump input is received', () => {
+      game.player.takeDamage(9999);
+      expect(game.player.isAlive).toBe(false);
+
+      // Simulate Spacebar press
+      game.keyboard.setAction('jump', true);
+      game.step(1 / 60);
+
+      expect(game.player.isAlive).toBe(true);
+      expect(game.player.stats.currentHealth).toBe(100);
+      expect(game.elapsedTime).toBe(0);
+    });
+  });
+});
+```
+
+### Verification Commands:
+1. `npm test`: Run entire Vitest unit test suite (assert 19 files, ~220 tests 100% green).
+2. `npx vitest run tests/unit/restart.spec.ts`: Run the dedicated restart test suite.
+3. `npx tsc --noEmit`: Ensure clean TypeScript type-checking with zero compilation errors.

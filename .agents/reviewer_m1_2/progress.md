@@ -1,14 +1,23 @@
 # Progress Log — reviewer_m1_2
 
-Last visited: 2026-09-10T10:12:30+09:00
+Last visited: 2026-09-10T15:48:00Z
 
 ## Status
-- [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Read mandatory context files (ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m1_viewport/handoff.md)
-- [x] Inspect git diff and worker handoff across all modified files
-- [x] Execute build and tests independently (`tsc --noEmit`, `npm run build`, `npm test`, Playwright E2E)
-- [x] Code inspection for integrity violations (CLEAN — no fake tests, no dummy code)
-- [x] Boundary condition and adversarial stress testing (frustum, camera clamp, parallax wrap, letterboxing)
-- [x] UX review against user feedback (horizontal breathing room achieved, vertical ground occlusion identified)
-- [x] Compile review report and handoff.md with APPROVE verdict and M2 directives
-- [ ] Notify parent via send_message
+- [x] Received dispatch for Milestone 1 Review (Restart State Engine & Lifecycle Architecture)
+- [x] Appended prompt to DISPATCH.md with UTC timestamp
+- [x] Read mandatory context: ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m1_1/handoff.md
+- [x] Executed independent verification commands:
+  - `npx vitest run tests/unit/restart.spec.ts`: 20/20 passed
+  - `npm test`: 21 test files, 246/246 passed
+  - `npx tsc --noEmit`: Clean compilation (0 errors)
+- [x] Scrutinized 5 edge-case areas in `GrimHarvestGame.restart()`:
+  - Rapid restart spam (loopEpoch, cancelAnimationFrame, zero memory leaks, bounded state)
+  - Normal gameplay resurrection prevention (`canResurrect()` strictly enforced)
+  - Death during open upgrade modal / pending level ups (modal reset, clean decoupling)
+  - DOM event listener duplication (stable references, removeEventListener guard, 0 duplicate listeners)
+  - `HordeManager.reset()` totalKilled inflation prevention (bypasses despawn(), resets counters)
+- [x] Adversarial stress analysis & discovery of Major Finding (`ProjectilePool.clear()` infinite loop on uninitialized projectile)
+- [x] Code inspection for integrity violations (CLEAN — no fake tests, no facade code, no cheats)
+- [x] Updated BRIEFING.md
+- [ ] Write comprehensive handoff report (`handoff.md`)
+- [ ] Notify parent via send_message with APPROVE verdict

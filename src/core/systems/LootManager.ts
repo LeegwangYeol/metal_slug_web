@@ -270,6 +270,25 @@ export class LootManager {
     }
   }
 
+  /**
+   * Recycles all active items to pool, sets isAlive = false, resets nextId = 1,
+   * sanitizes velocities and attraction flags, and restores factory pool state.
+   */
+  public reset(): void {
+    this.clear();
+    this.nextId = 1;
+    for (let i = 0; i < this.pool.length; i++) {
+      const item = this.pool[i];
+      item.isAlive = false;
+      item.isAttracted = false;
+      item.currentSpeed = 0;
+      item.velocity.x = 0;
+      item.velocity.y = 0;
+      item.position.x = 0;
+      item.position.y = 0;
+    }
+  }
+
   private collectItem(item: LootItem, player: Player, engine?: any): void {
     item.isAlive = false;
 

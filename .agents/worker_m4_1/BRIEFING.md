@@ -1,69 +1,54 @@
-# BRIEFING — 2026-09-08T14:46:00Z
+# BRIEFING — 2026-09-11T03:52:16Z
 
 ## Mission
-Milestone M4: Playwright E2E Integration & Visual Proof Screenshots for Metal Slug Web Expansion
+Implement Milestone 4 Playwright E2E verification test suite `tests/e2e/restart_survival.spec.ts` covering death debounce & pristine restart invariants, >=15s autonomous post-restart survival loop, and visual proof screenshot generation (>50KB each).
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_worker
+- Archetype: worker
 - Roles: implementer, qa, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M4_E2E_VERIFY
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 4 (Automated E2E Verification & Visual Proof Suite)
 
 ## 🔒 Key Constraints
-- Exclusive write ownership: src/main.ts, tests/e2e/ultimate_and_crisis_expansion.spec.ts, artifacts/expansion/
-- Zero regressions across existing 34 Vitest suites (453 tests) and 4 Playwright E2E suites (17 tests)
-- Genuine implementations: No cheating, no hardcoded dummy outputs, no fake test results
-- High-fidelity visual proof screenshots (>5KB) in artifacts/expansion/
+- Exclusive write ownership: `tests/e2e/restart_survival.spec.ts` and `src/main.ts` (only for minor exposure adjustments if needed).
+- No cheating: All implementations must be genuine, maintain real state and produce real behavior.
+- Test 1: Game Over, Death Debounce (0.5s) & Pristine Restart State Invariants.
+- Test 2: Post-Restart Autonomous Survival Loop (>= 15 Continuous Seconds) using 8-directional dynamic window evaluation steering bot.
+- Test 3: Visual Proof Screenshots Generation (all 3 artifacts > 50KB in `artifacts/dark_fantasy/`: `enhanced_graphics_swarm.png`, `restart_verified.png`, `occult_vfx_lighting.png`).
+- 100% clean test passes: `npm run build`, `npx playwright test tests/e2e/restart_survival.spec.ts`, `npm test`, `npx tsc --noEmit`.
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T14:46:00Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: not yet
 
 ## Task Summary
-- **What to build**: Expose __EXPANSION__ in src/main.ts bootstrap, write tests/e2e/ultimate_and_crisis_expansion.spec.ts covering 3 scenarios, capture visual proof screenshots in artifacts/expansion/
-- **Success criteria**: 100% build pass, 100% Vitest pass (453/453), 100% Playwright E2E pass (29/29 across all suites, 12/12 in expansion suite), visual proof PNGs > 5KB in artifacts/expansion/
-- **Interface contracts**: PROJECT.md and explorer_m4_1/2/3 handoffs
-- **Code layout**: PROJECT.md § Code Layout
+- **What to build**: Comprehensive Playwright E2E suite `tests/e2e/restart_survival.spec.ts` with 3 core tests + audit test.
+- **Success criteria**: All tests pass, 15+ seconds survived post-restart, 0 engine errors, screenshots generated >50KB.
+- **Interface contracts**: `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md` and `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md`.
+- **Code layout**: E2E tests in `tests/e2e/`, artifacts in `artifacts/dark_fantasy/`.
 
 ## Key Decisions Made
-- Exposed IronNokanaBoss, CrisisEventManager, AllyNPC, AllyManager, AllyKiBlast, ItemPickupEntity, ItemDropType, ArtilleryTargetReticle, ArtilleryShellHazard, FallingDebrisHazard, GroundFlameHazard, PowEntity, PowState, vec2 on (window as any).__EXPANSION__ in src/main.ts bootstrap.
-- Implemented complete 12-test Playwright expansion suite in tests/e2e/ultimate_and_crisis_expansion.spec.ts covering:
-  * Scenario 1: Genuine KeyU input, 4-phase progression (FREEZE -> STRIKE_PASS -> DETONATION -> RECOVERY), screen-clearing 100% minion elimination with zero friendly fire.
-  * Scenario 2: Mid-boss vehicle encounter with camera locking, Iron Nokana 3-tier crisis triggers (75% artillery, 50% collapse & contraction, 25% rage overdrive), and 120 HP burst damage with phase gating.
-  * Scenario 3: Autonomous Ally NPC (Hyakutaro follow & Ki blast attack), diverse weapon pickups (Shotgun, Laser Gun, Rocket Launcher, Shield, Medkit).
-  * Scenario 4: High-fidelity visual proof screenshot captures for both naming conventions.
-  * Scenario 5: Visual proof artifact audit asserting file existence and size > 5,000 bytes.
-- Saved screenshots under both required filenames (dual capture):
-  * `artifacts/expansion/ultimate_strike_pass.png` (21 KB) & `screenshot_ultimate_strike_bomber.png` (21 KB)
-  * `artifacts/expansion/ultimate_detonation_flash.png` (40 KB) & `screenshot_ultimate_detonation_blast.png` (40 KB)
-  * `artifacts/expansion/crisis_boss_encounter.png` (49 KB) & `screenshot_boss_nokana_crisis.png` (49 KB)
-  * `artifacts/expansion/ally_pow_rescue.png` (23 KB) & `screenshot_ally_and_weapons.png` (23 KB)
+- Use authentic 8-directional steering bot adapted from `tests/e2e/horde_survival.spec.ts` with carousel kiting orbit ($R=320$px), $H=0.32$s horizon, and Arcane Scythe sweet spot.
+- Use deterministic render setup for the 3 visual proof screenshots to eliminate frame jitter while showcasing all graphics overhaul features.
+- Provide helper getters/methods if needed in `src/main.ts` for clean test access while preserving existing behavior.
 
 ## Artifact Index
-- DISPATCH.md — Assignment from orchestrator
-- BRIEFING.md — Persistent situational awareness
-- progress.md — Heartbeat and execution step tracker
-- handoff.md — Comprehensive 5-component handoff report
-- tests/e2e/ultimate_and_crisis_expansion.spec.ts — Playwright expansion E2E test suite (12 tests)
-- artifacts/expansion/ — Visual proof screenshot artifacts
+- `tests/e2e/restart_survival.spec.ts` — Main E2E test suite for restart lifecycle and survival.
+- `artifacts/dark_fantasy/enhanced_graphics_swarm.png` — Visual proof: 4 concentric rings of undead and drop shadows.
+- `artifacts/dark_fantasy/restart_verified.png` — Visual proof: active post-restart gameplay and revived HUD.
+- `artifacts/dark_fantasy/occult_vfx_lighting.png` — Visual proof: dynamic lighting, scythe arc, lightning, soul motes, decals, mist.
+- `.agents/worker_m4_1/handoff.md` — 5-component handoff report.
 
 ## Change Tracker
-- **Files modified**:
-  * `src/main.ts`: Exposed expansion classes under (window as any).__EXPANSION__ in bootstrap(), synced cameraX in step()
-  * `tests/e2e/ultimate_and_crisis_expansion.spec.ts`: Created new Playwright E2E suite
-  * `artifacts/expansion/`: 8 screenshot files generated (>20KB each)
-- **Build status**: PASS (exit code 0, 0 TypeScript errors)
-- **Pending issues**: none
+- **Files modified**: None yet
+- **Build status**: Pending implementation
+- **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**:
-  * `npm run build`: PASS (0 errors)
-  * `npx vitest run`: 34 passed (34/34), 453 passed (453/453), 100% green
-  * `npx playwright test tests/e2e/ultimate_and_crisis_expansion.spec.ts`: 12 passed (12/12), 100% green
-  * `npx playwright test`: 29 passed (29/29), 100% green across all suites
-- **Lint status**: clean
-- **Tests added/modified**: tests/e2e/ultimate_and_crisis_expansion.spec.ts (12 new E2E tests)
+- **Build/test result**: Pending
+- **Lint status**: 0 violations
+- **Tests added/modified**: `tests/e2e/restart_survival.spec.ts`
 
 ## Loaded Skills
-- None
+None

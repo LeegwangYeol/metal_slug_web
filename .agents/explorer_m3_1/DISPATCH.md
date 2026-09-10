@@ -1,28 +1,25 @@
-## 2026-09-08T04:20:26Z
+## 2026-09-10T16:10:12Z
+You are explorer_m3_1 (role: Codebase Researcher / Explorer).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_1
 
-You are an Explorer subagent (teamwork_preview_explorer) for Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/src/render/vfx/DarkFantasyVFX.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/render/GothicBackdrop.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/main.ts
 
-You are READ-ONLY. DO NOT edit or modify source code files.
+Mission:
+Investigate Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish):
+1. Examine current lighting/vignette implementation in `GothicBackdrop.ts`, `DarkFantasyVFX.ts`, and `main.ts`.
+2. Formulate high-performance dynamic radial lighting architecture:
+   - Ambient darkness / fog-of-war layer covering the screen.
+   - Player radial torch light (amber/warm occult glow with soft gradient falloff) revealing ground and entities.
+   - Dynamic spell flash lights (violet scythe arc illumination, bright cyan/white lightning flash illumination, crimson death sigil pulse).
+   - Canvas composite strategy (`destination-out`, `lighter`, or multi-pass offscreen lighting buffer) ensuring locked 60Hz without GPU/CPU stalls.
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-
-YOUR MISSION & FOCUS:
-Investigate core mechanics, input wiring, and simulation architecture for the Ultimate Move System:
-1. Examine `src/core/player/PlayerController.ts`, `src/core/input/InputHandler.ts`, and see if `src/core/player/UltimateManager.ts` exists or needs to be created.
-2. Investigate how input `KeyU` (and cross-referencing `KeyX` / button triggers from COLLABORATION.md) should trigger the ultimate move on `PlayerController`.
-3. Map out the 4-phase cinematic pipeline:
-   - Phase 1: Freeze Frame & Air-raid Siren sound (~0.5s)
-   - Phase 2: Tactical Strike Pass (Heavy Bomber or Metal Slug charge crossing the screen)
-   - Phase 3: Screen Detonation shockwave — clears 100% of standard on-screen minions (within active camera viewport) and deals 120 burst damage to bosses/mid-bosses
-   - Phase 4: Screen unfreeze & Recovery
-4. Investigate viewport entity query logic: how `StageManager.getCamera()` or viewport bounding box coordinates are accessed to find all living enemies currently inside the screen.
-5. Provide an exact architectural blueprint and interface contract for the Worker.
-6. Write your report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_1/handoff.md`
-   and call send_message to parent.
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_1/handoff.md`.
+Update your `progress.md`.
+When complete, send a message to orchestrator with your findings.

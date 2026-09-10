@@ -1,9 +1,24 @@
-## 2026-09-10T01:08:40Z
-From: dc4b76ec-2c8d-41af-8152-fb6d5ed83654 (parent)
-Task:
-Adversarially challenge Milestone 1 camera boundaries, boss arena dimensions, and spawner out-of-bounds invariants:
-- Verify that mid-boss arena width is at least 1100px (1820 - 720 = 1100) and end-boss arena width is at least 1100px (2900 - 1800 = 1100).
-- Assert mathematically that forward deadzone provides at least 528px of visible reaction space from player position to camera right edge.
-- Assert that minion wave spawning offset guarantees enemies spawn off-screen outside the 960px camera viewport while satisfying legacy invariants (`spawnX >= cameraX + 480`).
-- Run `npm test` and empirical checks.
-- In your handoff.md, document your empirical findings and deliver an explicit verdict: APPROVE or REQUEST_CHANGES. Notify parent when done.
+## 2026-09-10T15:42:01Z
+
+You are challenger_m1_2 (role: Adversarial Verifier / Challenger).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2
+
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1_1/handoff.md
+
+Mission:
+Adversarially verify the pool and entity invariants across restarts:
+1. Empirically verify that:
+   - `HordeManager`: After spawning 1,000 enemies and calling `restart()`, `getActiveCount()` is exactly 35 (initial swarm), `getPoolAvailableCount()` is exactly 2,013, `totalSpawned` is exactly 35, and `totalKilled` is exactly 0.
+   - `SpatialHashGrid`: Zero ghost entities or phantom collision hits after restart.
+   - `LootManager`: Pooled items count is 1,500, active gems is 0.
+   - `WeaponManager`: Active projectiles is 0, only Rank 1 Arcane Scythe is equipped.
+2. Run test verification.
+
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/handoff.md`.
+Explicitly state your verdict: `APPROVE` or `REQUEST_CHANGES`.
+When complete, send a message to orchestrator with your verdict.

@@ -1,23 +1,27 @@
-## 2026-09-08T02:31:49Z
+## 2026-09-10T15:59:44Z
 
-You are a Reviewer subagent (teamwork_preview_reviewer) for Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+You are reviewer_m2_2 (role: High-Reliability Reviewer).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Worker Handoff: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md
 
-REVIEW FOCUS:
-Review interface contracts, types, and cross-system integration:
-1. Verify `PrisonerEntity` aliases and `spawnsAlly` events conform to architectural expectations.
-2. Verify `ItemPickup` defaults and interaction with `PlayerController` (shields, medkits, weapons).
-3. Verify that `ProceduralSpriteFactory` default key count invariant (164 keys) was not touched or broken.
-4. Run `npx vitest run tests/unit/` across the entire suite.
-5. Provide an explicit verdict: APPROVE or REQUEST_CHANGES.
-6. Write your full review to:
-/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/handoff.md
-7. Send a message to parent with your verdict and brief summary.
+Review Mission:
+Perform an independent, adversarial code review of Milestone 2:
+1. Examine:
+   - Headless node / browser fallback safety (e.g. gradient checks).
+   - Directional flipping (facing 1 vs -1) without canvas clipping.
+   - Damage flash mask generation (normal, red, white).
+   - Composite operations hygiene (resetting to 'source-over').
+2. Run verification commands independently:
+   - `npx vitest run tests/unit/DarkFantasySprites.spec.ts`
+   - `npm test`
+   - `npx tsc --noEmit`
+
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/handoff.md`.
+Explicitly state your verdict: `APPROVE` or `REQUEST_CHANGES`.
+When complete, send a message to orchestrator with your verdict.

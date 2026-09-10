@@ -1,286 +1,178 @@
-# Handoff Report — Milestone M3: Procedural Sprites & Cinematic FX Architecture
+# Milestone 3 Investigation Report: Entity Contact Drop Shadows & Ground Decal System
+
+- **Author**: `explorer_m3_2` (Codebase Researcher / Explorer)
+- **Date**: 2026-09-10T16:15:00Z
+- **Target Systems**: Entity Contact Drop Shadows & Ground Decal System for "Grim Harvest: Undead Siege"
+- **Status**: COMPLETE (Investigation & Architecture Formulation)
+
+---
 
 ## 1. Observation
 
-### 1.1 Invariant 164 Sprite Keys in Existing Adversarial Tests
-Direct inspection of `tests/unit/adversarial_sprites_crosshairs.test.ts` (lines 31–43 and 162–200) revealed exact assertions governing `ProceduralSpriteFactory.getAllKeys()`:
+### 1.1 Existing Render Pipeline & Shadow State
+1. **`src/main.ts:505-545`**:
+   The current rendering sequence in `GrimHarvestGame.render()` executes in the following order:
+   - Line 506: `this.backdrop.render(ctx, camX, camY, this.elapsedTime);`
+   - Line 509: `this.vfx.renderGround(ctx, this.camera);`
+   - Lines 512-519: `DarkFantasySprites.drawLoot(ctx, item, this.camera, this.elapsedTime);`
+   - Lines 522-529: `DarkFantasySprites.drawEnemy(ctx, enemy, this.camera, this.elapsedTime);`
+   - Line 532: `DarkFantasySprites.drawPlayer(ctx, this.player, this.camera, this.elapsedTime);`
+   - Line 535: `this.weaponManager.render(ctx, this.camera);`
+   - Line 538: `this.vfx.renderAir(ctx, this.camera);`
+   - Line 541: `this.backdrop.renderForegroundMist(ctx, camX, camY, this.elapsedTime);`
+   - Lines 544-565: HUD and Upgrade Modal overlays.
+   **Direct observation**: There is currently no standalone shadow pass. Shadows are partially baked inside each entity's procedural sprite offscreen canvas.
 
-```typescript
-// Line 32-43:
-it('EMPIRICAL ORACLE 1A: Sprite factory initializes exactly or at least 164 unique sprite keys', () => {
-  const allKeys = factory.getAllKeys();
-  const count = factory.count();
+2. **`src/render/sprites/DarkFantasySprites.ts:353-366, 609-613, 879-883, 1115-1128, 1298-1302`**:
+   - `drawPlayerVector`: Ellipse at `(0, 22)`, radius `(16, 6)`, radial gradient from `rgba(8, 6, 12, 0.65)` to transparent.
+   - `drawSkeletonVector`: Ellipse at `(0, 16)`, radius `(9.5, 3.0)`, color `'rgba(8, 6, 12, 0.45)'`.
+   - `drawGhoulVector`: Ellipse at `(0, 16 + crawl * 0.3)`, radius `(13.5, 4.2)`, color `'rgba(8, 6, 12, 0.50)'`.
+   - `drawBansheeVector`: Ellipse at `(0, 20)`, radius `(14, 4)`, radial gradient from `'rgba(26, 12, 46, 0.40)'`.
+   - `drawDeathKnightVector`: Ellipse at `(0, 25)`, radius `(20, 6)`, color `'rgba(8, 6, 12, 0.70)'`.
+   - `drawLoot` (`DarkFantasySprites.ts:1706-1746`): Draws only a diamond shape and specular reflection with `bob = Math.sin(...) * 1.5`. **Direct observation**: Soul Gems have zero contact shadows.
+   - Damage Flashing Flaw (`DarkFantasySprites.ts:1643-1649, 1690-1703`): When an entity takes damage, `flash === 'white'` or `'crimson'`, `drawMaskedEntity` fills the entire sprite bounding box mask. Because the shadow is baked into the sprite canvas, the shadow itself flashes white or crimson on hit! Furthermore, when multiple enemies cluster, an enemy drawn later in the loop draws its quad over the bodies/limbs of enemies behind it, causing its baked shadow to clip onto adjacent enemy sprites.
 
-  console.log(`[Oracle 1A] Total Registered Sprite Keys: ${count}`);
-  expect(count).toBeGreaterThanOrEqual(164);
-  expect(allKeys.length).toBe(count);
+3. **Entity Physical Scale & Dimensions (`src/core/entities/EnemyTypes.ts:29-66`, `src/core/entities/Player.ts:43`)**:
+   - Player: `COLLISION_RADIUS = 14.0`, sprite size `64x64`, feet at `y + 16`. Target shadow: `18x7`.
+   - Skeleton: `radius = 12`, sprite size `40x40`, feet at `y + 14`. Target shadow: `14x5`.
+   - Ghoul: `radius = 14`, sprite size `44x44`, feet at `y + 14`. Target shadow: `16x6`.
+   - Death Knight: `radius = 22`, sprite size `64x64`, feet at `y + 22`. Target shadow: `24x9`.
+   - Banshee: `radius = 16`, sprite size `48x48`, floating apparitional entity. Target shadow: Floating diffuse shadow.
+   - Loot Items (`src/core/systems/LootManager.ts:33-60`): Emerald radius 4, Ruby radius 6, Violet radius 8, Chest radius 12.
 
-  // Verify no duplicate keys
-  const uniqueKeys = new Set(allKeys);
-  expect(uniqueKeys.size).toBe(count);
-});
+### 1.2 Existing Decal System State
+1. **`src/render/vfx/DarkFantasyVFX.ts:470-514`**:
+   `renderGround(ctx, camera)` iterates through active particles in the pool and only renders particles of type `SPELL_CIRCLE`.
+   `emitBloodBurst` (`DarkFantasyVFX.ts:194-239`) creates transient airborne droplets (`maxLife = 0.4 - 0.7s`) that disappear immediately upon expiry.
+   **Direct observation**: There is no ground decal system in the project. Blood splatters, blast scorch marks from Abyssal Lightning, and Death Sigil craters do not persist on the floor.
 
-// Line 162-200:
-it('EMPIRICAL CATEGORY AUDIT 1E: Verifies all major sprite key categories are populated and sum to exactly 164', () => {
-  const allKeys = factory.getAllKeys();
+2. **Weapon Impact Events (`src/core/weapons/AbyssalLightning.ts:176-218`, `src/core/weapons/CursedAura.ts:151-167`)**:
+   - `AbyssalLightning` creates electrical bolt visual segments and applies damage/kills enemies, emitting `emitBloodBurst` and `emitSoulBurst`, but stamps no scorch marks on the terrain.
+   - `CursedAura` pulses expanding shockwave rings and damages swarms, but stamps no occult blast scorch marks.
 
-  const categories = {
-    player: allKeys.filter((k) => k.startsWith('player_')),
-    rebel: allKeys.filter((k) => k.startsWith('rebel_') || k.startsWith('soldier_')),
-    pow: allKeys.filter((k) => k.startsWith('pow_')),
-    ironTechnical: allKeys.filter((k) => k.startsWith('iron_technical_')),
-    tetsuyuki: allKeys.filter((k) => k.startsWith('tetsuyuki_')),
-    projectile: allKeys.filter((k) => k.startsWith('proj_')),
-    casings: allKeys.filter((k) => k.startsWith('casing_')),
-    explosions: allKeys.filter((k) => k.startsWith('explosion_')),
-    hud: allKeys.filter((k) => k.startsWith('hud_')),
-  };
-
-  expect(categories.player.length).toBe(67);
-  expect(categories.rebel.length).toBe(21);
-  expect(categories.pow.length).toBe(9);
-  expect(categories.ironTechnical.length).toBe(7);
-  expect(categories.tetsuyuki.length).toBe(8);
-  expect(categories.projectile.length).toBe(13);
-  expect(categories.casings.length).toBe(4);
-  expect(categories.explosions.length).toBe(18);
-  expect(categories.hud.length).toBe(17);
-  expect(allKeys.length).toBe(164);
-});
-```
-
-### 1.2 Existing Key Isolation Mechanism in `ProceduralSpriteFactory.ts`
-Inspection of `src/render/sprites/ProceduralSpriteFactory.ts` (lines 381–412) revealed that a key partitioning pattern was previously implemented for "polish" features (parachute canopy and death animations):
-
-```typescript
-// Line 381-412:
-private readonly polishKeys: Set<string> = new Set([
-  'parachute_canopy',
-  'rebel_death_standard_0',
-  'rebel_death_standard_1',
-  'rebel_death_standard_2',
-  'rebel_death_standard_3',
-  'rebel_death_explosion_air',
-  'rebel_death_explosion_helmet',
-  'rebel_death_explosion_land_0',
-  'rebel_death_explosion_land_1',
-  'rebel_death_burn_thrash_0',
-  'rebel_death_burn_thrash_1',
-  'rebel_death_burn_charcoal_0',
-  'rebel_death_burn_ash_0',
-  'rebel_death_burn_ash_1',
-]);
-
-public hasSprite(key: string): boolean {
-  return this.spriteCache.has(key);
-}
-
-public getAllKeys(includePolish: boolean = false): string[] {
-  if (includePolish) {
-    return Array.from(this.spriteCache.keys());
-  }
-  return Array.from(this.spriteCache.keys()).filter((k) => !this.polishKeys.has(k));
-}
-
-public count(includePolish: boolean = false): number {
-  return this.getAllKeys(includePolish).length;
-}
-```
-
-Notice:
-- `this.spriteCache` actually holds $164 + 14 = 178$ sprites.
-- `hasSprite(key)` checks `this.spriteCache.has(key)`, which returns `true` for all 178 sprites.
-- `getSprite(key)` and `drawSprite(ctx, key, ...)` directly query `this.spriteCache.get(key)`.
-- But `getAllKeys()` defaults to `includePolish = false`, returning strictly 164 keys, which satisfies Oracle 1A and Category Audit 1E.
-
-### 1.3 `CanvasRenderer.ts` Current Render Pipeline & Gaps
-Inspection of `src/render/CanvasRenderer.ts` (lines 117–129 and 195–224) revealed the current 5-pass structure:
-```typescript
-// Line 117-129:
-export interface RenderSceneState {
-  time?: number;
-  camera: Camera;
-  platforms?: Platform[];
-  player?: RenderPlayerState;
-  enemies?: RenderEnemyState[];
-  corpses?: RenderCorpseState[];
-  boss?: RenderBossState;
-  pows?: RenderPowState[];
-  projectiles?: RenderProjectileState[];
-  explosions?: RenderExplosionState[];
-  hud?: RenderHUDState;
-}
-
-// Line 195-224:
-public renderScene(scene: RenderSceneState): void {
-  const time = scene.time ?? this.elapsedTime;
-  const cam = scene.camera;
-  this.clear();
-
-  this.renderParallaxPass(cam, time);
-
-  if (scene.platforms && scene.platforms.length > 0) {
-    this.renderPlatformsPass(scene.platforms, cam);
-  }
-
-  this.renderEntitiesPass(scene, cam, time);
-
-  if (scene.player && scene.player.state !== 'death') {
-    this.renderCrosshairPass(scene.player, cam, time);
-  }
-
-  this.renderProjectilesAndExplosionsPass(scene.projectiles ?? [], scene.explosions ?? [], cam, time);
-
-  if (scene.hud) {
-    this.renderHudPass(scene.hud);
-  }
-}
-```
-
-Current missing visual passes in `CanvasRenderer.ts`:
-1. **Screen Flash**: No full-screen alpha overlay for detonations.
-2. **Tactical Bomber Flyover & Shadow**: No aerial bomber sweep or moving ground shadow pass.
-3. **Expanding Shockwave Rings**: No expanding circular shockwave distortion rings for ultimate move or heavy explosions.
-4. **Item Pickups / Supply Crates**: No rendering pass for Shotgun, Laser, Rocket, Medkit, or Shield pickup crates (`scene.items`).
-5. **Hazard Warning Reticles & Debris**: No dedicated render pass for `ArtilleryTargetReticle`, falling artillery shells, falling ceiling debris, or ground flame hazards (`scene.hazards`).
-6. **Autonomous Ally NPC (Hyakutaro Ichimonji)**: No rendering pass for companion soldier and his Ki blast energy projectiles (`scene.allies`).
-7. **Iron Nokana Boss**: Currently `renderEntitiesPass` line 347 only checks `boss` with `tetsuyuki_` sprites.
-
-### 1.4 Baseline Test Execution
-Ran all 31 test suites across the project (`npx vitest run`):
-- 31 test files passed (100% green).
-- 389 unit tests passed.
-- `tests/unit/adversarial_sprites_crosshairs.test.ts` (17 tests) passed cleanly.
+3. **Performance & Memory Rigor (`tests/unit/ChallengerM2_1AdversarialHarness.test.ts:4-9`)**:
+   Unit and adversarial benchmarks require 60Hz performance with 1,000+ active entities, 0 dynamic canvas allocations per frame, and 0 runtime memory leaks. Any decal or shadow system must strictly conform to zero-garbage architecture.
 
 ---
 
 ## 2. Logic Chain
 
-### 2.1 Preserving the 164-Key Invariant
-1. **Fact**: `adversarial_sprites_crosshairs.test.ts` invokes `factory.getAllKeys()` without arguments and strictly asserts that `allKeys.length === 164` and that individual category breakdowns equal exact quantities (Observation 1.1).
-2. **Fact**: `ProceduralSpriteFactory` already implements an exclusion set `polishKeys` that filters out 14 polish sprites from `getAllKeys()` by default (Observation 1.2).
-3. **Deduction**: We can introduce a second set `expansionKeys: Set<string>` and update `getAllKeys`:
-   ```typescript
-   public getAllKeys(includePolish: boolean = false, includeExpansion: boolean = false): string[] {
-     return Array.from(this.spriteCache.keys()).filter((k) => {
-       if (!includePolish && this.polishKeys.has(k)) return false;
-       if (!includeExpansion && this.expansionKeys.has(k)) return false;
-       return true;
-     });
-   }
-   ```
-4. **Deduction**: Default `getAllKeys()` will evaluate with `includePolish = false` and `includeExpansion = false`, continuing to return strictly the 164 baseline keys.
-5. **Safety Mechanism**: To guarantee zero developer error or missed key registrations, all new expansion sprites should be registered using a private helper:
-   ```typescript
-   private registerExpansionSprite(
-     key: string,
-     width: number,
-     height: number,
-     anchorX: number,
-     anchorY: number,
-     renderFn: (ctx: CanvasContext2DLike) => void
-   ): SpriteFrame {
-     this.expansionKeys.add(key);
-     return this.registerSprite(key, width, height, anchorX, anchorY, renderFn);
-   }
-   ```
-   Every expansion sprite registered is automatically added to `expansionKeys`, making accidental leakage into `getAllKeys()` mathematically impossible.
+### 2.1 Entity Contact Drop Shadow Architecture
+- **Step 1 (Layer Separation)**:
+  By moving shadow rendering from individual entity sprite drawers into a dedicated **Pre-Entity Contact Drop Shadow Pass** (executing directly after Ground Decals and before any Loot, Horde, or Player entities draw):
+  - Shadows are always projected onto the ground plane beneath all living entities.
+  - Overlapping enemies in high-density swarms (e.g. 500+ enemies) will never have one enemy's shadow drawn across another enemy's torso or weapon.
+  - Damage flashes (`white` / `crimson`) applied to entity sprites will never taint the ground contact shadow.
+  - Floating entities (Banshees and Soul Gems) achieve true 3D grounding: the shadow remains on the ground plane while the sprite bobs above it.
 
-### 2.2 Integration of 41 Expansion Sprites
-By categorizing the expansion requirements from `PROJECT.md` and `COLLABORATION.md`, 41 new procedural pixel-art sprites are specified:
-- **Ultimate Move (7 sprites)**: `tactical_bomber`, `tactical_bomber_shadow`, `air_bomb_falling_0`, `air_bomb_falling_1`, `shockwave_ring_0`, `shockwave_ring_1`, `shockwave_ring_2`.
-- **Boss Iron Nokana (7 sprites)**: `iron_nokana_hull`, `iron_nokana_treads_0`, `iron_nokana_treads_1`, `iron_nokana_cannon`, `iron_nokana_missile_pod`, `iron_nokana_flame_turret`, `iron_nokana_wreckage`.
-- **Crisis Environmental Hazards (7 sprites)**: `hazard_reticle_artillery`, `hazard_reticle_debris`, `hazard_warning_icon`, `hazard_shell_falling`, `hazard_falling_debris`, `hazard_ground_flame_0`, `hazard_ground_flame_1`.
-- **Autonomous Ally Hyakutaro Ichimonji (10 sprites)**: `ally_hyakutaro_idle_0`, `ally_hyakutaro_idle_1`, `ally_hyakutaro_walk_0`, `ally_hyakutaro_walk_1`, `ally_hyakutaro_attack_0`, `ally_hyakutaro_attack_1`, `ally_hyakutaro_celebrate_0`, `ally_hyakutaro_celebrate_1`, `ally_ki_blast_0`, `ally_ki_blast_1`.
-- **Diverse Weapons, Items & Shields (10 sprites)**: `item_crate_shotgun`, `item_crate_laser`, `item_crate_rocket`, `item_crate_medkit`, `item_crate_shield`, `proj_shotgun_pellet`, `proj_laser_beam`, `proj_laser_head`, `proj_homing_rocket`, `player_shield_bubble`.
+- **Step 2 (Offscreen Radial Shadow Atlas for 60 FPS Performance)**:
+  Calling `ctx.createRadialGradient(...)` hundreds of times per frame in HTML5 Canvas 2D is a well-known CPU bottleneck due to gradient object instantiation and CSS color parsing.
+  Therefore, an offscreen canvas atlas (`ShadowAtlas`) must be pre-rendered once at initialization, baking soft radial gradient stamps:
+  - `STAMP_PLAYER` (48x24 surface, soft 18x7 core)
+  - `STAMP_SKELETON` (36x18 surface, soft 14x5 core)
+  - `STAMP_GHOUL` (40x20 surface, soft 16x6 core with subtle necrotic rim)
+  - `STAMP_DEATH_KNIGHT` (56x28 surface, soft 24x9 deep core)
+  - `STAMP_BANSHEE` (44x22 surface, ethereal diffuse 18x7 purple-void halo)
+  - `STAMP_GEM_SMALL` (16x10 surface, 5x2.2 core)
+  - `STAMP_GEM_MED` (20x12 surface, 7x3 core)
+  - `STAMP_GEM_LARGE` (28x16 surface, 11x5 core)
+  Rendering each shadow in the frame loop then becomes an immediate, GPU-accelerated `ctx.drawImage` blit costing $< 0.001\text{ ms}$ per entity.
 
-All 41 sprites use authentic 16-color shaded palettes with outlines, non-null offscreen canvas buffers, and valid anchor coordinates.
+- **Step 3 (Dynamic Scaling & Floating Modulation)**:
+  - For grounded entities (Player, Skeleton, Ghoul, Death Knight), shadow positions are pegged to `(x, y + feetOffset)` with fixed scale.
+  - For the Banshee: the entity bobs at $y_{bob} = \sin(t \cdot 3) \cdot 3$. As it rises higher above the ground, the shadow expands ($scale = 1.0 + y_{bob} \cdot 0.05$) and its alpha diffuses ($\alpha = 0.35 - y_{bob} \cdot 0.04$).
+  - For Soul Gems: the diamond sprite oscillates with `Math.sin(elapsedTime * 4.0 + ...) * 1.5` while the shadow stays fixed at `y + 4`, creating a convincing levitation aesthetic.
 
-### 2.3 Non-Breaking Presentation Pipeline in `CanvasRenderer.ts`
-1. **Scene State Extension**:
-   Extend `RenderSceneState` with optional fields:
-   ```typescript
-   export interface RenderSceneState {
-     // Existing fields unchanged...
-     allies?: RenderAllyState[];
-     items?: RenderItemState[];
-     hazards?: RenderHazardState[];
-     cinematicFX?: RenderCinematicFXState;
-   }
-   ```
-   Because each new property is optional, all existing tests (e.g. `render_components.test.ts` line 284) that instantiate `RenderSceneState` without these properties will continue compiling and running without behavioral modification.
+### 2.2 Ground Decal System Architecture
+- **Step 1 (Zero-Allocation Circular Buffer)**:
+  A fixed-capacity circular ring buffer (`GroundDecalSystem`, capacity 500) ensures zero dynamic heap allocation:
+  - An array of 500 pre-allocated `GroundDecal` objects is created at instantiation.
+  - Decal allocation uses `this.head = (this.head + 1) % this.capacity`, overwriting the oldest slot when full in $O(1)$ time with zero GC pressure.
+  - Frame updates step decal `life += dt`. When `life >= maxLife`, the decal expires.
+  - Memory footprint is strictly bounded to $< 50\text{ KB}$ permanently.
 
-2. **Render Order & Layering**:
-   The expanded render sequence inside `renderScene()` preserves depth hierarchy:
-   - **Pass 1**: Background Parallax
-   - **Pass 2**: Terrain & Platforms
-   - **Pass 2.5 (NEW)**: Environmental Warning Reticles & Ground Flames (`renderHazardsPass`)
-   - **Pass 3**: Entities:
-     - POW Hostages
-     - Boss: Tetsuyuki Fortress OR Iron Nokana Dreadnought (`renderBossPass`)
-     - Enemies & Mid-Boss
-     - Allies: Hyakutaro Ichimonji (`renderAlliesPass`)
-     - Item Pickups / Crates with sine floating bob (`renderItemsPass`)
-     - Corpses & Casualties
-     - Player Marco Rossi & active Shield Bubble (`player_shield_bubble`)
-   - **Pass 3.5**: Crosshair Reticle (Pistol, HMG, Flame Shot unchanged; add Shotgun fan, Laser beam, Rocket tracking)
-   - **Pass 4**: Projectiles & Explosions (including Shotgun pellets, Laser beam segments, Homing rockets, Falling debris)
-   - **Pass 4.5 (NEW)**: Cinematic FX:
-     - Tactical Bomber Flyover & Ground Shadow
-     - Expanding Shockwave Rings
-     - Screen Flash Full-Screen Alpha Overlay
-   - **Pass 5**: Retro Arcade HUD (Overlay renders on top of screen flash, ensuring score/lives/ammo are always legible)
+- **Step 2 (Decal Types & Dynamic Fading Curves)**:
+  1. **Blood Splatters & Droplets (`BLOOD_SPLATTER`)**:
+     - Triggered on weapon slash/pierce impacts and when airborne blood particles land on the ground.
+     - Radius: 3 to 8 px with 2 to 4 directional satellite micro-droplets.
+     - Lifespan: 12.0s (fully opaque for 8.0s, linear decay to 0 over final 4.0s).
+     - Color transitions from fresh coagulated crimson (`#6b1212`) to oxidized crust (`#380a0a`).
+  2. **Pooling Dark Crimson Core (`BLOOD_POOL`)**:
+     - Triggered on enemy death (`result.killed === true`).
+     - Radius scaled to enemy mass: Skeleton 10px, Ghoul 14px, Death Knight 26px, Banshee 12px (ectoplasmic violet).
+     - Lifespan: 15.0s (opaque for 10.0s, smooth exponential decay over final 5.0s).
+  3. **Blast Scorch Marks (`LIGHTNING_SCORCH`)**:
+     - Triggered at Abyssal Lightning impact and bounce coordinates.
+     - Radius: 16 to 22 px charred carbon crater with 4 to 6 jagged fractal electrical discharge cracks.
+     - Lifespan: 10.0s with cooling ozone aura.
+  4. **Death Sigil Occult Scorch (`SIGIL_SCORCH`)**:
+     - Triggered by Cursed Aura shockwave pulse.
+     - Radius: 25 to 35 px charred occult ring with inscribed arcane geometric runes.
+     - Lifespan: 8.0s.
 
-3. **Ultimate Move System (`src/core/player/UltimateManager.ts`) Flow**:
-   - `KeyU` event triggers `player.triggerUltimateMove(engine)`.
-   - 4-phase sequence:
-     1. `FREEZE_SIREN`: Brief time dilation (0.6s), air-raid siren sound (`sfx_air_raid_siren`).
-     2. `STRIKE_PASS`: Tactical bomber passes horizontally across the screen at `y = 35`, casting ground shadow at `y = 226`, releasing falling blockbuster bombs.
-     3. `DETONATION`: Bombs hit ground; full-screen white/orange flash (`alpha = 0.85`), camera shake (`amplitude = 14`), 3 concentric shockwave rings expand outward, minion wipe query (`camera.isInViewport`) wipes 100% of standard enemies and inflicts 120 HP to bosses.
-     4. `RECOVERY`: Flash fades out, gameplay resumes seamlessly.
+- **Step 3 (Frustum Culling & Render Efficiency)**:
+  The decal renderer evaluates each active decal against the camera viewport:
+  ```typescript
+  const sx = decal.x - camera.renderX;
+  const sy = decal.y - camera.renderY;
+  if (sx < -decal.radius || sx > vw + decal.radius || sy < -decal.radius || sy > vh + decal.radius) continue;
+  ```
+  Only on-screen decals are submitted to the canvas, keeping the render budget under $0.5\text{ ms}$ even with 500 active decals.
+
+- **Step 4 (Clean Lifecycle Reset)**:
+  In `GrimHarvestGame.restart()`, `groundDecals.clear()` resets `head = 0`, `count = 0`, and `active = false` across all 500 slots, guaranteeing clean re-initialization with zero state leaks.
 
 ---
 
 ## 3. Caveats
-
-1. **AudioContext Browser Autoplay**:
-   In headless Vitest / Node environments, `AudioContext` is mocked or absent. `SoundEngine.ts` already handles `typeof window === 'undefined'` gracefully. The new procedural sounds (`air_raid_siren`, `shotgun`, `laser`, `rocket`, `ki_blast`) must follow the same guard pattern so headless tests never throw.
-2. **Crosshair Distances and Pulsation Formula Invariants**:
-   `adversarial_sprites_crosshairs.test.ts` Oracle 2C explicitly tests the exact mathematical return values for `PISTOL`, `HEAVY_MACHINE_GUN`, and `FLAME_SHOT`. When adding new weapon cases (`SHOTGUN`, `LASER_GUN`, `ROCKET_LAUNCHER`) to `calculateCrosshairGeometry`, the formulas for existing weapons must remain completely unmodified.
-3. **Screen Resolution Invariant**:
-   All rendering occurs on the fixed 480x270 virtual framebuffer with letterboxing. Screen flash (`fillRect(0, 0, 480, 270)`) and bomber bounds must remain constrained to this coordinate system.
+1. **Sprite Atlas Decoupling**: Removing the baked contact shadow from `DarkFantasySprites.ts` vector methods (`drawPlayerVector`, `drawSkeletonVector`, etc.) is recommended so that damage flashes do not tint shadows. If backward compatibility with tests checking sprite atlas pixel bounds is required, the baked shadow can be retained as a faint 1px ambient occlusion rim while the primary soft shadow is handled by the pre-entity pass.
+2. **Decal Visual Complexity vs Canvas 2D Path Overhead**: Procedurally rendering 500 complex fractal paths per frame directly via `ctx.arc()` and `ctx.lineTo()` can accumulate path evaluation overhead. To achieve sub-millisecond execution, decals should utilize a hybrid approach: pre-rendered procedural offscreen decal stamps (4 variations per decal type) blitted via `ctx.drawImage` with randomized rotation and scale.
+3. **Canvas Taint in Headless Environments**: All offscreen canvases must be created through existing safe helpers (`safeCreateOffscreen` or `document.createElement('canvas')`) with headless environment guards (`typeof document !== 'undefined'`) to ensure 100% test compatibility in Node/Vitest.
 
 ---
 
 ## 4. Conclusion
+1. **Entity Contact Drop Shadows**:
+   - Implement a dedicated `renderContactDropShadows` pass in `GrimHarvestGame.render()` positioned immediately before entity rendering.
+   - Use an offscreen `ShadowAtlas` with pre-rendered radial gradient stamps scaled to the exact requested bounds:
+     - Player: `18x7` (offset `y + 16`)
+     - Skeleton: `14x5` (offset `y + 14`)
+     - Ghoul: `16x6` (offset `y + 14`, necrotic rim)
+     - Death Knight: `24x9` (offset `y + 22`, heavy ambient occlusion)
+     - Banshee: `18x7` (floating diffuse shadow with inverse height scaling and alpha modulation)
+     - Soul Gems: `5x2.2` to `11x5` (pinned to ground at `y + 4` while sprite bobs vertically)
+   - Guarantees zero shadow flash discoloration, zero overlapping body clipping, and $< 0.5\text{ ms}$ render time.
 
-1. **Safety & Zero Regressions**: The 164-key invariant tested by `adversarial_sprites_crosshairs.test.ts` can be 100% preserved by isolating the 41 new expansion sprites within an `expansionKeys: Set<string>` collection, accessed via `getAllKeys(includePolish = false, includeExpansion = false)`.
-2. **Seamless Presentation**: `CanvasRenderer.ts` can incorporate full cinematic visual FX (screen flash, tactical bomber flyover, shockwaves, item crates, crisis warning reticles, and ally companions) through optional extensions to `RenderSceneState`, ensuring zero breaking changes to existing visual and unit tests.
-3. **Readiness**: All foundational requirements for M3 are fully analyzed, mapped to exact lines, and ready for worker implementation upon orchestrator dispatch.
+2. **Ground Decal System**:
+   - Create `src/render/vfx/GroundDecalSystem.ts` with a pre-allocated 500-slot circular ring buffer.
+   - Implement 4 distinct decal archetypes: `BLOOD_SPLATTER`, `BLOOD_POOL`, `LIGHTNING_SCORCH`, and `SIGIL_SCORCH`.
+   - Wire event triggers into `HordeManager.applyDamage` / kill events, `AbyssalLightning` strikes, and `CursedAura` pulses.
+   - Hook airborne blood droplets in `DarkFantasyVFX` so expiring droplets stamp persistent splatters onto the ground.
+   - Enforce zero dynamic heap allocation, deterministic procedural variety via PRNG seeds, and seamless `restart()` lifecycle cleanup.
 
 ---
 
 ## 5. Verification Method
 
-To independently verify the architecture and ensure zero regressions:
-
-1. **Run Sprite & Crosshairs Adversarial Suite**:
+### 5.1 Automated Unit & Adversarial Tests
+1. **Shadow System Invariants**:
+   - Verify shadow dimensions match exact specs (Player: 18x7, Skeleton: 14x5, Ghoul: 16x6, Death Knight: 24x9).
+   - Verify Banshee shadow radius increases and opacity decreases when floating bob is at peak.
+   - Verify Soul Gem shadows render at ground level while sprite position reflects vertical oscillation.
+   - Verify zero canvas rendering exceptions and 0 NaNs across 1,000 active entities.
+2. **Ground Decal Buffer & Performance Invariants**:
+   - Circular buffer capacity check: Verify exact 500 capacity, $O(1)$ wrap-around replacement, and zero array re-allocations across 10,000 spawn cycles.
+   - Lifecycle fade test: Verify alpha transitions from 1.0 to 0.0 over decal lifespan.
+   - Frustum culling test: Assert off-screen decals are bypassed during rendering.
+   - Restart reset test: Assert `groundDecals.clear()` resets active count to 0 and reclaims all slots.
+3. **Execution Command**:
    ```bash
-   npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts
+   npm test
    ```
-   *Expected*: 17/17 tests pass. Oracle 1A and Category Audit 1E report exactly 164 total registered keys and identical category breakdowns.
+   All 24 test suites (285+ tests) must remain 100% green.
 
-2. **Run Renderer Components Suite**:
-   ```bash
-   npx vitest run tests/unit/render_components.test.ts
-   ```
-   *Expected*: 35/35 tests pass. `calculateLetterbox` and full 5-pass scene render cycle execute without errors.
-
-3. **Run Entire Project Vitest Suite**:
-   ```bash
-   npx vitest run
-   ```
-   *Expected*: All 31 test files pass, 389+ tests pass (100% green).
-
-4. **Verify Expansion Sprites Individually**:
-   Verify via unit test that `factory.hasSprite('tactical_bomber') === true`, `factory.hasSprite('shockwave_ring_0') === true`, `factory.hasSprite('item_crate_shotgun') === true`, `factory.hasSprite('iron_nokana_hull') === true`, and `factory.hasSprite('ally_hyakutaro_idle_0') === true`, while `factory.getAllKeys().length === 164`.
+### 5.2 Visual Inspection & Playwright Proof
+- Run Playwright test and capture high-resolution screenshots in `artifacts/dark_fantasy/`:
+  - Verify contact shadows ground entities naturally on flagstone tiles.
+  - Verify persistent crimson blood pools accumulate around slain horde swarms.
+  - Verify charred black scorch marks appear under lightning strikes and sigil explosions.

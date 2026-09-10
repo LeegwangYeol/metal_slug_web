@@ -1,301 +1,275 @@
-# Handoff Report: Independent Code & UX Review for Milestone M1 (16:9 HD Screen & Viewport Expansion)
+# Milestone 1 Independent Review & Adversarial Challenge Report
 
-**Reviewer & Adversarial Critic**: `reviewer_m1_2`  
+**Reviewer Agent**: `reviewer_m1_2` (Roles: High-Reliability Reviewer, Adversarial Critic)  
+**Parent Agent**: `orchestrator` (`16d4f03a-b906-4dcd-a7c3-e24f1752216b`)  
+**Date**: 2026-09-10T15:49:00Z  
+**Target Milestone**: Milestone 1 (Restart State Engine & Lifecycle Architecture for "Grim Harvest: Undead Siege")  
 **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m1_2`  
-**Parent Task ID**: `dc4b76ec-2c8d-41af-8152-fb6d5ed83654`  
-**Verdict**: **APPROVE** (with Major UX Findings & Action Directives for Milestone M2)  
-**Date**: 2026-09-10T10:13:00+09:00  
+**Verdict**: **APPROVE** (with Major Finding for ProjectilePool hardening)
 
 ---
 
-## Review Summary
+## 1. Review Summary
 
-**Verdict**: **APPROVE**  
-Milestone M1 successfully delivers the core engine and architectural requirements for the modern 16:9 HD widescreen viewport:
-1. **Resolution & Canvas**: Upgraded to 960x540 internal framebuffer (`CanvasRenderer.VIRTUAL_WIDTH = 960`, `VIRTUAL_HEIGHT = 540`) with crisp integer scaling and responsive 16:9 CSS.
-2. **Forward Reaction View**: Camera deadzone set to 44% (`deadzoneRight = 422px`), providing **538px** of forward reaction view (`960 - 422 = 538px`), strictly exceeding the >= 528px requirement.
-3. **Arena Expansion**: Both mid-boss (`720..1820`, 1100px width) and end-boss (`1800..2900`, 1100px width) arenas are expanded to 1100px, eliminating horizontal claustrophobia.
-4. **Sprite Charm & Invariants**: Marco Rossi, Rebel soldiers, and POW hostages feature cute expressive anime/chibi features (bright specular eye glints, rosy cheek blush, fluttering headband tails with golden fringe tips, bouncy breathing idles), while rigorously preserving the **164 baseline sprite key invariant**.
-5. **Parallax Tiling**: Seamless modular horizontal wrapping loop (`while (drawX < W)`) with 1920px double buffers eliminates gaps and popping.
-6. **Integrity Audit**: **CLEAN**. Zero integrity violations, zero fake mocks, zero bypassed logic.
-7. **Verification**: `npx tsc --noEmit` passed (0 errors), `npm run build` passed (44 modules transformed), and `npm test` passed 100% (35 of 35 files, 464 of 464 tests).
-
-**Adversarial Warning for Milestone M2**: While the horizontal viewport expansion eliminates horizontal claustrophobia, a major visual occlusion issue was discovered where `ground_main`'s expanded 310px height paints a solid `#383838` dark grey concrete block over the entire bottom 57.4% of the screen (Y=230..540). This completely hides the tropical dunes, coconut palms, and turquoise sea drawn in `ParallaxBackground.ts`. This must be resolved in Milestone M2 during the level design and terrain overhaul.
-
----
-
-## 1. Observation
-
-### 1.1 Source Code Inspections & Direct Citations
-
-1. **Resolution & Canvas (`src/render/CanvasRenderer.ts`)**:
-   - Lines 159–160:
-     ```typescript
-     public static readonly VIRTUAL_WIDTH = 960;
-     public static readonly VIRTUAL_HEIGHT = 540;
-     ```
-   - Lines 197–208: `calculateLetterbox(destWidth, destHeight)` accurately handles aspect ratio letterboxing/pillarboxing.
-   - Lines 313–327 (`renderPlatformsPass`):
-     ```typescript
-     if (plat.type === 'SOLID') {
-       ctx.fillStyle = T[2]; ctx.fillRect(sx, sy, w, Math.min(4, h));
-       ctx.fillStyle = T[4]; ctx.fillRect(sx, sy + 4, w, Math.min(8, Math.max(0, h - 4)));
-       if (h > 12) {
-         ctx.fillStyle = T[5]; // #383838 (dark concrete)
-         ctx.fillRect(sx, sy + 12, w, h - 12);
-         ctx.fillStyle = T[6];
-         for (let rx = sx + 8; rx < sx + w; rx += 24) ctx.fillRect(rx, sy + 15, 2, 2);
-       }
-     }
-     ```
-
-2. **Camera Forward Sight & Deadzones (`src/render/Camera.ts`)**:
-   - Lines 60–74:
-     ```typescript
-     this.viewportWidth = options.viewportWidth ?? 960;
-     this.viewportHeight = options.viewportHeight ?? 540;
-     this.deadzoneLeft = Math.floor(this.viewportWidth * 0.35);
-     this.deadzoneRight = this.viewportWidth >= 960 ? Math.floor(this.viewportWidth * 0.44) : Math.floor(this.viewportWidth * 0.45);
-     this.deadzoneTop = Math.floor(this.viewportHeight * 0.30);
-     this.deadzoneBottom = Math.floor(this.viewportHeight * 0.70);
-     ```
-   - On 960px width: `deadzoneRight = Math.floor(960 * 0.44) = 422`. Forward view = `960 - 422 = 538px` (exceeds >= 528px threshold).
-   - Lines 36–41: Default `bounds.maxY = 540`.
-
-3. **Stage Dimensions & 1100px Arenas (`src/main.ts`)**:
-   - Lines 713–714: `STAGE_WIDTH = 3600; STAGE_HEIGHT = 540;`
-   - Line 719: `{ id: 'ground_main', type: 'SOLID', bounds: createAABB(0, 230, STAGE_WIDTH, 310) },`
-   - Line 787: Mid-Boss lock bounds `{ minX: 720, maxX: 1820, minY: 0, maxY: 540 }` -> `1820 - 720 = 1100px`.
-   - Line 831: End-Boss lock bounds `{ minX: 1800, maxX: 2900, minY: 0, maxY: 540 }` -> `2900 - 1800 = 1100px`.
-   - Lines 757, 771, 816: Spawning coordinates: `cameraX + Math.max(1000, CanvasRenderer.VIRTUAL_WIDTH + 40)` (1000px, 40px beyond right camera edge).
-   - Lines 793–794: Mid-Boss patrol: `patrolMinX: 800, patrolMaxX: 1150`.
-
-4. **Parallax Background Engine (`src/render/ParallaxBackground.ts`)**:
-   - Lines 21–22: `VIEWPORT_WIDTH = 960`, `VIEWPORT_HEIGHT = 540`.
-   - Line 36: `bufferWidth = 1920`.
-   - Lines 60–96: Sunny Coastal sky bands (`#1B6CA8` to `#AED6F1`), morning sun halo (`#FFF9D2`).
-   - Lines 148–160: Distant mountains rendered from Y = 290 to 540.
-   - Lines 210–260: Tropical coconut palms rendered from Y = 330 to 412.
-   - Lines 275–298: Deep turquoise ocean and white foam crests rendered from Y = 495 to 540.
-   - Lines 381–388: Modular horizontal wrapping helper:
-     ```typescript
-     const renderTiledLayer = (buffer: CanvasBuffer, factor: number) => {
-       const offset = ((cameraX * factor) % this.bufferWidth + this.bufferWidth) % this.bufferWidth;
-       let drawX = -Math.floor(offset);
-       while (drawX < W) {
-         ctx.drawImage(buffer as any, drawX, 0);
-         drawX += this.bufferWidth;
-       }
-     };
-     ```
-
-5. **Procedural Sprites & Invariants (`src/render/sprites/ProceduralSpriteFactory.ts`)**:
-   - Lines 712–734: Marco Rossi chibi details (white cartoon sclera, large pupils with specular glint, cheek blush `rgba(255, 110, 110, 0.4)`, golden ribbon tips).
-   - Lines 848–875: Bouncy idle and springy run cycle animations.
-   - Lines 1018–1022: Comical expressive Rebel eyes with specular reflections.
-   - Lines 1480–1485: POW hostage sparkling cartoon eyes and rosy cheeks.
-   - Key count: verified strictly `164` baseline keys.
-
-6. **DOM & Responsive Styling (`index.html`)**:
-   - Lines 31–43: `#game-canvas` styled with `aspect-ratio: 16 / 9; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated;`.
-
-### 1.2 Verbatim Tool Outputs
-
-1. `npx tsc --noEmit`:
-   - Exit code: 0
-   - Output: Clean, 0 errors.
-
-2. `npm run build`:
-   - Exit code: 0
-   - Output:
-     ```
-     vite v6.4.3 building for production...
-     ✓ 44 modules transformed.
-     dist/index.html                  1.36 kB │ gzip:  0.60 kB
-     dist/assets/index-CmkJZIRR.js  258.84 kB │ gzip: 65.14 kB │ map: 929.76 kB
-     ✓ built in 287ms
-     ```
-
-3. `npm test` (`vitest run`):
-   - Exit code: 0
-   - Output: 35 test files passed, 464 tests passed (100% pass rate in 1.23s).
-
-4. `npx playwright test tests/e2e/game_initialization.spec.ts`:
-   - Exit code: 0 (3 passed in 5.2s).
-
-5. `npx playwright test tests/e2e/visual_verification.spec.ts tests/e2e/gameplay_controls.spec.ts`:
-   - Exit code: 0 (11 passed in 5.2s).
-
-6. `npx playwright test tests/e2e/ultimate_and_crisis_expansion.spec.ts`:
-   - Exit code: 1 (11 passed, 1 failed in 7.5s).
-   - Failure: `Scenario 2.1: Mid-Boss Vehicle triggers and locks camera during Section 1 battle` at line 355:
-     ```
-     Error: expect(received).toBe(expected)
-     Expected: 1200
-     Received: 1820
-     ```
-
-### 1.3 Visual Artifact Inspection (`view_file` on `artifacts/screenshots/`)
-
-- `artifacts/screenshots/screenshot_01_idle_crosshair.png`:
-  - Image resolution: 960x540.
-  - Top 42.6% (Y=0..230): Beautiful sunny azure sky, puffy white clouds, platforms, cute Marco aiming crosshair with 800+ px forward sight.
-  - Bottom 57.4% (Y=230..540): Solid, featureless dark grey slab (`#383838`) with a single row of rivets at Y=245.
-  - The tropical mountains, coconut palms, and turquoise ocean coded in `ParallaxBackground.ts` are 100% occluded by this dark grey box.
-
-- `artifacts/screenshots/screenshot_05_combat_upgraded_sprites.png`:
-  - Same visual layout: all action is compressed into the upper 230px, while the lower 310px is an empty `#383838` void.
+- **Verdict**: **APPROVE**
+- **Integrity Status**: **CLEAN** — Zero integrity violations detected. No dummy facade implementations, no hardcoded test outputs, no bypassed tasks, and no fabricated assertions.
+- **Scope Evaluated**:
+  - `src/main.ts`: Lifecycle orchestration (`start`, `stop`, `restart`, `destroy`, `mount`, `canResurrect`, input event handlers, loop epoching, accumulator clamping).
+  - `src/core/entities/Player.ts`: `reset(startX, startY, customStats)`.
+  - `src/core/HordeManager.ts`: `reset()`.
+  - `src/core/SpatialHashGrid.ts`: `clear()`.
+  - `src/core/systems/LootManager.ts`: `reset()`.
+  - `src/core/weapons/WeaponManager.ts`: `reset(starterWeaponId, starterRank)`.
+  - `src/core/systems/UpgradeSystem.ts`: `reset(starterWeaponId, starterRank)`.
+  - `src/ui/UpgradeModal.ts`: `reset()`.
+  - `src/core/weapons/Projectile.ts`: `ProjectilePool` inspection.
+  - `tests/unit/restart.spec.ts`, `tests/unit/ChallengerM1_2RestartAdversarial.test.ts`, `tests/unit/ChallengerRestartEngine_M1_1.test.ts`.
 
 ---
 
-## 2. Logic Chain
+## 2. Technical Evaluation of Mandatory Review Points
 
-1. **Alignment with User Feedback & Viewport Expansion (Observation 1.1, 1.3)**:
-   - **Horizontal Space**: In 480x270, the player had 216px forward sight and boss arenas were 480px wide, creating extreme horizontal cramping. In 960x540, forward sight is expanded to 538px (`960 - 422`), and arenas are expanded to 1100px. This completely solves horizontal claustrophobia and gives ample maneuvering room.
-   - **Vertical Occlusion**: Because `ground_main`'s bounding box was increased to `height: 310` starting at `Y: 230`, `renderPlatformsPass` draws a solid `#383838` concrete block from Y=230 to 540.
-   - In `ParallaxBackground.ts`, the background features were placed at Y=290 (mountains), Y=330 (coconut palms), and Y=495 (turquoise ocean). Because `ground_main` is rendered on top of the background, these scenic elements are completely occluded.
-   - While this prevents the full tropical aesthetic from being seen in M1 screenshots, it is a transitional state before Milestone M2 (Level Design & Terrain System Overhaul), which is specifically tasked with replacing the flat ground with 24 platforms, stepped sand dunes, and elevated stilt docks.
+### 2.1 Rapid Restart Spam
+- **Question**: *What happens if `restart()` is called repeatedly in rapid succession?*
+- **Empirical & Code Analysis**:
+  - In `src/main.ts` (lines 320–381), `restart()` synchronously executes `this.stop()`, incrementing `this.loopEpoch++` and cancelling any in-flight RAF token (`cancelAnimationFrame`).
+  - In the RAF frame callback (`tickFrame`, line 241), execution guards with `if (!this.isRunning || this.loopEpoch !== currentEpoch) return;`. Any scheduled RAF callback from a prior loop generation is instantly dropped.
+  - When `this.start()` is invoked at the conclusion of `restart()`, `loopEpoch` increments again, instantiating a solitary, un-aliased RAF loop. Multiple concurrent RAF loops are mathematically impossible.
+  - `restart()` does not invoke `addEventListener` or `mount()`, so rapid spamming does not accumulate duplicate event listeners.
+  - Subsystems (`HordeManager`, `LootManager`, `SpatialHashGrid`, `WeaponManager`) are wiped and restored in-place via zero-allocation memory sweeps, preserving object identities and progression callbacks while wiping active instances.
+  - **Empirical Stress Test**: In `tests/unit/ChallengerRestartEngine_M1_1.test.ts` (lines 146–166), 15 consecutive synchronous `restart()` calls and 50 consecutive high-churn simulation/restart cycles executed with 0 crashes, 0 NaNs, bounded heap memory (<35MB growth), and exact invariant preservation (35 active enemies, 2,013 pool slots available, `totalKilled = 0`, `totalSpawned = 35`, 1 weapon).
 
-2. **Boss Arenas Expansion (Observation 1.1 `main.ts:787, 831`)**:
-   - Mid-boss camera lock: `minX: 720, maxX: 1820` -> `1820 - 720 = 1100px`.
-   - End-boss camera lock: `minX: 1800, maxX: 2900` -> `2900 - 1800 = 1100px`.
-   - In a 960px viewport, an 1100px arena allows 140px of dynamic camera travel, providing tactical dodging space while keeping the boss in view. Requirement strictly met.
+### 2.2 Resurrection During Normal Gameplay
+- **Question**: *Can resurrection trigger during normal gameplay (is `canResurrect()` strictly enforced)?*
+- **Empirical & Code Analysis**:
+  - `src/main.ts` lines 290–296 strictly defines `canResurrect()`:
+    ```typescript
+    public canResurrect(): boolean {
+      return (
+        (!this.player.isAlive || this.isVictory) &&
+        !this.upgradeModal.getIsOpen() &&
+        this.deathTimer >= 0.5
+      );
+    }
+    ```
+  - During normal gameplay:
+    - `this.player.isAlive === true` and `this.isVictory === false`.
+    - Therefore, `(!this.player.isAlive || this.isVictory)` evaluates strictly to `false`.
+    - Even if Space is pressed, canvas is clicked, or Jump is held, `canResurrect()` returns `false` and `restart()` is not invoked.
+  - All resurrection call sites (`handleKeyDown`, line 301; `handleCanvasClick`, line 311; `step`, line 391) strictly guard behind `if (this.canResurrect())`.
+  - In addition, line 388 in `step()` ensures the keyboard jump snapshot resurrection is only checked when `!this.player.isAlive`.
+  - Debounce Buffer: When lethal damage is sustained, `deathTimer` starts at 0. For 0.5s (30 fixed frames at 60Hz), `deathTimer < 0.5`, preventing accidental restart dismissal from key mashing during combat.
 
-3. **Forward Reaction View (Observation 1.1 `Camera.ts:60-74`)**:
-   - `viewportWidth = 960`.
-   - `deadzoneRight = Math.floor(960 * 0.44) = 422px`.
-   - Forward sight = `960 - 422 = 538px >= 528px`. Requirement strictly met.
+### 2.3 Player Death with Open Modal or Pending Level Ups
+- **Question**: *What happens if the player dies while the upgrade modal is open or with pending level ups?*
+- **Empirical & Code Analysis**:
+  - If the modal is currently open (`upgradeModal.getIsOpen() === true`):
+    - `canResurrect()` returns `false` due to `!this.upgradeModal.getIsOpen()`.
+    - Keydown events for Space and Enter are captured by `UpgradeModal.handleKeyDown` (lines 114–116) to confirm card selections, preventing unintended game restarts.
+  - If lethal damage occurred simultaneously with level up (or while modal is displayed):
+    - The player selects their upgrade card(s). Upon the final selection, `this.pendingLevelUps` reaches 0 and `this.upgradeModal.close()` is called.
+    - Once closed, `!this.upgradeModal.getIsOpen()` becomes `true`. The Game Over plaque is rendered by `GothicHUD`, `deathTimer` advances to `>= 0.5`, and Space/click resurrection unlocks.
+  - If `restart()` is invoked directly while modal is open or `pendingLevelUps > 0`:
+    - `restart()` explicitly sets `this.pendingLevelUps = 0`, `this.isPaused = false`, and calls `this.upgradeModal.reset()`.
+    - `UpgradeModal.reset()` (lines 78–86) closes the modal, clears cards array, resets hovered/selected indices, and detaches mouse/keyboard listeners.
+    - `this.player.reset(0, 0)` resets player to Level 1 / 0 XP, cleanly discarding stale progression.
 
-4. **Visual Charm & 164 Key Invariant (Observation 1.1 `ProceduralSpriteFactory.ts`)**:
-   - Characters have expressive cartoon eyes with specular sparkle glints, warm cheek blush (`rgba(255, 110, 110, 0.4)`), fluttering headband tails with golden fringe tips, and bouncy animation cycles.
-   - Exactly 164 baseline keys are preserved, verified across 1,000 iterations in `adversarial_m5_final_gate.test.ts`. Requirement strictly met.
+### 2.4 DOM Event Listener Cleanliness
+- **Question**: *Are DOM event listeners cleanly bound without creating duplicate listeners on restarts?*
+- **Empirical & Code Analysis**:
+  - In `src/main.ts` lines 72–73, stable references are constructed once during instantiation:
+    ```typescript
+    this.boundOnKeyDown = this.handleKeyDown.bind(this);
+    this.boundOnCanvasClick = this.handleCanvasClick.bind(this);
+    ```
+  - `GrimHarvestGame.restart()` (lines 320–381) contains **zero** calls to `addEventListener` or `mount()`. Calling `restart()` N times adds 0 listeners.
+  - In `mount()` (lines 211–218), explicit `removeEventListener` calls precede `addEventListener`, preventing duplicate listener registration even on repeated `mount()` calls:
+    ```typescript
+    if (this.canvas) {
+      this.canvas.removeEventListener('click', this.boundOnCanvasClick);
+      this.canvas.addEventListener('click', this.boundOnCanvasClick);
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this.boundOnKeyDown);
+      window.addEventListener('keydown', this.boundOnKeyDown);
+    }
+    ```
+  - In `destroy()` (lines 221–231), listeners are detached from `this.canvas`, `window`, and delegated controllers (`this.keyboard.detach()`, `this.upgradeModal.close()`).
+  - In `UpgradeModal.open()`, `this.close()` is called before attaching modal listeners, preventing listener accumulation across multiple level-up cards.
 
-5. **Build and Test Verification (Observation 1.2)**:
-   - TypeScript compiles cleanly (0 errors).
-   - Production Vite build succeeds in <300ms.
-   - Vitest unit tests pass 100% (464/464 tests across 35 files).
-   - E2E game initialization and visual verification pass cleanly.
-
----
-
-## 3. Caveats
-
-1. **Milestone Boundary between M1 and M2**:
-   - Viewport expansion, camera math, and parallax loops belong to M1.
-   - Platform layout, ground elevation stepping, and destructible obstacles belong to M2.
-   - The visual occlusion of the lower background is caused by the legacy single flat ground platform (`ground_main`) awaiting M2's multi-tier terrain overhaul.
-2. **E2E Assertion in `ultimate_and_crisis_expansion.spec.ts:355`**:
-   - Line 355 asserts the legacy 480px mid-boss arena boundary (`maxX: 1200`). Under M1's expanded 1100px arena (`maxX: 1820`), this test fails. Per `PROJECT.md`, E2E test hardening is assigned to Milestone M4.
-
----
-
-## 4. Conclusion
-
-**Verdict: APPROVE**
-
-Milestone M1 satisfies all requirements specified in `PROJECT.md` and the user prompt:
-- Native 16:9 widescreen HD (960x540) canvas and responsive CSS styling.
-- Forward reaction view of 538px (>= 528px required).
-- Mid-boss and end-boss arenas expanded to 1100px width.
-- Cute/charming chibi-arcade sprite art preserving the 164 key baseline invariant.
-- Modular parallax horizontal wrapping loops.
-- Clean build and 100% passing unit test suite (464/464 tests).
-
-### Directives for Milestone M2 (Level Design & Terrain System Overhaul)
-1. **Eliminate the 310px Concrete Slab**: Replace the monolithic `ground_main` (height 310) with multi-tier terrain, stepped sand dunes, and elevated wooden stilt docks (with open gaps) so that the tropical mountains, coconut palms, and turquoise ocean in `ParallaxBackground.ts` become fully visible in gameplay.
-2. **Expand MidBoss Patrol Range**: Update `MidBossVehicle` `patrolMaxX` from 1150 to ~1650 to utilize the expanded 1100px arena.
-3. **Update E2E Assertion**: In Milestone M4, update `tests/e2e/ultimate_and_crisis_expansion.spec.ts:355` from `1200` to `1820`.
-
----
-
-## Findings
-
-### [Major] Finding 1: Background Scenery Occluded by 310px Solid Ground Slab
-- **What**: 57.4% of the vertical viewport (Y=230..540) is drawn as a solid `#383838` dark grey concrete block, hiding the tropical background scenery.
-- **Where**: `src/main.ts:719` (`ground_main` bounds: `createAABB(0, 230, STAGE_WIDTH, 310)`) and `src/render/CanvasRenderer.ts:319–327`.
-- **Why**: `ground_main` was expanded to height 310. Because it is `SOLID`, `renderPlatformsPass` fills 298px of opaque grey. This completely covers layers 1, 2, and 3 in `ParallaxBackground.ts` (mountains at Y=290, palms at Y=330, ocean at Y=495).
-- **Suggestion for M2**: During the M2 level redesign, replace `ground_main` with multi-tier platforms and sandy shoreline contours (height 30–40px) or wooden pier stilts so the background remains visible beneath elevated walkways.
-
-### [Major] Finding 2: Legacy Mid-Boss Arena Assertion Failure in Playwright E2E
-- **What**: `tests/e2e/ultimate_and_crisis_expansion.spec.ts:355` fails with `Expected: 1200, Received: 1820`.
-- **Where**: `tests/e2e/ultimate_and_crisis_expansion.spec.ts:355`.
-- **Why**: The test checks for the old 480px arena maxX (`1200`). M1 expanded the arena to 1100px (`maxX: 1820`).
-- **Suggestion for M4**: Update assertion to `expect(midBossStatus.boundsMaxX).toBe(1820);`.
-
-### [Minor] Finding 3: Mid-Boss Patrol Range Under-Utilizes Expanded Arena
-- **What**: `MidBossVehicle` patrol range is locked to `[800, 1150]` (350px width) within an 1100px arena (`[720, 1820]`).
-- **Where**: `src/main.ts:793–794`.
-- **Why**: The vehicle leaves the right 670px of the arena empty.
-- **Suggestion for M2**: Extend `patrolMaxX` to ~1600–1650.
-
----
-
-## Verified Claims
-
-| Claim | Verification Method | Result |
-|---|---|---|
-| Native 16:9 widescreen HD (960x540) | `CanvasRenderer.VIRTUAL_WIDTH = 960`, `VIRTUAL_HEIGHT = 540` | **PASS** |
-| Forward reaction view >= 528px | `Camera.viewportWidth - deadzoneRight = 960 - 422 = 538px` | **PASS** |
-| Mid-boss arena expanded to 1100px | `src/main.ts:787` (`minX: 720, maxX: 1820`, delta = 1100px) | **PASS** |
-| End-boss arena expanded to 1100px | `src/main.ts:831` (`minX: 1800, maxX: 2900`, delta = 1100px) | **PASS** |
-| ProceduralSpriteFactory 164 baseline keys | `adversarial_m5_final_gate.test.ts` (1,000 iterations asserting 164) | **PASS** |
-| Parallax modular horizontal wrapping loop | `ParallaxBackground.ts:381-388` (`while (drawX < W)`) | **PASS** |
-| TypeScript type check clean | `npx tsc --noEmit` exited 0 (0 errors) | **PASS** |
-| Production build clean | `npm run build` completed in 287ms (44 modules) | **PASS** |
-| Vitest unit test suite clean | `npm test` passed 35/35 files, 464/464 tests | **PASS** |
-| Playwright initialization E2E clean | `playwright test tests/e2e/game_initialization.spec.ts` passed 3/3 | **PASS** |
+### 2.5 `HordeManager.reset()` TotalKilled Inflation Prevention
+- **Question**: *Does `HordeManager.reset()` correctly prevent `totalKilled` inflation?*
+- **Empirical & Code Analysis**:
+  - Previously, `HordeManager.clear()` iterated active enemies and called `this.despawn()`.
+  - `despawn(id)` (line 194) unconditionally executes `this.totalKilled++`. Calling `clear()` on 100 active enemies artificially inflated `totalKilled` by 100 on restart.
+  - In `worker_m1_1`'s new implementation of `HordeManager.reset()` (lines 467–487):
+    - Bypasses `despawn()`.
+    - Sweeps all 2,048 entities in the flat pool array, setting `active = false, isAlive = false, hp = 0, vx = 0, vy = 0, pushVx = 0, pushVy = 0, flashTimer = 0, behaviorTimer = 0`.
+    - Re-establishes pristine index arrays: `freeIndices[i] = i`, `indexInActive[i] = -1`.
+    - Explicitly zeroes counters:
+      ```typescript
+      this.freeCount = this.maxEnemies;
+      this.activeCount = 0;
+      this.totalSpawned = 0;
+      this.totalKilled = 0;
+      this.spatialGrid.clear();
+      ```
+  - In `GrimHarvestGame.restart()`:
+    - Calls `this.hordeManager.reset()`.
+    - Deploys initial perimeter wave: 25 skeletons + 10 ghouls = 35 enemies.
+    - Strictly verified invariant: `totalKilled === 0`, `totalSpawned === 35`, `activeCount === 35`, `poolAvailableCount === 2013`.
 
 ---
 
-## Coverage Gaps
+## 3. Independent Verification Outputs
 
-- **Stepped terrain elevation and platform drop-through under 960x540**:
-  - Risk Level: Low (Scheduled for Milestone M2).
-  - Recommendation: Dispatch Milestone M2 worker with clear directives on terrain height and platform collision.
+All verification commands were executed independently by `reviewer_m1_2` in the working environment:
+
+### 3.1 Restart Spec Suite
+```bash
+$ npx vitest run tests/unit/restart.spec.ts
+```
+**Output**:
+```
+ RUN  v3.2.7 /Users/user/src/fullmetalslug
+
+ ✓ tests/unit/restart.spec.ts (20 tests) 120ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  00:42:41
+   Duration  474ms
+```
+*Result: 20/20 unit tests passed 100% green.*
+
+### 3.2 Full Unit Test Suite
+```bash
+$ npm test
+```
+**Output**:
+```
+> fullmetalslug@1.0.0 test
+> vitest run
+
+ RUN  v3.2.7 /Users/user/src/fullmetalslug
+
+ ✓ tests/unit/GothicBackdrop.test.ts (8 tests) 7ms
+ ✓ tests/unit/GothicHUD.test.ts (10 tests) 22ms
+ ✓ tests/unit/ChallengerDF_M2.test.ts (8 tests) 32ms
+ ✓ tests/unit/DarkFantasyVFX.test.ts (11 tests) 23ms
+ ✓ tests/unit/ChallengerM1_2.test.ts (17 tests) 68ms
+ ✓ tests/unit/SpatialHashGrid.test.ts (9 tests) 7ms
+ ✓ tests/unit/Weapons.test.ts (11 tests) 16ms
+ ✓ tests/unit/ChallengerM3_2.test.ts (12 tests) 339ms
+ ✓ tests/unit/PlayerProgression.test.ts (16 tests) 14ms
+ ✓ tests/unit/PlayerAndLoot.test.ts (9 tests) 9ms
+ ✓ tests/unit/DarkFantasySprites.test.ts (11 tests) 14ms
+ ✓ tests/unit/WaveDirector.test.ts (16 tests) 522ms
+ ✓ tests/unit/DarkFantasyPalette.test.ts (8 tests) 6ms
+ ✓ tests/unit/ChallengerM1_2RestartAdversarial.test.ts (8 tests) 325ms
+ ✓ tests/unit/restart.spec.ts (20 tests) 445ms
+ ✓ tests/unit/UpgradeSystem.test.ts (14 tests) 512ms
+ ✓ tests/unit/ChallengerRestartEngine_M1_1.test.ts (8 tests) 564ms
+ ✓ tests/unit/ChallengerM2_2.test.ts (12 tests) 866ms
+ ✓ tests/unit/ChallengerDF_M3_1.test.ts (18 tests) 987ms
+ ✓ tests/unit/HordeStressAdversarial.test.ts (7 tests) 1991ms
+ ✓ tests/unit/HordeManager.test.ts (13 tests) 2733ms
+
+ Test Files  21 passed (21)
+      Tests  246 passed (246)
+   Start at  00:46:25
+   Duration  3.14s
+```
+*Result: All 21 test files and 246 unit tests passed 100% green.*
+
+### 3.3 TypeScript Typecheck
+```bash
+$ npx tsc --noEmit
+```
+**Output**:
+```
+Exited with code 0. Zero TypeScript diagnostic errors.
+```
+*Result: Clean TypeScript compilation across the entire codebase.*
 
 ---
 
-## Unverified Items
+## 4. Adversarial Findings & Challenge Report
 
-- None for Milestone M1 scope.
+### 4.1 Major Finding 1: Uninitialized Projectile Hang in `ProjectilePool.clear()`
+- **Severity**: **Major**
+- **Location**: `src/core/weapons/Projectile.ts` lines 108–139, 163–167
+- **Mechanism**:
+  - In `ProjectilePool.spawn()`, an index is extracted from `freeIndices`, `activeCount` is incremented, and `activeIndices` is populated. However, `p.active` is **not** set to `true` (it is expected to be initialized later via `p.init()` or `p.reset()`).
+  - In `ProjectilePool.free(idx)`:
+    ```typescript
+    if (!p.active) return;
+    ```
+    If `p.active` is false, `free()` returns early without decrementing `this.activeCount` or returning the index to `freeIndices`.
+  - In `ProjectilePool.clear()`:
+    ```typescript
+    public clear(): void {
+      while (this.activeCount > 0) {
+        this.free(this.activeIndices[this.activeCount - 1]);
+      }
+    }
+    ```
+  - If any projectile in the pool was allocated but never initialized with `active = true`, calling `clear()` triggers an infinite `while` loop, pegging the CPU at 100% and freezing the process.
+- **Current Mitigation in M1**:
+  - In `BoneSpear.ts`, all spawned projectiles immediately execute `p.reset(...)`, which sets `p.active = true`.
+  - `restart()` currently succeeds cleanly because no uninitialized projectiles linger in the pool.
+- **Action Item for Milestone 2 / 3**:
+  - Harden `ProjectilePool.free()` to pop from active indices even if `!p.active`, or adopt the atomic O(N) array sweep pattern used by `HordeManager.reset()` instead of a `while (activeCount > 0)` loop.
+
+### 4.2 Minor Observation: Headless `isVictory` Stepping
+- **Severity**: **Minor**
+- **Location**: `src/main.ts` line 388
+- **Observation**:
+  - In browser RAF mode, `tickFrame` guards with `if (!this.isPaused && this.player.isAlive && !this.isVictory)`. When `isVictory` is true, simulation stops stepping and `deathTimer` accumulates.
+  - In headless mode, direct calls to `game.step()` only check `if (!this.player.isAlive)`. If `game.step()` is invoked headlessly after victory while `player.isAlive` is true, simulation advances.
+- **Mitigation**: Purely a headless test nuance; browser gameplay functions as intended.
 
 ---
 
-## Adversarial Review & Stress Testing Report
+## 5. Logic Chain
 
-**Overall Risk Assessment**: **LOW** (with UX Action Item for M2)
-
-### Integrity Audit
-- **Hardcoded test returns**: None detected. Procedural rendering uses genuine geometry and math.
-- **Dummy / facade implementations**: None detected. Camera, parallax loops, and sprite factory contain active simulation logic.
-- **Bypassed tasks**: None detected. All M1 deliverables in `PROJECT.md` were implemented directly.
-- **Attestation / artifact fabrication**: None detected. All tests executed fresh and live.
-
-### Stress Test Results
-
-1. **Frustum Minion Spawning Invariant**:
-   - Stress test: `tests/unit/challenger_2_empirical_stress.test.ts` evaluated camera panning speeds from 132 to 2000 px/s (up to 15x run speed).
-   - Result: 100% of wave minions spawn strictly out-of-bounds (`cameraX + 1000 >= cameraX + 960 + 40`). **PASS**.
-
-2. **Extreme Camera Coordinates in Parallax Wrapping**:
-   - Stress test: Probed coordinates `cameraX = -100,000` to `+1,000,000`.
-   - Result: Double-modulo arithmetic `((offset % 1920) + 1920) % 1920` prevents negative index or boundary NaN errors. **PASS**.
-
-3. **Letterbox Clamping Across Aspect Ratios**:
-   - Stress test: Evaluated 1:1, 2x FHD (1920x1080), ultrawide 21:9 (2400x1080), and portrait (540x960).
-   - Result: Correct letterbox offsets and integer scaling without aspect ratio distortion. **PASS**.
+1. **Premise 1**: The root cause of the restart infinite loop bug was lack of teardown for existing RAF callbacks, uncontrolled `accumulator` debt accumulation in lag spikes, and absence of sub-system reset methods.
+2. **Observation 1**: `src/main.ts` lines 236, 241, 283 enforce `loopEpoch` generation tracking and `cancelAnimationFrame`. Delta spikes are clamped by `MAX_SUB_STEPS = 5` with `this.accumulator = 0` discard guard.
+3. **Observation 2**: `src/core/HordeManager.ts` lines 467–487 implements `reset()` bypassing `despawn()`, resetting 2,048 pooled slots, `totalSpawned = 0`, and `totalKilled = 0`.
+4. **Observation 3**: `Player`, `SpatialHashGrid`, `LootManager`, `WeaponManager`, `UpgradeSystem`, and `UpgradeModal` each implement explicit, in-place `reset()` methods restoring pristine starting states without orphaning object references or callbacks.
+5. **Observation 4**: Independent execution of `tests/unit/restart.spec.ts` (20 tests), `npm test` (246 tests across 21 files), and `npx tsc --noEmit` exit with code 0 and zero regressions.
+6. **Deduction**: The restart lifecycle architecture satisfies all correctness, safety, and performance requirements specified in `ORIGINAL_REQUEST.md` (R1) and `PROJECT.md`.
 
 ---
 
-## 5. Verification Method
+## 6. Caveats
 
-To independently verify this review:
-1. `npx tsc --noEmit` -> Must return 0 errors.
-2. `npm run build` -> Must succeed cleanly.
-3. `npm test` -> Must pass all 35 test files and 464 tests.
-4. `npx playwright test tests/e2e/game_initialization.spec.ts` -> Must pass 3/3 tests.
-5. `npx playwright test tests/e2e/visual_verification.spec.ts` -> Must pass 6/6 tests.
-6. Inspect `src/render/CanvasRenderer.ts` lines 159–160 (`VIRTUAL_WIDTH = 960`, `VIRTUAL_HEIGHT = 540`).
-7. Inspect `src/render/Camera.ts` lines 60–74 (`viewportWidth = 960`, `deadzoneRight = 422`, forward view = 538px).
-8. Inspect `src/main.ts` lines 787 and 831 (mid-boss and end-boss arena widths = 1100px).
-9. Inspect `artifacts/screenshots/screenshot_01_idle_crosshair.png` to confirm 960x540 resolution and verify the ground occlusion finding.
+- **WebAudio State**: Audio playback is currently mocked or decoupled in headless unit test environments. When audio systems are expanded in subsequent milestones, `SoundEngine.stopAll()` should be registered into `restart()`.
+- **E2E Browser Playwright Test**: Milestone 1 focused on engine core lifecycle and unit/adversarial verification. Full headless browser Playwright testing (`tests/e2e/restart_survival.spec.ts`) is planned for Milestone 4.
+
+---
+
+## 7. Conclusion
+
+Milestone 1 (Restart State Engine & Lifecycle Architecture) is technically sound, robust against adversarial edge cases, and completely solves the infinite loop and state retention bugs.
+Zero integrity violations exist.
+**Verdict: APPROVE**.
+
+---
+
+## 8. Verification Method for Independent Auditors
+
+To reproduce and verify this review independently:
+```bash
+# 1. Run the dedicated restart lifecycle test suite
+npx vitest run tests/unit/restart.spec.ts
+
+# 2. Run adversarial challenger suites
+npx vitest run tests/unit/ChallengerM1_2RestartAdversarial.test.ts tests/unit/ChallengerRestartEngine_M1_1.test.ts
+
+# 3. Run entire unit test suite (assert 21 files, 246 tests green)
+npm test
+
+# 4. Verify TypeScript compilation
+npx tsc --noEmit
+```

@@ -1,14 +1,15 @@
-# Progress — Explorer M1_1
+# Progress — explorer_m1_1
 
-Last visited: 2026-09-03T16:52:00Z
-Status: Investigation complete. Preparing handoff report.
+Last visited: 2026-09-10T15:33:15Z
 
-- [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Read ORIGINAL_REQUEST.md and orchestrator PROJECT.md
-- [x] Run vitest to capture exact error output
-- [x] Inspect tests/unit/boss_crisis_events.test.ts and CrisisEventManager.ts
-- [x] Inspect tests/unit/iron_nokana_boss.test.ts and IronNokanaBoss.ts
-- [x] Trace and diagnose root causes for all failures in both suites
-- [x] Verify mathematical and kinematic solutions with tsx
-- [ ] Compile handoff.md
-- [ ] Send summary message to parent
+## Status
+- [x] Read MANDATORY files: `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`
+- [x] Initialized agent files: `DISPATCH.md`, `BRIEFING.md`, `progress.md`
+- [x] Detailed inspection of `src/main.ts` and `GrimHarvestGame`
+- [x] Investigate RAF loop lifecycle and `rafId` tracking/cancellation
+- [x] Investigate `lastTime`, `accumulator`, `elapsedTime`, `isPaused` and accumulator explosion prevention
+- [x] Investigate event listeners (Keyboard 'Space' and Canvas 'click') for Game Over / Victory restart
+- [x] Investigate subsystem reset methods across `Player`, `HordeManager`, `LootManager`, `WeaponManager`, `UpgradeSystem`, `WaveDirector`, `Camera`, `VFX`, `HUD`
+- [x] Formulate concrete fix architecture and implementation recommendations
+- [x] Compile `handoff.md` and verify report structure
+- [x] Send completion message to orchestrator via `send_message`

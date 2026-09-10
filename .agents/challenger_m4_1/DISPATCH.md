@@ -1,18 +1,24 @@
-## 2026-09-10T02:09:46Z
+## 2026-09-10T18:59:37Z
+You are challenger_m4_1 (role: Adversarial Verifier / Challenger).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_1
 
-You are challenger_m4_1.
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_1
-Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/tests/e2e/restart_survival.spec.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/main.ts
 
-MANDATORY READING:
-1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_e2e_artifacts/handoff.md
+Mission:
+Adversarially challenge and stress-test the Restart Lifecycle and Debounce Engine:
+1. Empirically verify:
+   - Stress-test multiple consecutive restarts (e.g. 5x consecutive deaths and restarts in browser/unit harness): assert zero RAF loop accumulation, zero memory leaks, and `accumulator` stays strictly <= 1/60.
+   - Rapid key hammering stress test: spam Spacebar and canvas clicks rapidly during the initial 0.5s death debounce; assert resurrection never fires prematurely.
+   - Assert `loopEpoch` tracks cleanly and prior callbacks are discarded.
+2. Run tests.
 
-TASK:
-Adversarially challenge screenshot artifact generation and resilience:
-- Test repeatability and determinism: Run `npx playwright test tests/e2e/ui_overhaul_artifacts.spec.ts` multiple times. Verify that tests never flake, canvas size is strictly 960x540, and screenshot outputs are non-empty valid PNGs.
-- Test edge cases: What happens if `artifacts/ui_overhaul/` directory is deleted prior to running? Does the test recreate it gracefully?
-- Verify binary PNG headers (`89 50 4E 47 0D 0A 1A 0A`) and IHDR chunks for all 3 generated images.
-- Deliver an explicit verdict in handoff.md: APPROVE or REQUEST_CHANGES. Notify parent when done.
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_1/handoff.md`.
+Explicitly state your verdict: `APPROVE` or `REQUEST_CHANGES`.
+When complete, send a message to orchestrator with your verdict.

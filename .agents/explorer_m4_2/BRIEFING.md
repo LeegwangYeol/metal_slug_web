@@ -1,51 +1,49 @@
-# BRIEFING — 2026-09-08T05:26:30Z
+# BRIEFING — 2026-09-10T18:51:35Z
 
 ## Mission
-Design comprehensive Playwright E2E test scenarios and assertions for `tests/e2e/ultimate_and_crisis_expansion.spec.ts` covering Ultimate Move execution, Crisis Boss encounters, and Autonomous Ally support.
+Investigate Milestone 4 post-restart 15-second survival test design, 8-directional steering bot evaluation, weapon mechanics, and pass criteria.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: teamwork_preview_explorer, explorer
+- Roles: Codebase Researcher / Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M4 (Playwright E2E Integration & Visual Proof Screenshots)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 4 (Automated E2E Verification & Visual Proof Suite)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- DO NOT edit or modify source code files
-- Design Playwright E2E test scenarios for `tests/e2e/ultimate_and_crisis_expansion.spec.ts`
-- Must produce 5-component handoff report in `handoff.md`
-- Send final notification back to parent agent via `send_message`
+- ALWAYS wait for explicit user approval before proceeding with implementation
+- Communicate with Claude via Rule Guide (Markdown) COLLABORATION.md
+- Use File for content delivery, Message for coordination
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T05:26:30Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: not yet
 
 ## Investigation State
 - **Explored paths**:
-  - `src/main.ts`: browser bootstrap, 60Hz loop, scene compilation, window exposure, stage triggers
-  - `src/core/player/UltimateManager.ts`: 4-phase state machine (FREEZE -> STRIKE_PASS -> DETONATION -> RECOVERY), minion wipe (999 explosion damage), boss burst (120 HP)
-  - `src/core/player/PlayerController.ts`: KeyU handling, weapon management, shield charges, drop collision
-  - `src/core/entities/boss/CrisisEventManager.ts`: 75% artillery, 50% platform collapse, 25% rage overdrive
-  - `src/core/entities/boss/IronNokanaBoss.ts`: 4-phase crawler boss, turrets, weakpoint, custom render
-  - `src/core/entities/allies/AllyNPC.ts` & `AllyManager.ts`: Hyakutaro Ichimonji AI, follow, target acquisition, ki blasts
-  - `src/core/weapons/WeaponManager.ts`: Shotgun, Laser, Rocket, Medkit, Shield, ItemPickup
-  - `src/render/CanvasRenderer.ts` & `ProceduralSpriteFactory.ts`: cinematic FX rendering, expansion sprites
-  - `tests/e2e/*.spec.ts`: Existing Playwright suites (game_initialization, gameplay_controls, death_animations, visual_verification)
+  - `ORIGINAL_REQUEST.md`: Verified explicit user approval for M4 restart bug fix and graphics overhaul.
+  - `COLLABORATION.md`: Verified 60-agent swarm M4 blueprint for Playwright restart test and visual proof.
+  - `PROJECT.md`: Verified horde survival engine architecture and verification requirements.
+  - `tests/e2e/horde_survival.spec.ts`: Analyzed 8-directional dynamic window evaluation steering bot (lines 218–466).
+  - `src/main.ts`: Analyzed restart lifecycle, RAF cancellation, `loopEpoch` isolation, contact collision (29px).
+  - `src/core/weapons/ArcaneScythe.ts`: Analyzed Rank 1 scythe mechanics (25 damage, 1.4s cd, 75px area, 120 knockback, 1-shotting Skeletons).
+  - `src/core/entities/Player.ts` & `EnemyTypes.ts`: Analyzed player/swarm kinematics (200 px/s vs 65/110 px/s).
+  - `src/core/systems/WaveDirector.ts`: Verified Phase 1 Awakening spawn parameters.
+  - `tests/unit/restart.spec.ts`: Audited all 8 suites passing clean lifecycle invariants.
 - **Key findings**:
-  - TypeScript build is 100% clean (`tsc -b && vite build` passes).
-  - All 453 Vitest unit tests across 34 files pass 100%.
-  - All 17 existing Playwright E2E tests pass 100% when preview server is active.
-  - `KeyboardController` maps `KeyU` -> action `'ultimate'`, triggering `player.triggerUltimateMove(engine)`.
-  - For tests requiring programmatic expansion entity spawning in the browser context, `src/main.ts` should expose `IronNokanaBoss`, `CrisisEventManager`, `AllyNPC`, `AllyManager`, `ItemPickupEntity` on `window.__EXPANSION__`.
-- **Unexplored areas**: None for M4 exploration scope.
+  - 8-directional steering bot with $H=0.32$s, 3-point collision evaluation, 58px warning buffer, 34px lethal elimination, 64-80px engagement sweet spot, and carousel orbit at $R=320$px guarantees 100% reliable 15+ second survival.
+  - Contact collision radius is strictly 29px ($14 + 15$px).
+  - Arcane Scythe 1-shots 25 HP Skeletons every 1.4s, generating kills and soul gem drops safely.
+  - Exact pass criteria defined: `elapsedTime >= 15.0`, `isAlive === true`, `health > 0`, `kills >= 1`, `accumulator <= 1/60 + 0.01`, zero duplicate RAF loops (frame delta ~16.6ms), zero console/page errors.
+- **Unexplored areas**: None for M4 exploration; ready for test implementation and visual proof execution.
 
 ## Key Decisions Made
-- Fully designed all 3 Playwright E2E scenarios for `tests/e2e/ultimate_and_crisis_expansion.spec.ts`.
-- Outlined exact assertions, `page.waitForFunction` timings, viewport queries, and screenshot generation to `artifacts/expansion/`.
-- Documented worker recommendations for `src/main.ts` window exposure and rendering support.
+- Fully documented 6-stage lifecycle for `tests/e2e/restart_survival.spec.ts` in `handoff.md`.
+- Established mathematical proof for steering bot reliability and RAF loop cleanliness.
 
 ## Artifact Index
-- handoff.md — Comprehensive E2E test design and verification specification
-- progress.md — Heartbeat and activity log
-- DISPATCH.md — Initial dispatch log
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/DISPATCH.md — Initial dispatch
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/BRIEFING.md — Persistent working memory
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/progress.md — Liveness heartbeat
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/handoff.md — Final investigation report

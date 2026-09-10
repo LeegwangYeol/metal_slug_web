@@ -1,17 +1,25 @@
-## 2026-09-10T02:09:47Z
-You are challenger_m4_2.
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2
-Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+## 2026-09-10T18:59:37Z
+<USER_REQUEST>
+You are challenger_m4_2 (role: Adversarial Verifier / Challenger).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2
 
-MANDATORY READING:
-1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_e2e_artifacts/handoff.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/tests/e2e/restart_survival.spec.ts
 
-TASK:
-Adversarially stress-test full project regression invariants and test suites:
-- Run the full Vitest unit test suite: `npm test` (`npx vitest run`). Assert that 100% of the 42 test files and 596 tests pass with 0 failures and 0 regressions.
-- Run the full Playwright E2E browser test suite: `npx playwright test`. Assert that 100% of the 6 spec files and 33 tests pass in Chromium.
-- Run `npx tsc --noEmit` and `npm run build`. Assert zero compiler errors and clean production bundle.
-- Deliver an explicit verdict in handoff.md: APPROVE or REQUEST_CHANGES. Notify parent when done.
+Mission:
+Adversarially verify the 15-second survival loop and visual buffer fidelity:
+1. Empirically verify:
+   - Kinematic safety of the 8-directional dynamic window evaluation steering bot: assert the player reliably survives >= 15 seconds against Phase 1 waves without taking lethal contact damage.
+   - Auto-firing weapons engage enemies, drop gems, and advance XP without accumulation leaks.
+   - Visual inspection of the 3 screenshot artifacts in `artifacts/dark_fantasy/`: assert non-empty, non-blank, non-solid-black pixel buffers, with diverse color histograms and valid 960x540 dimensions.
+2. Run tests.
+
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2/handoff.md`.
+Explicitly state your verdict: `APPROVE` or `REQUEST_CHANGES`.
+When complete, send a message to orchestrator with your verdict.
+</USER_REQUEST>

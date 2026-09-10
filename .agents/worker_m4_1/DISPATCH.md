@@ -1,66 +1,83 @@
-## 2026-09-08T14:27:00Z
+## 2026-09-11T03:52:16Z
 
-You are a Worker subagent (teamwork_preview_worker) for Milestone M4 (Playwright E2E Integration & Visual Proof Screenshots).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+You are worker_m4_1 (role: Implementation & Testing Worker).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_1
 
 MANDATORY INTEGRITY WARNING:
-DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
+DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. An auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Explorer 1 Report: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/handoff.md
-- Explorer 2 Report: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/handoff.md
-- Explorer 3 Report: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_3/handoff.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_3/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/tests/e2e/horde_survival.spec.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/main.ts
 
-FILE OWNERSHIP:
-You have exclusive write ownership of:
-- src/main.ts (for __EXPANSION__ window exposure in bootstrap)
-- tests/e2e/ultimate_and_crisis_expansion.spec.ts
-- artifacts/expansion/
+Your exclusive write ownership:
+- tests/e2e/restart_survival.spec.ts
+- src/main.ts (only if minor exposure adjustment needed, e.g. window.__game getter)
 
-TASK & IMPLEMENTATION REQUIREMENTS:
-1. In `src/main.ts`:
-   - Inside `bootstrap()`, expose expansion classes under `(window as any).__EXPANSION__` so Playwright tests can construct expansion entities in `page.evaluate()`:
-     ```typescript
-     if (typeof window !== 'undefined') {
-       (window as any).__GAME__ = game;
-       (window as any).__ENGINE__ = game.engine;
-       (window as any).__AUDIO_CTX__ = game.soundEngine.ctx;
-       (window as any).__CORPSE_MANAGER__ = game.corpseManager;
-       (window as any).__EXPANSION__ = {
-         IronNokanaBoss,
-         CrisisEventManager,
-         AllyNPC,
-         AllyManager,
-         ItemPickupEntity,
-         ItemDropType,
-         vec2,
-       };
-     }
-     ```
-     Ensure required imports (`IronNokanaBoss`, `CrisisEventManager`, `AllyNPC`, `AllyManager`, `ItemPickupEntity`, `ItemDropType`, `vec2`) are present in `src/main.ts`.
-2. In `tests/e2e/ultimate_and_crisis_expansion.spec.ts`:
-   - Implement the complete Playwright E2E expansion suite based on the blueprint in `explorer_m4_2/handoff.md`:
-     * Scenario 1: KeyU ultimate move input, 4-phase progression (`FREEZE` -> `STRIKE_PASS` -> `DETONATION` -> `RECOVERY`), on-screen minion wipe (100% standard enemies cleared) with 0 friendly fire.
-     * Scenario 2: Mid-Boss vehicle encounter and Iron Nokana multi-phase crisis triggers (75% artillery, 50% platform collapse & camera contraction, 25% rage overdrive) and 120 HP burst damage.
-     * Scenario 3: Autonomous Ally NPC (Hyakutaro follow & Ki blast attack), diverse weapon pickups (Shotgun, Laser Gun, Rocket Launcher, Shield, Medkit).
-3. Visual Proof Screenshots in `artifacts/expansion/`:
-   - Save screenshots capturing the game canvas:
-     * `artifacts/expansion/ultimate_strike_pass.png` (and `screenshot_ultimate_strike_bomber.png`)
-     * `artifacts/expansion/ultimate_detonation_flash.png` (and `screenshot_ultimate_detonation_blast.png`)
-     * `artifacts/expansion/crisis_boss_encounter.png` (and `screenshot_boss_nokana_crisis.png`)
-     * `artifacts/expansion/ally_pow_rescue.png` (and `screenshot_ally_and_weapons.png`)
-   - Ensure `fs.mkdirSync('artifacts/expansion', { recursive: true })` is called and files have size > 5,000 bytes.
-4. Run verification commands:
-   - `npm run build` (must pass cleanly, exit code 0)
-   - `npx vitest run` (all 34 test files must pass, 453/453 green)
-   - `npx playwright test tests/e2e/ultimate_and_crisis_expansion.spec.ts` (all tests pass)
-   - `npx playwright test` (all 20+ E2E tests pass across all suites)
-   - Check that all screenshots exist in `artifacts/expansion/`.
-5. Write your complete handoff report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_1/handoff.md`
-   and call `send_message` to parent.
+Implementation Requirements for Milestone 4:
+Create `tests/e2e/restart_survival.spec.ts` using Playwright:
+
+1. Test 1: Game Over, Death Debounce & Pristine Restart State Invariants
+   - Navigate to `/`, wait for canvas and `window.__game ?? window.__GAME__`.
+   - Set player health to 0 or simulate lethal damage.
+   - Assert player is dead (`isAlive === false`), Game Over plaque is active, `canResurrect() === false` during the initial 0.5s death debounce.
+   - Send early Spacebar / Canvas click event and assert restart is ignored during debounce.
+   - Wait until `deathTimer >= 0.5s` so `canResurrect() === true`.
+   - Trigger restart via Spacebar (`page.keyboard.press('Space')`) or canvas click.
+   - Assert all pristine restart invariants:
+     - `player.isAlive === true`
+     - `player.stats.currentHealth === 100`
+     - `player.level === 1`
+     - `player.position.x === 0 && player.position.y === 0`
+     - `weaponManager.getActiveWeapons()[0]?.id === 'scythe'`
+     - `hordeManager.getActiveCount() >= 25`
+     - `lootManager.getActiveCount() === 0`
+     - `accumulator === 0`
+     - `elapsedTime === 0`
+     - `isPaused === false`
+     - `loopEpoch` incremented (no duplicate RAF loops running).
+
+2. Test 2: Post-Restart Autonomous Survival Loop (>= 15 Continuous Seconds)
+   - After restarting, run the 8-directional dynamic window evaluation steering bot (adapted from `tests/e2e/horde_survival.spec.ts:218-466` with $H=0.32$s, sweet spot distance 64–80px for Arcane Scythe, danger penalty $< 58$px, and carousel orbit $R=320$px).
+   - If Level-Up modal triggers, press 'Digit1' to select upgrade and unpause.
+   - Run simulation until `elapsedTime >= 15.0` seconds post-restart.
+   - Assert:
+     - `elapsedTime >= 15.0`
+     - `player.isAlive === true`
+     - `player.stats.currentHealth > 0`
+     - `kills >= 1`
+     - `accumulator <= 1/60 + 0.01`
+     - Zero engine crashes, zero infinite accumulator loops.
+     - 0 console errors and 0 unhandled page errors.
+
+3. Test 3: Visual Proof Screenshots Generation (All 3 Artifacts > 50KB in `artifacts/dark_fantasy/`)
+   - Ensure directory `artifacts/dark_fantasy/` exists.
+   - Deterministic capture using `setupDeterministicGame(page)` with `game.stop()`, manual `game.step(1/60)`, and `game.render()`:
+     a. `artifacts/dark_fantasy/enhanced_graphics_swarm.png` (>50KB):
+        - Centered Grim Sorcerer surrounded by 4 concentric rings of Skeletons (r=150), Ghouls (r=240), Banshees (r=330), and Death Knights (r=420) (92+ entities).
+        - Drop shadows under all entities, player, and gems.
+     b. `artifacts/dark_fantasy/restart_verified.png` (>50KB):
+        - Active post-restart gameplay: player resurrected, revived HUD (100 HP vitality bar, fresh Level 1 bar, active timer, scythe weapon), newly spawned horde, and active scythe cleave slash.
+     c. `artifacts/dark_fantasy/occult_vfx_lighting.png` (>50KB):
+        - Rich visual effects: dynamic amber player torch light (200px radial light with breathing flicker carved through ambient darkness + #f59e0b warm bloom), active violet scythe slash arc, branching abyssal lightning arcs, swirling soul motes, ground blood decals, and 3-layer parallax graveyard mist.
+   - Invariant assertion for all 3 screenshots:
+     - `fs.existsSync(filePath)` is true.
+     - `fs.statSync(filePath).size > 50 * 1024` (51,200 bytes).
+
+Verification:
+- Run `npm run build` (prerequisite for playwright webServer preview)
+- Run `npx playwright test tests/e2e/restart_survival.spec.ts`
+- Run `npm test`
+- Run `npx tsc --noEmit`
+- Verify file sizes of `artifacts/dark_fantasy/*.png`
+
+Document your implementation, command outputs, and test logs in `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_1/handoff.md`.
+Update `progress.md`.
+When complete, send a message to orchestrator with your results.

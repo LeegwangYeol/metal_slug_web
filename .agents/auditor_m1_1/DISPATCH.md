@@ -1,18 +1,34 @@
-## 2026-09-10T01:08:40Z
-You are auditor_m1_1.
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1
-Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+## 2026-09-10T15:42:01Z
 
-MANDATORY CONTEXT:
-1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1_viewport/handoff.md
+You are auditor_m1_1 (role: Forensic Integrity Auditor).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1
 
-TASK:
-Perform a forensic integrity audit of Milestone 1 changes:
-- Check git status and diff across all modified files (CanvasRenderer.ts, Camera.ts, ParallaxBackground.ts, ProceduralSpriteFactory.ts, HUDOverlay.ts, main.ts, index.html, tests).
-- Verify authenticity: Ensure NO hardcoded test bypasses, NO dummy implementations, NO fake returns, NO deleted or skipped tests.
-- Confirm that 960x540 resolution, modular parallax loops, chibi-arcade procedural sprite details, and 1100px arena widths are genuinely implemented and active at runtime.
-- Run `npm test` and `npx tsc --noEmit` independently.
-- In your handoff.md, provide an explicit verdict: CLEAN or INTEGRITY VIOLATION, with full evidence chain. Notify parent when done.
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1_1/handoff.md
+
+Mission:
+Perform a strict forensic integrity audit on the Milestone 1 changes:
+1. Examine code in:
+   - src/core/entities/Player.ts
+   - src/core/HordeManager.ts
+   - src/core/SpatialHashGrid.ts
+   - src/core/systems/LootManager.ts
+   - src/core/weapons/WeaponManager.ts
+   - src/core/systems/UpgradeSystem.ts
+   - src/ui/UpgradeModal.ts
+   - src/main.ts
+   - tests/unit/restart.spec.ts
+2. Verify:
+   - No mock/dummy implementations or hardcoded return values designed to fool tests.
+   - No bypassed game logic.
+   - Authentic simulation math and state transitions.
+   - Tests in `tests/unit/restart.spec.ts` execute real assertions on real classes without mocking out the core logic.
+3. Run `npm test` and `npx tsc --noEmit` to verify authenticity.
+
+Write your forensic report in `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1/handoff.md`.
+Explicitly state your verdict: `CLEAN` or `INTEGRITY VIOLATION`.
+When complete, send a message to orchestrator with your verdict.

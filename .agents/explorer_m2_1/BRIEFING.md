@@ -1,44 +1,52 @@
-# BRIEFING — 2026-09-08T02:26:30Z
+# BRIEFING — 2026-09-10T15:52:00Z
 
 ## Mission
-Investigate failing tests in `tests/unit/allies_system.test.ts` and related source code in `src/core/entities/allies/`, diagnose exact root causes, and formulate an exact line-by-line fix strategy for Worker.
+Investigate Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul): sprite generation & caching in DarkFantasySprites.ts, procedural drawing design for Player (Grim Sorcerer), performance implications & offscreen caching to maintain locked 60 FPS.
 
 ## 🔒 My Identity
-- Archetype: Explorer (teamwork_preview_explorer)
-- Roles: Read-only investigation, problem analysis, synthesis, structured handoff reporting
+- Archetype: explorer
+- Roles: Codebase Researcher / Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M2 (Autonomous Ally NPCs & Diverse Items/Weapons)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul)
 
 ## 🔒 Key Constraints
-- Read-only investigation — do NOT implement or modify source code files
-- Only write metadata, reports, and progress files inside /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/
-- Produce a 5-component handoff report (Observation, Logic Chain, Caveats, Conclusion, Verification Method) with concrete fix strategy for Worker
+- Read-only investigation — do NOT implement
+- Wait for explicit user approval before proceeding with implementation
+- Follow user global rules regarding COLLABORATION.md
+- Write only to your own agent folder (.agents/explorer_m2_1/)
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
 - Updated: not yet
 
 ## Investigation State
 - **Explored paths**:
-  - `tests/unit/allies_system.test.ts`
-  - `src/core/entities/allies/AllyNPC.ts`
-  - `src/core/entities/allies/AllyKiBlast.ts`
-  - `src/core/entities/allies/AllyManager.ts`
-  - `src/core/entities/allies/AllyTypes.ts`
-  - `src/core/engine/GameEngine.ts`
-  - `src/core/player/PlayerController.ts`
+  - `ORIGINAL_REQUEST.md`: User prompt history and recent M2/M3 requirements.
+  - `COLLABORATION.md`: 60-agent swarm blueprint and milestone allocations.
+  - `PROJECT.md`: Dark fantasy horde survival core vision and aesthetic.
+  - `src/render/sprites/DarkFantasySprites.ts`: Current sprite generation, offscreen caching, and rendering routines.
+  - `src/core/entities/Player.ts`: Movement kinematics, facingDirection, invulnerabilityTimer, bounds.
+  - `src/render/DarkFantasyPalette.ts`: Color definitions and precomputed transparencies.
+  - `src/render/vfx/DarkFantasyVFX.ts`: Particle and arcane VFX engine.
+  - `src/core/weapons/ArcaneScythe.ts`: Weapon visual effects and theme alignment.
+  - `tests/unit/DarkFantasySprites.test.ts`, `tests/unit/ChallengerDF_M2.test.ts`, `tests/unit/ChallengerM2_2.test.ts`: Verification harnesses and benchmarks.
 - **Key findings**:
-  1. Test 1 (`SPAWN_SALUTE -> FOLLOW`): Spawn coordinate at `(150, 200)` gives `absDx = 5px <= 12px`, triggering instant transition to `IDLE` upon exiting salute.
-  2. Test 3 (Autonomous jump): Jump impulse `-350.0 px/s` is immediately degraded by `gravity * dt` (`+16.33 px/s`) in `integrateKinematics` within the same update tick, giving `-333.67 px/s`.
-  3. Tests 4, 5, 7 (Target acquisition & Ki Blast): `engine.addEntity(enemy)` queues enemies in `entitiesToAdd`. `AllyNPC.findBestTarget` only called `engine.getAllEntities()`, missing pending entities, returning `null`, preventing attack charge and projectile emission.
-- **Unexplored areas**: None within the allies subsystem scope.
+  - `DarkFantasySprites.ts` uses offscreen canvas caching: 5 types * 4 frames * 2 facings * 3 flash states = 120 cached canvases.
+  - Current player vector art is crude (draws an Ashwood staff with a crystal, flat solid polygons, 2 static 1.2px eye dots, no crimson borders).
+  - High-fidelity Grim Sorcerer procedural design created: layered tattered cowl, dark crimson embroidered trim, shadow gradients, ethereal bone scythe with purple runic glow and blade highlights, triple-layered glowing occult eyes with pupil pinpoints, 4-frame walk bobbing and directional flipping.
+  - Canvas resolution upgrade: 48x48 -> 64x64 (`ox=32, oy=36`) prevents clipping of the curved scythe blade and billowing cowl.
+  - Performance: Pre-rasterized blitting executes 1,000 entity draws in 1.407ms (leaving ~11.2ms idle headroom in 16.6ms frame budget), guaranteeing locked 60 FPS. Total VRAM footprint is only ~1.96 MB.
+- **Unexplored areas**: None for M2 Player sprite scope.
 
 ## Key Decisions Made
-- Clear root causes identified for all 5 test failures with line-by-line fix recommendations ready for Worker.
+- Upgraded Player canvas resolution to 64x64 with origin at (32, 36).
+- Replaced the placeholder Ashwood staff with an Ethereal Bone Scythe.
+- Added triple-layer eye rendering (radial bloom, violet iris, white pupil pinpoint).
+- Retained eager 120-canvas offscreen cache with dual-mode support (browser blitting + headless unit test fallback).
 
 ## Artifact Index
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/DISPATCH.md` — Dispatch log
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/BRIEFING.md` — Persistent working memory
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/progress.md` — Heartbeat and progress tracking
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md` — Final handoff report
+- `DISPATCH.md` — Initial task dispatch
+- `progress.md` — Liveness & progress tracking
+- `BRIEFING.md` — Persistent working memory
+- `handoff.md` — Final investigation report

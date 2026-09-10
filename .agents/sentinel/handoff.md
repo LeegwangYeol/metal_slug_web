@@ -1,44 +1,42 @@
-# Sentinel Handoff Report — Dark Fantasy Horde Survival Rebuild
+# Sentinel Handoff Report — Bug Fix & Dark Fantasy Graphics Overhaul ("Grim Harvest: Undead Siege")
 
-## Observation
-1. User issued a full project reboot request: Rebuild the entire game from absolute scratch into a dark fantasy, Vampire Survivors-like horde survival shooter using a 60-agent swarm.
-2. User provided explicit approval ("승인", 2026-09-10T10:36:45Z).
-3. User provided critical feedback: "기획단부터 바꿔 새끼야" (Change it completely from the planning/foundation stage). Coding must halt until the fundamental planning, architecture, and core design documents are completely redone from scratch.
-4. Key requirements:
-   - R1: Complete reboot & dark fantasy art style (gothic aesthetic, undead swarms, occult magic, imposing environments).
-   - R2: Horde survival core loop (auto-firing weapons, XP gems, level-ups, rogue-lite upgrades, synergies).
-   - R3: Automated playtesting & deployment (Playwright 30s+ survival loop, visual proof screenshots, 100% green tests, git push to origin/main, Vercel build verification).
+## 1. Observation
+1. **User Request & Approval**:
+   - Initial Request: Fix critical infinite loop bug upon game restart (R1) & significantly upgrade dark fantasy graphics to be more polished and visually impressive (R2) using a 60-agent swarm.
+   - Approval received: `"승인"` (2026-09-10T15:27:30Z). Recorded verbatim in `ORIGINAL_REQUEST.md` and `.agents/ORIGINAL_REQUEST.md`.
+2. **Technical Scope**:
+   - **R1. Fix Game Restart Bug**: Implement clean `restart()` / `reinitialize()` in `GrimHarvestGame`. Cancel existing RAF loop, reset clock (`lastTime`, `accumulator = 0`, `elapsedTime = 0`), re-initialize Player, HordeManager (2,048 slots), SpatialHashGrid, LootManager (1,500 slots), WeaponManager, UpgradeSystem, UpgradeModal, WaveDirector (reset to Phase 1). Wire Spacebar and Canvas Click listeners.
+   - **R2. Significant Graphics Upgrade**: Overhaul procedural sprites in `DarkFantasySprites.ts` with multi-layered anatomical shading, glowing runic eyes, and refined silhouettes (Sorcerer, Skeletons, Ghouls, Banshees, Death Knights). Overhaul `DarkFantasyVFX.ts` & `GothicBackdrop.ts` with dynamic radial lighting, drop contact shadows under entities, ground blood decals with fade, branching abyssal lightning, and atmospheric depth mist.
+   - **Acceptance Criteria**:
+     - Restart Verification: Playwright E2E test intentionally triggers Game Over, clicks Restart, and survives >= 15 seconds cleanly without infinite loop or crash.
+     - Visual Proof: Playwright screenshots demonstrate significant leap in visual quality with files > 50KB in `artifacts/dark_fantasy/`.
+     - 100% Green Tests: Unit tests (`npm test`) and E2E tests (`npx playwright test`) pass cleanly.
+     - Deployment: Git push to `origin/main` verified and Vercel build succeeds.
+3. **Active Swarm Deployment**:
+   - Route: General (`teamwork_preview_orchestrator`).
+   - Project Orchestrator spawned: `16d4f03a-b906-4dcd-a7c3-e24f1752216b`.
+   - Working directory: `/Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_enhancement`.
+   - Monitoring Crons:
+     - Cron 1 (Progress Reporting, `*/8 * * * *`): `ac2e615f-16d0-4705-9e88-970a1e7a0368/task-80`.
+     - Cron 2 (Liveness Check, `*/10 * * * *`): `ac2e615f-16d0-4705-9e88-970a1e7a0368/task-82`.
 
-## Logic Chain
-1. Verified user approval and critical feedback; recorded all messages verbatim in `ORIGINAL_REQUEST.md` (both root and `.agents/`).
-2. Evaluated Routing Decision Table:
-   - Not Document Review (no document supplied for critique).
-   - Not Math / Proof.
-   - Not SWE Light (large full-game overhaul with 60 agents).
-   - Routed to General (`teamwork_preview_orchestrator`).
-3. Overhauled `PROJECT.md` from the ground up with deep dark fantasy horde survival architecture:
-   - Spatial hash grid high-performance simulation (500–1000+ entities at 60Hz).
-   - Wave director and continuous difficulty scaling.
-   - Occult arsenal (5 auto-firing weapons, XP gem magnetism, rogue-lite upgrade card engine).
-   - Gothic aesthetic palette, procedural dark fantasy sprites, imposing backdrop, and gothic HUD.
-   - 5-milestone roadmap delegating tasks across 60 agents.
-4. Overhauled `COLLABORATION.md` for Claude collaboration workflow.
-5. Initialized `.agents/orchestrator_dark_fantasy/` and spawned Project Orchestrator (`6bab7276-2b23-4494-b27b-d0a93584d82f`).
-6. Initialized Sentinel monitoring crons:
-   - Cron 1 (Progress Reporting, `*/8 * * * *`): `c949f701-56e6-4b4f-902e-7db29e6ac6b2/task-62`
-   - Cron 2 (Liveness Check, `*/10 * * * *`): `c949f701-56e6-4b4f-902e-7db29e6ac6b2/task-64`
+## 2. Logic Chain
+1. Received explicit user approval (`"승인"`).
+2. Updated authoritative user request logs (`ORIGINAL_REQUEST.md`) and Claude collaboration guide (`COLLABORATION.md`).
+3. Created working directory `.agents/orchestrator_enhancement/`.
+4. Spawned `teamwork_preview_orchestrator` with full context and instructions.
+5. Immediately scheduled Cron 1 (Progress Reporting) and Cron 2 (Liveness Check).
+6. Orchestrator is executing the 60-agent swarm across Milestones 1–5.
+7. Upon completion claim, Sentinel will enforce a mandatory, blocking independent victory audit via `teamwork_preview_victory_auditor`.
 
-## Caveats
-- No code was written by Sentinel. All technical implementation and subagent coordination are delegated to the Project Orchestrator.
-- Independent victory audit (`teamwork_preview_victory_auditor`) is strictly mandatory before declaring completion.
-- When orchestrator completes, crons and subagents must be killed cleanly.
+## 3. Caveats
+- Sentinel maintains strict architectural neutrality (zero source code written directly).
+- Orchestrator will supervise 5-agent verification gates at each milestone.
 
-## Conclusion
-- Foundation and architecture completely established in `PROJECT.md` and `COLLABORATION.md`.
-- Project Orchestrator active and running.
-- Crons active.
-- Ready for swarm execution.
+## 4. Conclusion
+- Swarm is actively executing in the background under Sentinel monitoring.
 
-## Verification Method
-- Monitor orchestrator `progress.md` and files via scheduled crons.
-- Trigger independent victory auditor upon victory claim.
+## 5. Verification Method
+- Active tasks: `manage_task` (tasks 80 and 82 active).
+- Active subagents: `16d4f03a-b906-4dcd-a7c3-e24f1752216b` (running).
+- Progress tracking: `.agents/orchestrator_enhancement/progress.md` and automated crons.

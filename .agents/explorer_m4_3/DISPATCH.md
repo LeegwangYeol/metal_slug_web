@@ -1,26 +1,29 @@
-## 2026-09-08T05:19:05Z
-You are an Explorer subagent (teamwork_preview_explorer) for Milestone M4 (Playwright E2E Integration & Visual Proof Screenshots), replacing a timed-out predecessor.
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_3
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+## 2026-09-10T18:47:24Z
+You are explorer_m4_3 (role: Codebase Researcher / Explorer).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_3
 
-You are READ-ONLY. DO NOT edit or modify source code files.
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/tests/e2e/horde_survival.spec.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/render/sprites/DarkFantasySprites.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/render/vfx/DarkFantasyVFX.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/render/GothicBackdrop.ts
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+Mission:
+Investigate Milestone 4 (Automated E2E Verification & Visual Proof Suite):
+1. Design the deterministic capture of the 3 required visual proof screenshots in `tests/e2e/restart_survival.spec.ts` (saved in `artifacts/dark_fantasy/`):
+   - **`enhanced_graphics_swarm.png` (>50KB)**:
+     - Showcasing the procedural sprites: Grim Sorcerer in center with hooded cowl, layered crimson robes, bone scythe; surrounded by concentric rings of Skeletons, Ghouls, Banshees, and Death Knights.
+     - Contact drop shadows clearly visible beneath all entities.
+   - **`restart_verified.png` (>50KB)**:
+     - Showcasing active post-restart gameplay: player resurrected, HUD showing revived status, active horde engagement, and pristine game state.
+   - **`occult_vfx_lighting.png` (>50KB)**:
+     - Showcasing rich visual effects: dynamic amber player torch light, active violet scythe slashes, branching abyssal lightning arcs, swirling soul motes, ground blood decals, and 3-layer parallax graveyard mist.
+2. Specify exact canvas setup procedures, camera positions, entity counts, lighting flags, and assertion logic verifying each file exists on disk and `stats.size > 50 * 1024` (51,200 bytes).
 
-YOUR MISSION & FOCUS:
-Design the Visual Proof Screenshot capture system:
-1. Target directory: `artifacts/expansion/`
-2. Required screenshots:
-   - `artifacts/expansion/ultimate_strike_pass.png`: Capturing the tactical bomber flyover and screen flash/shadow.
-   - `artifacts/expansion/ultimate_detonation_flash.png`: Capturing the screen flash overlay, shockwave rings, and camera shake.
-   - `artifacts/expansion/crisis_boss_encounter.png`: Capturing Iron Nokana boss / crisis environmental hazards in action.
-   - `artifacts/expansion/ally_pow_rescue.png`: Capturing POW rescue / Ally Hyakutaro combat.
-3. Ensure directory creation (`mkdir -p artifacts/expansion/`) and proper Playwright screenshot options (`path: ...`).
-4. Detail how to capture frames during the exact visual phases (e.g. timing after KeyU press).
-5. Write your report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_3/handoff.md`
-   and call `send_message` to parent.
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_3/handoff.md`.
+Update your `progress.md`.
+When complete, send a message to orchestrator with your findings.

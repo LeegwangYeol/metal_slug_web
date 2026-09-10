@@ -72,6 +72,19 @@ export class UpgradeModal {
     }
   }
 
+  /**
+   * Closes the modal, detaches listeners, and resets all card and selection state.
+   */
+  public reset(): void {
+    this.close();
+    this.cards = [];
+    this.level = 1;
+    this.hoveredIndex = null;
+    this.selectedIndex = 0;
+    this.pulseTimer = 0;
+    this.cardBounds = [];
+  }
+
   public getIsOpen(): boolean {
     return this.isOpen;
   }

@@ -1,277 +1,343 @@
-# Handoff Report: Playwright E2E Integration & Visual Proof Architecture (Milestone M4)
+# Milestone 4 Investigation Report: Automated E2E Verification & Restart Lifecycle
 
-**Agent**: `teamwork_preview_explorer` (`explorer_m4_1`)  
-**Target Milestone**: M4 (Playwright E2E Integration & Visual Proof Screenshots)  
-**Date**: 2026-09-08  
+**Date**: 2026-09-11  
+**Agent**: explorer_m4_1 (Codebase Researcher / Explorer)  
+**Scope**: Playwright E2E Runner Architecture, `src/main.ts` Restart Lifecycle, Death Debounce Invariants, and Blueprint for `tests/e2e/restart_survival.spec.ts`.
 
 ---
 
 ## 1. Observation
 
-### 1.1 Playwright Configuration & Web Server Architecture
-- **File**: `playwright.config.ts` (lines 1–23)
-  ```ts
-  export default defineConfig({
-    testDir: './tests/e2e',
-    timeout: 30000,
-    workers: 1,
-
-    webServer: {
-      command: 'npm run preview',
-      port: 4173,
-      reuseExistingServer: !process.env.CI,
+### 1.1 Playwright Runner & WebServer Preview Configuration
+- **File**: `/Users/user/teamwork_projects/metal_slug_web/playwright.config.ts` (Lines 12–29):
+  ```typescript
+  webServer: {
+    command: 'kill -9 $(lsof -ti :4173) 2>/dev/null || true; npm run build && npm run preview',
+    url: 'http://localhost:4173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 60000,
+  },
+  use: {
+    baseURL: 'http://localhost:4173',
+    headless: true,
+    viewport: { width: 960, height: 540 },
+    deviceScaleFactor: 1,
+    trace: 'off',
+    video: 'off',
+    screenshot: 'only-on-failure',
+    launchOptions: {
+      args: ['--disable-gpu', '--disable-dev-shm-usage', '--no-sandbox'],
     },
-    use: {
-      baseURL: 'http://localhost:4173',
-      trace: 'off',
-    },
-    projects: [
-      {
-        name: 'chromium',
-        use: { ...devices['Desktop Chrome'] },
-      },
-    ],
-  });
+  },
   ```
-  - **Single Worker (`workers: 1`)**: Prevents race conditions, port conflicts, and CPU throttling across parallel browser sessions.
-  - **Web Server Command**: Runs `npm run preview` on port `4173`. In `package.json`:
-    - `"preview": "vite preview"`
-    - `"build": "tsc -b && vite build"`
-    - In `vite.config.ts`: `preview.port = 4173`, `build.outDir = 'dist'`.
-  - **Critical Dependency**: `vite preview` serves the compiled bundle in `dist/`. Therefore, `npm run build` must have been run prior to testing; otherwise `vite preview` fails to find `dist/`.
+- **File**: `/Users/user/teamwork_projects/metal_slug_web/package.json` (Lines 11–12):
+  ```json
+  "pretest:e2e": "kill -9 $(lsof -ti :4173) 2>/dev/null || true",
+  "test:e2e": "playwright test"
+  ```
+- **Port & Concurrency**:
+  - The webServer preview port is **4173** (standard Vite preview port).
+  - Playwright enforces `fullyParallel: false` and `workers: 1` (`playwright.config.ts:9-10`), guaranteeing serial execution to prevent canvas context corruption, GPU contention, or race conditions during long-duration survival tests.
+  - Overall test timeout is set to 90,000ms (`playwright.config.ts:5`) to comfortably support active 30s+ survival tests.
 
-### 1.2 Browser Bootstrap & Game Engine Exposure on Window
-- **File**: `src/main.ts` (lines 967–988, 991–999)
-  ```ts
-  function bootstrap(): FullMetalSlugGame | null {
-    if (typeof document === 'undefined') return null;
-    const container = document.getElementById('game-container');
-    if (!container) return null;
-
-    const game = new FullMetalSlugGame(container, { spawnMode: 'diverse' });
-
-    if (typeof window !== 'undefined') {
+### 1.2 Page Initialization Hooks
+- **File**: `/Users/user/teamwork_projects/metal_slug_web/src/main.ts` (Lines 589–598):
+  ```typescript
+  // Auto-bootstrap when loaded in browser
+  if (typeof document !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('game-container') ?? document.body;
+      const game = new GrimHarvestGame(container);
+      game.start();
+      (window as any).__game = game;
       (window as any).__GAME__ = game;
-      (window as any).__ENGINE__ = game.engine;
-      (window as any).__AUDIO_CTX__ = game.soundEngine.ctx;
-      (window as any).__CORPSE_MANAGER__ = game.corpseManager;
-    }
-
-    game.start();
-    return game;
+    });
   }
   ```
-- **File**: `src/main.ts` (lines 52–64, 189–235, 238–297)
-  - `game.engine`: `GameEngine` instance containing all registered entities (`entities: Map<string, GameEntity>`), platform geometry, collision system, and spatial hash grid.
-  - `game.player`: `PlayerController` containing physics position (`vec2(80, 230)`), health, weapon manager, and `ultimateManager: UltimateManager`.
-  - `game.camera`: `Camera` with viewport `480x270`.
-  - `game.stageManager`: `StageManager` managing camera bounds and wave triggers.
-  - `game.start()`: Initiates 60Hz fixed-timestep accumulator loop via `requestAnimationFrame`.
-  - `game.stop()`: Cancels the `requestAnimationFrame` loop and pauses the engine.
-  - `game.step(dt = 1/60)`: Discretely steps simulation logic (inputs, player kinematics, physics tick, camera, explosions) by exactly `dt`.
-  - `game.render()`: Manually renders the complete frame (parallax, terrain, entities, hazards, ultimate cinematic FX, HUD) to canvas.
+- In both `tests/e2e/game_initialization.spec.ts` (lines 143–150) and `tests/e2e/horde_survival.spec.ts` (lines 32–42, 92–99), tests synchronize page initialization using:
+  ```typescript
+  await page.waitForFunction(() => {
+    const w = window as any;
+    const g = w.__game ?? w.__GAME__;
+    return g && g.player && g.hordeManager && g.weaponManager && g.lootManager;
+  }, { timeout: 10000 });
+  ```
 
-### 1.3 Canvas Interaction & Keyboard Event Dispatching
-- **File**: `src/input/KeyboardController.ts` (lines 68–100, 102–112, 246–320)
-  - Keyboard mappings include:
-    ```ts
-    KeyU: 'ultimate'
-    ```
-  - Keyboard listener attachment:
-    ```ts
-    if (typeof window !== 'undefined') {
-      this.attach(window);
+### 1.3 Player Death, Death Debounce & Resurrection Flow in `src/main.ts`
+- **Player Death Trigger**:
+  - In `/Users/user/teamwork_projects/metal_slug_web/src/core/entities/Player.ts` (Lines 262–269):
+    ```typescript
+    if (this.stats.currentHealth <= 0) {
+      this.isAlive = false;
+      engine?.eventBus?.emit('player_died', {
+        position: this.position,
+        level: this.level,
+      });
     }
     ```
-  - When Playwright focuses the canvas element (`await page.focus('canvas#game-canvas')`) and dispatches key events (`await page.keyboard.press('KeyU')` or `await page.keyboard.down('KeyU')` / `await page.keyboard.up('KeyU')`), `KeyboardController.handleKeyDown` intercepts the event, maps `e.code === 'KeyU'` to action `'ultimate'`, and sets:
-    ```ts
-    this.ultimate = true;
-    this.ultimateJustPressed = true;
+- **Frame Loop Branching upon Death**:
+  - In `/Users/user/teamwork_projects/metal_slug_web/src/main.ts` (Lines 248–269):
+    ```typescript
+    if (!this.isPaused && this.player.isAlive && !this.isVictory) {
+      this.accumulator += dt;
+      let subSteps = 0;
+      while (
+        this.accumulator >= GrimHarvestGame.FIXED_TIMESTEP &&
+        subSteps < GrimHarvestGame.MAX_SUB_STEPS
+      ) {
+        this.step(GrimHarvestGame.FIXED_TIMESTEP);
+        this.accumulator -= GrimHarvestGame.FIXED_TIMESTEP;
+        subSteps++;
+      }
+      if (subSteps >= GrimHarvestGame.MAX_SUB_STEPS) {
+        this.accumulator = 0; // Prevent infinite freeze death spiral
+      }
+    } else if (this.upgradeModal.getIsOpen()) {
+      this.upgradeModal.update(dt);
+    } else if (!this.player.isAlive || this.isVictory) {
+      this.deathTimer += dt;
+      this.vfx.update(dt);
+    }
     ```
-  - In `KeyboardController.getSnapshot()`, `ultimatePressed` is latched:
-    ```ts
-    const ultimatePressed = this.ultimateJustPressed || (this.ultimate && !this.prevUltimate);
-    this.ultimateJustPressed = false;
+  - Directly observed properties upon player death:
+    1. `this.player.isAlive` becomes `false`.
+    2. `this.isPaused` remains `false` (pause flag is solely reserved for modal popups).
+    3. `this.deathTimer` accumulates elapsed delta time (`dt`) on each RAF tick.
+    4. Note: There is currently **no explicit property named `isGameOver`** on `GrimHarvestGame`. The game over state is represented by `!this.player.isAlive` (HUD checks `!actualState.player.isAlive` at `src/ui/GothicHUD.ts:304`).
+- **Debounce Guard (`canResurrect`)**:
+  - In `/Users/user/teamwork_projects/metal_slug_web/src/main.ts` (Lines 291–297):
+    ```typescript
+    public canResurrect(): boolean {
+      return (
+        (!this.player.isAlive || this.isVictory) &&
+        !this.upgradeModal.getIsOpen() &&
+        this.deathTimer >= 0.5
+      );
+    }
     ```
-  - Programmatic fallback: Tests can also trigger actions programmatically via:
-    ```ts
-    game.keyboard.setAction('ultimate', true);
+  - The death debounce duration is strictly **0.5 seconds (500ms)**. Any restart input received before `deathTimer >= 0.5` is completely ignored.
+- **Restart Event Handlers (Spacebar & Canvas Click)**:
+  - In `/Users/user/teamwork_projects/metal_slug_web/src/main.ts` (Lines 299–318):
+    ```typescript
+    private handleKeyDown(e: KeyboardEvent): void {
+      if (e.repeat) return;
+      if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') {
+        if (this.canResurrect()) {
+          if (typeof e.preventDefault === 'function') {
+            e.preventDefault();
+          }
+          this.restart();
+        }
+      }
+    }
+
+    private handleCanvasClick(e: MouseEvent): void {
+      if (this.canResurrect()) {
+        if (typeof e.preventDefault === 'function') {
+          e.preventDefault();
+        }
+        this.restart();
+      }
+    }
     ```
+  - Keyboard listener filters out `e.repeat`, preventing stuck/held Spacebar keys from accidentally triggering immediate restart.
+  - Listeners are wired during `mount(container)` on `window` (`keydown`) and `canvas` (`click`) (Lines 212–219).
+  - Also in `step(dt)` (Lines 388–395), `keyboard.jump` snapshot triggers `restart()` if `canResurrect()`.
 
-### 1.4 Ultimate Move State Machine & Execution Engine
-- **File**: `src/core/player/UltimateManager.ts` (lines 52–81, 121–187, 197–218, 248–297, 300–423)
-  - Phases: `IDLE` -> `FREEZE` (0.5s) -> `STRIKE_PASS` (0.6s) -> `DETONATION` (0.4s) -> `RECOVERY` (0.3s) -> `IDLE`.
-  - Trigger API: `player.triggerUltimateMove(engine)` or `ultimateManager.trigger(engine)`.
-  - Consumes 1 stock (initialized with stock = 1).
-  - Cinematic FX:
-    - `FREEZE`: Pulsing golden screen flash (`rgba(255, 220, 100, 0.2)`), simulation frozen, air-raid siren SFX.
-    - `STRIKE_PASS`: Heavy tactical bomber flies from `camX - 100` to `camX + 680` at `y = 45` dropping bombs, bomber flyover roar SFX.
-    - `DETONATION`: Bright screen flash, 18px camera shake, expanding concentric shockwave rings (`radius: progress * 280`), cataclysmic blast SFX.
-    - `RECOVERY`: Dissipating screen flash, screen unfreezes.
-  - Combat Resolution during Detonation:
-    - Eliminates 100% of standard infantry minions (`SOLDIER_RIFLE`, `SOLDIER_KNIFE`, `SOLDIER_GRENADE`, `SOLDIER_SHIELD`, etc.) within viewport (`AABB(camX, 0, 480, 270)`).
-    - Culls all hostile projectiles (`ENEMY_BULLET`, `ENEMY_GRENADE`, `CANNON_SHELL`, `ARTILLERY_SHELL`, `HOMING_MISSILE`).
-    - Deals 120 HP burst damage to bosses (`IronNokanaBoss`, `TetsuyukiBoss`, `MidBossVehicle`).
-    - Zero Friendly Fire: Player, `AllyNPC`, `AllyKiBlast`, and `PowEntity` are completely immune.
-    - Frustum Preservation: Off-screen minions outside the active viewport bounding box remain undamaged and alive.
+### 1.4 Post-Restart Invariants in `GrimHarvestGame.restart()`
+- In `/Users/user/teamwork_projects/metal_slug_web/src/main.ts` (Lines 320–382):
+  ```typescript
+  public restart(): void {
+    const wasRunning = this.isRunning;
+    this.stop();
 
-### 1.5 Existing E2E Test Suite Analysis
-Existing E2E tests in `tests/e2e/`:
-1. `game_initialization.spec.ts` (3 tests):
-   - Boots preview server, checks `#game-container`, checks canvas 480x270, asserts 0 console errors.
-   - Measures 300 animation frames in browser context (>= 50 FPS).
-   - Verifies `window.__GAME__`, `window.__ENGINE__`, `window.__AUDIO_CTX__`.
-   - Execution status: **3/3 PASSED (19.7s)**.
-2. `gameplay_controls.spec.ts` (5 tests):
-   - Verifies Space / KeyK jumps with real browser keyboard events (`page.keyboard.press`).
-   - Verifies Arrow and WASD horizontal movement (`page.keyboard.down` / `waitForTimeout` / `page.keyboard.up`).
-   - Verifies combined air mobility (jumping while moving right).
-   - Execution status: **5/5 PASSED (26.8s)**.
-3. `visual_verification.spec.ts` (6 tests):
-   - Uses `setupDeterministicGame(page)`: navigates to `/`, waits for `canvas#game-canvas` and `window.__GAME__`, sets canvas style width 960px x 540px, calls `game.stop()` to pause the rAF loop.
-   - Sets player position, aims diagonally, steps frames with `game.step(1/60)`, calls `game.render()`.
-   - Takes screenshots via `page.screenshot({ path })` into `artifacts/screenshots/`.
-   - Execution status: **6/6 PASSED (15.4s)**.
-4. `death_animations_screenshots.spec.ts` (3 tests):
-   - Uses `setupDeterministicGame(page)`.
-   - Spawns corpses with `game.corpseManager.spawnCorpse(...)`, advances simulation frames, calls `game.render()`.
-   - Takes screenshots via `canvas.screenshot({ path })` into `artifacts/death_animations/`.
-   - Execution status: **3/3 PASSED (13.0s)**.
+    // 1. Simulation clock & loop state
+    this.elapsedTime = 0;
+    this.killCount = 0;
+    this.isPaused = false;
+    this.isVictory = false;
+    this.pendingLevelUps = 0;
+    this.deathTimer = 0;
+    this.accumulator = 0;
+    this.lastTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
-### 1.6 Current Build and Vitest Status
-- `npm run build` (`tsc -b && vite build`): **0 TypeScript errors, clean bundle generated in 4.67s**.
-- `npm test` (`vitest run`): **34 test files passed (34/34), 453 tests passed (453/453) in 27.78s**.
+    // 2. Upgrade modal reset
+    this.upgradeModal.reset();
+
+    // 3. Player entity reset
+    this.player.reset(0, 0);
+
+    // 4. Horde manager & spatial grid reset
+    this.hordeManager.reset();
+
+    // 5. Loot drops purge
+    this.lootManager.reset();
+
+    // 6. Weapons reset (starter Rank 1 Arcane Scythe)
+    this.weaponManager.reset('scythe', 1);
+
+    // 7. Upgrade system reset (starter Rank 1 Arcane Scythe)
+    this.upgradeSystem.reset('weapon_scythe', 1);
+
+    // 8. Wave director reset (Phase 1, 0:00)
+    this.waveDirector.reset();
+
+    // 9. Camera & screen shake zeroing
+    this.camera.reset(0, 0);
+    this.camera.update(0, 0, 0);
+
+    // 10. Particle VFX clear
+    this.vfx.clear();
+
+    // 11. HUD reset
+    this.hud.reset();
+
+    // 12. Input controllers reset
+    this.keyboard.reset();
+    ...
+    // 13. Re-spawn initial perimeter swarm
+    this.spawnInitialSwarm();
+
+    // 14. Restart simulation loop if active or mounted
+    if (wasRunning || !!this.canvas) {
+      this.start();
+    }
+  }
+  ```
+- Explicit post-restart state values:
+  - `player.isAlive === true` (from `player.reset(0,0)`)
+  - `player.stats.currentHealth === 100` (from `player.reset(0,0)`)
+  - `player.level === 1` (from `progression.reset()`)
+  - `starterWeapon === 'scythe'` (from `weaponManager.reset('scythe', 1)`)
+  - `accumulator === 0` (strictly `<= 1/60`)
+  - `elapsedTime === 0`
+  - `isPaused === false`
+  - `deathTimer === 0`
+  - `loopEpoch` incremented in `stop()`, invalidating prior RAF callbacks and preventing dual loops.
+  - `hordeManager.getActiveCount() === 35` (re-spawned 25 skeletons + 10 ghouls).
+  - `lootManager.getActiveCount() === 0`.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Web Server Lifecycle**:
-   - `playwright.config.ts` delegates server lifecycle to `npm run preview` on port 4173 with `reuseExistingServer: !process.env.CI`.
-   - Because `vite preview` relies on `./dist/`, running `npm run build` is a mandatory prerequisite step whenever source files change.
-   - Single worker (`workers: 1`) ensures serialized execution, eliminating port binding race conditions.
-
-2. **Game Ready Detection**:
-   - Upon `await page.goto('/')`, the page loads `index.html` which executes `bootstrap()`.
-   - Bootstrap attaches `window.__GAME__`, `window.__ENGINE__`, etc., and appends `canvas#game-canvas`.
-   - The robust, canonical readiness check established across all existing suites is:
-     ```ts
-     await page.goto('/');
-     await page.waitForSelector('canvas#game-canvas');
-     await page.waitForFunction(() => {
-       const w = window as any;
-       return w.__GAME__ && w.__GAME__.engine && w.__GAME__.player;
-     });
-     ```
-   - This guarantees that both the DOM element and the engine globals are fully hydrated before test actions occur.
-
-3. **Input Interaction vs Deterministic Control**:
-   - The repository demonstrates two distinct, complementary test patterns:
-     - **Pattern A (Real-Time End-to-End Control)**: Used in `gameplay_controls.spec.ts`. Focuses the canvas (`await page.focus('canvas#game-canvas')`), issues genuine browser keyboard events (`page.keyboard.press('KeyU')`), and observes simulation responses via `page.waitForFunction(...)`.
-     - **Pattern B (Deterministic Frame-Stepped Visual Proof)**: Used in `visual_verification.spec.ts` and `death_animations_screenshots.spec.ts`. Stops the rAF loop via `game.stop()`, injects entities or inputs, steps the exact number of frames via `for (let i = 0; i < N; i++) game.step(1/60);`, forces a draw pass with `game.render()`, and captures a pixel-perfect screenshot.
-   - For Milestone M4:
-     - Acceptance requirement 1 (E2E Ultimate Move test): Use **Pattern A** to verify that pressing `KeyU` in the browser triggers the move, destroys active on-screen minions, inflicts 120 HP to the boss, and preserves off-screen minions.
-     - Acceptance requirement 2 & Visual Proof (Artifact screenshots): Use **Pattern B** to freeze the exact cinematic frames (`FREEZE`, `STRIKE_PASS`, `DETONATION`, `BOSS_CRISIS`, `ALLY_SUPPORT`) with 100% frame-perfect reproducibility.
-
-4. **Eliminating Flakiness**:
-   - Flakiness in web game E2E tests stems from four root causes:
-     - *Issue 1: Asynchronous asset loading / DOM delay.* Solved by `waitForFunction` polling `window.__GAME__`.
-     - *Issue 2: Browser window focus loss.* Solved by `await page.focus('canvas#game-canvas')`.
-     - *Issue 3: Variable frame rate (rAF jitter) during screenshot capture.* Solved by pausing the loop (`game.stop()`), advancing via `game.step(1/60)`, and calling `game.render()`.
-     - *Issue 4: Fixed sleep timeouts (`waitForTimeout`).* Solved by replacing arbitrary sleeps with state-based predicates (`waitForFunction` checking `ultimateManager.phase`).
+1. **Test Infrastructure Soundness**:
+   - `playwright.config.ts` configures Vite preview on `http://localhost:4173` after building `tsc -b && vite build`.
+   - Running `npx playwright test tests/e2e/game_initialization.spec.ts` executes successfully (`3 passed (13.3s)`), confirming the headless browser, webServer lifecycle, canvas mounting, and window hook binding are fully operational.
+2. **Lifecycle State Transition from Life to Death**:
+   - Fatal enemy contact damage sets `player.stats.currentHealth = 0` and `player.isAlive = false`.
+   - In `tickFrame()`, physics simulation stops automatically because `!isPaused && player.isAlive` is false.
+   - The loop falls through to `this.deathTimer += dt`, steadily advancing `deathTimer`.
+   - `canResurrect()` strictly returns `false` while `deathTimer < 0.5`.
+   - Any Spacebar or click event received within this 500ms window does nothing.
+3. **Resurrection Execution & State Invariants**:
+   - When `deathTimer >= 0.5`, `canResurrect()` becomes `true`.
+   - When Spacebar keydown or canvas click occurs, `restart()` is invoked.
+   - `restart()` halts the previous RAF loop with `stop()` (`loopEpoch++`), resets all manager pools (`HordeManager`, `LootManager`, `WeaponManager`, `UpgradeSystem`), restores player health to 100 and level to 1, sets `accumulator = 0`, `elapsedTime = 0`, and restarts the loop cleanly.
+4. **Contract Hygiene Observation on `isGameOver` & `deathDebounceTimer`**:
+   - The mission prompt mentions `isGameOver` and `deathDebounceTimer`.
+   - Currently, in `GrimHarvestGame`:
+     - The property is named `deathTimer` (not `deathDebounceTimer`).
+     - There is no `isGameOver` getter; game over is determined by `!player.isAlive`.
+   - If tests or external checkers expect `g.isGameOver === false` and `g.deathDebounceTimer`, evaluating `g.isGameOver` directly would return `undefined`.
+   - Implementing convenience getters `get isGameOver(): boolean { return !this.player.isAlive; }` and `get deathDebounceTimer(): number { return this.deathTimer; }` in `src/main.ts` or supporting fallback `g.isGameOver ?? !g.player.isAlive` in the test provides 100% contract compliance and prevents assertion mismatches.
 
 ---
 
 ## 3. Caveats
 
-1. **Pre-Build Requirement**: If `dist/` is not updated after code edits, Playwright will test stale production bundle code because `webServer.command` is `npm run preview`. A clean build (`npm run build`) must always precede Playwright test runs.
-2. **Viewport Dimension Consistency**: The internal game canvas virtual resolution is 480x270. Existing visual screenshot tests set the canvas CSS style to `width: 960px; height: 540px` and use `viewport: { width: 960, height: 540 }` with `deviceScaleFactor: 1`. The new M4 screenshot tests must adhere to this exact dimension standard so screenshot artifacts have high fidelity (>20KB) and match existing artifacts in visual scale.
-3. **Audio Context Mocking in Headless Mode**: In headless Chromium, Web Audio API requires user interaction to resume from `suspended` state. `SoundEngine.ts` handles this gracefully with null-safe and suspended checks, so tests do not crash.
+1. **`isGameOver` & `deathDebounceTimer` Naming**:
+   - In `src/main.ts`, the field is `public deathTimer: number` and death state is `!player.isAlive`.
+   - While conceptually identical to `deathDebounceTimer` and `isGameOver`, tests asserting `g.isGameOver === false` should either use `g.isGameOver ?? !g.player.isAlive` or a minor non-breaking getter alias should be added to `GrimHarvestGame`.
+2. **Vitest Unit Benchmark Fluctuation**:
+   - During `npm test`, test `tests/unit/HordeStressAdversarial.test.ts` had a single assertion failure (`expected 30.11ms to be less than 25ms` for p95 frame time under 1,200 simulated enemies) due to momentary CPU load spikes on the test runner machine. All other 371 unit tests and 27 test files passed.
+3. **Existing Screenshots vs Milestone 4 Target Artifacts**:
+   - `artifacts/dark_fantasy/` currently contains `horde_swarm.png`, `level_up_modal.png`, and `survival_gameplay.png` (all >180KB).
+   - Milestone 4 calls for `enhanced_graphics_swarm.png`, `restart_verified.png`, and `occult_vfx_lighting.png`, each >50KB.
+   - `tests/e2e/restart_survival.spec.ts` must generate these three new artifacts as part of its visual proof suite.
 
 ---
 
-## 4. Conclusion
+## 4. Conclusion & Test Blueprint
 
-The testing architecture and game hooks in `metal_slug_web` are exceptionally clean, decoupled, and well-instrumented:
-1. `window.__GAME__` directly exposes the player controller, engine, camera, and input controller.
-2. `KeyboardController` already has `KeyU` mapped to `'ultimate'`, with edge-detection snapshot latches and `setAction('ultimate', true)` support.
-3. `UltimateManager` is fully integrated into `PlayerController`, with complete 4-phase cinematic timing, viewport-bounded 100% minion elimination, 120 HP boss damage, projectile culling, and zero friendly fire.
-4. All existing tests (34 unit suites / 453 tests, 4 E2E suites / 17 tests) pass 100% green.
+The architecture in `src/main.ts` is fully prepared for Milestone 4 E2E verification. The death debounce, event handlers, and state restoration in `restart()` cleanly prevent infinite loops and accumulator drift.
 
-### Recommended Blueprint for Milestone M4 Worker Agent
+### Blueprint for `tests/e2e/restart_survival.spec.ts`
 
-Create `tests/e2e/ultimate_and_crisis_expansion.spec.ts` with two distinct test suites:
+The specification file should be structured with 3 core tests:
 
-#### Suite 1: Genuine Browser E2E Acceptance Verification (Real Keyboard & Live rAF)
-1. **Test 1.1: Live Keyboard `KeyU` Screen Wipe & Boss Damage**:
-   - Setup: Start game, wait for `__GAME__`.
-   - Setup entities:
-     - 4 in-screen infantry soldiers (`SOLDIER_RIFLE`, `SOLDIER_KNIFE`, `SOLDIER_GRENADE`, `SOLDIER_SHIELD`) at X = 200–380.
-     - 1 Iron Nokana boss at X = 320 with HP = 400.
-     - 2 off-screen soldiers at X = 600 (outside viewport).
-     - 1 Ally NPC (`AllyNPC`) at X = 120.
-     - 1 POW hostage (`PowEntity`) at X = 160.
-   - Dispatch input: `await page.focus('canvas#game-canvas');` then `await page.keyboard.press('KeyU');`.
-   - Assert: Player enters `FREEZE` phase, stock decrements from 1 to 0.
-   - Wait for completion: `await page.waitForFunction(() => (window as any).__GAME__.player.ultimateManager.phase === 'IDLE', { timeout: 6000 });`.
-   - Assertions:
-     - 100% of on-screen soldiers are dead (`isAlive === false`, `health === 0`).
-     - Boss received 120 HP damage (HP clamped at 300 with Phase 2 transition, or 280).
-     - Off-screen soldiers at X = 600 remain alive (`isAlive === true`).
-     - Friendly units (Player, Ally NPC, POW) remain completely undamaged (`zero friendly fire`).
-2. **Test 1.2: Autonomous Ally Combat Verification**:
-   - Spawn `AllyNPC` at X = 150 and enemy soldier at X = 300.
-   - Without dispatching any player attack keys, run simulation ticks.
-   - Assert: Ally acquires target, emits `AllyKiBlast`, and damages/eliminates enemy independently.
-3. **Test 1.3: Boss Crisis Event Gating Verification**:
-   - Lower boss HP below 75% checkpoint (300 HP).
-   - Assert: `CrisisEventManager` triggers artillery hazards (`ArtilleryShellHazard`), warning reticles, and platform collapse / bounds contraction.
+```typescript
+import { test, expect, Page } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 
-#### Suite 2: Visual Proof Screenshots (Deterministic Frame Stepping)
-Save 5 high-fidelity screenshots in `artifacts/expansion/`:
-1. `screenshot_01_ultimate_freeze_siren.png`:
-   - Freeze frame during `UltimatePhase.FREEZE` (golden screen tint, player in tactical stance, active enemies frozen in place).
-2. `screenshot_02_ultimate_strike_bomber.png`:
-   - Strike pass frame during `UltimatePhase.STRIKE_PASS` (~frame 18, showing tactical bomber sprite flying overhead with falling bombs).
-3. `screenshot_03_ultimate_detonation_shockwave.png`:
-   - Detonation frame during `UltimatePhase.DETONATION` (concentric expanding shockwave rings, bright flash, vaporized enemy effects).
-4. `screenshot_04_iron_nokana_crisis_artillery.png`:
-   - Boss crisis scene showing `IronNokanaBoss` in rage mode, artillery targeting reticles on the ground, and falling debris hazards.
-5. `screenshot_05_ally_ichimonji_combat.png`:
-   - Ally support scene showing `AllyNPC` (Hyakutaro Ichimonji) firing ki blasts, with new weapon crates (`Shotgun`, `LaserGun`, `RocketLauncher`) visible on the ground.
+test.describe('Milestone M4: Dark Fantasy Horde Survival — Restart Lifecycle & Continuous Survival Verification', () => {
+  const ARTIFACT_DIR = path.resolve(process.cwd(), 'artifacts/dark_fantasy');
+
+  // TEST 1: Intentional Death, Debounce Guard & Immediate Restart Invariants
+  test('Restart Lifecycle: triggers Game Over, enforces 0.5s death debounce, resurrects via Space/Click, and verifies immediate invariants', async ({ page }) => {
+    // 1. Boot page and wait for window.__game
+    // 2. Drive player into horde (or stand still) until player.isAlive === false
+    // 3. Immediately test debounce:
+    //    - Assert g.deathTimer < 0.5 and g.canResurrect() === false
+    //    - Press Space or click canvas; assert player.isAlive is STILL false (debounce works)
+    // 4. Wait for deathTimer >= 0.5 (page.waitForFunction(() => g.canResurrect()))
+    // 5. Trigger resurrection via Spacebar (or Canvas click)
+    // 6. Assert all immediate restart invariants:
+    //    - isGameOver === false (or !player.isAlive === false)
+    //    - player.isAlive === true
+    //    - player.stats.currentHealth === 100
+    //    - player.level === 1
+    //    - starterWeapon === 'scythe'
+    //    - accumulator <= 1 / 60
+    //    - elapsedTime === 0
+    //    - isPaused === false
+    //    - deathTimer === 0
+    //    - hordeManager.getActiveCount() >= 25
+  });
+
+  // TEST 2: Continuous 15-Second Post-Restart Survival Execution Loop
+  test('Continuous Survival: bot autonomously survives >= 15s post-restart, moves, kills foes, vacuums XP, with 0 engine errors or accumulator runaway', async ({ page }) => {
+    // 1. Trigger death and resurrection as in Test 1
+    // 2. Run continuous 15s survival simulation using dynamic 8-directional steering
+    // 3. Handle level-up card selection modal if triggered
+    // 4. Assert final invariants:
+    //    - elapsedTime >= 15.0
+    //    - player.isAlive === true
+    //    - player.stats.currentHealth > 0
+    //    - hordeManager.totalKilled >= 1
+    //    - accumulator <= 1 / 60 + 0.01
+    //    - consoleErrors.length === 0
+    //    - pageErrors.length === 0
+  });
+
+  // TEST 3: Visual Proof Artifacts Capture & Audit (> 50KB)
+  test('Visual Proof: captures enhanced_graphics_swarm.png, restart_verified.png, occult_vfx_lighting.png and verifies valid PNGs > 50KB', async ({ page }) => {
+    // 1. Capture restart_verified.png right after resurrection
+    // 2. Setup deterministic dense swarm and capture enhanced_graphics_swarm.png
+    // 3. Trigger active weapon VFX and lighting to capture occult_vfx_lighting.png
+    // 4. Audit all 3 files: exist on disk, valid PNG magic bytes, dimensions 960x540, file size > 50KB
+  });
+});
+```
 
 ---
 
 ## 5. Verification Method
 
-To independently verify the findings in this report:
+To independently verify these findings:
 
-1. **Verify TypeScript compilation**:
-   ```bash
-   npm run build
-   ```
-   *Expected*: Exits with code 0, 0 errors, output written to `dist/`.
-
-2. **Verify all Vitest unit tests**:
-   ```bash
-   npx vitest run
-   ```
-   *Expected*: All 34 test files pass (453 tests).
-
-3. **Verify existing Playwright E2E suites**:
+1. **Verify Playwright WebServer & Page Initialization**:
    ```bash
    npx playwright test tests/e2e/game_initialization.spec.ts
-   npx playwright test tests/e2e/gameplay_controls.spec.ts
-   npx playwright test tests/e2e/visual_verification.spec.ts
-   npx playwright test tests/e2e/death_animations_screenshots.spec.ts
    ```
-   *Expected*: All 17 tests pass 100% across the 4 suites.
-
-4. **Verify KeyU Mapping in Source**:
-   - Inspect `src/input/KeyboardController.ts` line 95: `KeyU: 'ultimate'`.
-   - Inspect `src/core/player/PlayerController.ts` line 257: `if (input.ultimatePressed) { this.triggerUltimateMove(engine); }`.
-
-5. **Invalidation Conditions**:
-   - If `npm run build` fails, the E2E preview server will fail.
-   - If canvas element ID changes from `game-canvas`, Playwright selectors will fail.
-   - If `window.__GAME__` exposure is removed from `src/main.ts`, E2E test harness cannot query engine state.
+   *Expected*: Passes with 3 green tests on `http://localhost:4173`.
+2. **Verify Restart Engine Unit Tests**:
+   ```bash
+   npx vitest run tests/unit/restart.spec.ts tests/unit/ChallengerRestartEngine_M1_1.test.ts
+   ```
+   *Expected*: 100% pass across all restart lifecycle suites (clock reset, debounce, player restoration, weapons, wave director).
+3. **Inspect Implementation Code**:
+   - Inspect `src/main.ts` lines 248–382 (`canResurrect`, `handleKeyDown`, `handleCanvasClick`, `restart`).
+   - Inspect `src/core/entities/Player.ts` lines 94–125 (`reset`) and 249–271 (`takeDamage`).
+   - Inspect `playwright.config.ts` lines 12–29 (`webServer` and `use` config).

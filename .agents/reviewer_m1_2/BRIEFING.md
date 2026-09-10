@@ -1,7 +1,7 @@
-# BRIEFING — 2026-09-10T01:12:00Z
+# BRIEFING — 2026-09-10T15:47:00Z
 
 ## Mission
-Perform an independent code and UX review of Milestone 1 (widescreen viewport overhaul, boss arenas expansion, forward reaction view, bright/tropical/cute palette, builds and tests, integrity checks, failure modes).
+Perform an independent, adversarial code review and verification of Milestone 1 (Restart State Engine & Lifecycle Architecture for "Grim Harvest: Undead Siege"). Scrutinize rapid restart spam, resurrection enforcement during normal gameplay, player death with open modal / pending level ups, DOM listener duplication, and HordeManager.reset kill count inflation. Verify test suite and TypeScript compilation.
 
 ## 🔒 My Identity
 - Archetype: reviewer_critic
@@ -10,6 +10,8 @@ Perform an independent code and UX review of Milestone 1 (widescreen viewport ov
 - Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
 - Milestone: Milestone 1 - Viewport & Arena Overhaul
 - Instance: 2 of 2
+- Current Task Parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Current Target Milestone: Milestone 1 - Restart State Engine & Lifecycle Architecture
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
@@ -19,56 +21,55 @@ Perform an independent code and UX review of Milestone 1 (widescreen viewport ov
 - Follow 5-component handoff protocol
 
 ## Current Parent
-- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Updated: 2026-09-10T10:12:00+09:00
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-10T15:47:00Z
 
 ## Review Scope
-- **Files to review**:
-  - src/render/CanvasRenderer.ts
-  - src/render/Camera.ts
-  - src/render/ParallaxBackground.ts
-  - src/render/sprites/ProceduralSpriteFactory.ts
-  - src/ui/HUDOverlay.ts
-  - src/main.ts
-  - index.html
-  - tests/unit/render_components.test.ts
-  - tests/e2e/game_initialization.spec.ts
-  - tests/e2e/visual_verification.spec.ts
-  - tests/e2e/ultimate_and_crisis_expansion.spec.ts
-- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md
-- **Review criteria**: Correctness, integrity, alignment with user feedback, viewport/arena dimensions, forward reaction view, visual styling, test coverage.
+- **Files reviewed**:
+  - `src/main.ts` (`restart()`, `mount()`, `destroy()`, `start()`, `stop()`, `canResurrect()`, `handleKeyDown()`, `handleCanvasClick()`, `step()`)
+  - `src/core/entities/Player.ts` (`reset()`)
+  - `src/core/HordeManager.ts` (`reset()`)
+  - `src/core/SpatialHashGrid.ts` (`clear()`)
+  - `src/core/systems/LootManager.ts` (`reset()`)
+  - `src/core/weapons/WeaponManager.ts` (`reset()`)
+  - `src/core/systems/UpgradeSystem.ts` (`reset()`)
+  - `src/ui/UpgradeModal.ts` (`reset()`)
+  - `src/core/weapons/Projectile.ts` (`ProjectilePool`, `clear()`, `free()`)
+  - `tests/unit/restart.spec.ts`
+  - `tests/unit/ChallengerM1_2RestartAdversarial.test.ts`
+  - `tests/unit/ChallengerRestartEngine_M1_1.test.ts`
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md, worker_m1_1/handoff.md
+- **Review criteria**: Correctness, integrity, adversarial edge-case stress tolerance, zero memory/listener leaks, build & test validation.
 
 ## Review Checklist
 - **Items reviewed**:
-  - CanvasRenderer 960x540 virtual resolution & letterboxing: VERIFIED
-  - Camera 960x540 defaults & deadzone ratio 0.44 (538px forward view >= 528px): VERIFIED
-  - Stage bounds 3600x540 and 1100px arenas (720..1820, 1800..2900): VERIFIED
-  - ProceduralSpriteFactory 164 baseline keys invariant & chibi art: VERIFIED
-  - Parallax modular horizontal wrapping: VERIFIED
-  - Parallax background occlusion by 310px solid ground: IDENTIFIED (Major Finding for M2)
-  - E2E Playwright ultimate_and_crisis_expansion.spec.ts:355 regression: IDENTIFIED (Major Finding for M4)
-  - MidBoss patrol range under-utilization: IDENTIFIED (Minor Finding for M2)
-- **Verdict**: APPROVE (with Major Findings & Critical Action Items for M2)
+  - Rapid restart spam (50 consecutive cycles): VERIFIED (zero memory leak, zero NaN, zero RAF drift)
+  - Normal gameplay resurrection prevention: VERIFIED (`canResurrect()` strictly enforced)
+  - Player death while upgrade modal open / pending level ups: VERIFIED (modal reset, pending level ups cleared, Space confirmation decoupled)
+  - DOM event listener duplication: VERIFIED (stable bound handlers, removeEventListener guards, restart attaches 0 listeners)
+  - HordeManager.reset kill count inflation: VERIFIED (bypasses despawn(), resets counters to 0, pool exact 2,048 slots)
+  - ProjectilePool.clear uninitialized projectile vulnerability: IDENTIFIED (Major Finding)
+- **Verdict**: APPROVE (with Major Finding for ProjectilePool hardening in M2/M3)
 - **Unverified claims**: None.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - H1: Minions spawn inside visible frustum on fast camera pan -> Rejected (spawns >= 1000px).
-  - H2: Modular parallax loop crashes on negative or extreme coordinates -> Rejected (modulo handles cleanly).
-  - H3: Letterbox calculation distorts non-16:9 aspect ratios -> Rejected (clamps correctly).
-  - H4: Background art is visually visible in gameplay -> CONFIRMED FAILURE: 57.4% of lower screen is occluded by 310px solid concrete slab (`ground_main`).
+  - H1: Rapid restart spam causes duplicate RAF loops and thread freeze -> Rejected (loopEpoch + cancelAnimationFrame prevents duplicate RAF; MAX_SUB_STEPS clamps delta spikes).
+  - H2: Pressing Space or clicking during active gameplay triggers unexpected restart -> Rejected (`canResurrect()` strictly requires `!player.isAlive || isVictory`).
+  - H3: Dying while upgrade modal is open traps player or corrupts state -> Rejected (Space selects card, modal reset cleans state, canResurrect unblocked once modal closes).
+  - H4: Restarting multiple times duplicates window/canvas event listeners -> Rejected (`restart()` binds 0 listeners; `mount()` removes before adding).
+  - H5: HordeManager.reset() inflates totalKilled like clear() did -> Rejected (`reset()` directly initializes pool without calling `despawn()`).
+  - H6: Uninitialized projectile in ProjectilePool causes infinite loop on clear() -> CONFIRMED (p.active is false, free() skips decrementing activeCount).
 - **Vulnerabilities found**:
-  - Visual Occlusion: `ground_main` 310px height hides layers 1, 2, 3 of `ParallaxBackground`.
-  - Legacy E2E Assertion: `ultimate_and_crisis_expansion.spec.ts:355` expects old 1200 bound.
-- **Untested angles**:
-  - Multi-tier platform drop-through and stepped terrain (scoped for M2).
+  - `ProjectilePool.clear()` infinite while-loop vulnerability when projectile is spawned but uninitialized.
+- **Untested angles**: None within M1 scope.
 
 ## Key Decisions Made
-- Confirmed zero integrity violations (no cheats, no dummy mocks, no hardcoded bypasses).
-- Verified builds (`tsc`, `npm run build`) and test suite (`npm test` 464/464 passed).
-- Formulated APPROVE verdict with critical design directive for M2 to eliminate ground occlusion.
+- Zero integrity violations detected across source and test suites.
+- Independently verified all commands: `restart.spec.ts` (20/20 passed), `npm test` (246/246 passed across 21 test files), `npx tsc --noEmit` (0 errors).
+- Issued formal APPROVE verdict for Milestone 1.
 
 ## Artifact Index
-- handoff.md — Final review and adversarial challenge report
-- progress.md — Activity log
-- DISPATCH.md — Received task prompt
+- `.agents/reviewer_m1_2/handoff.md` — Comprehensive Review and Adversarial Challenge Report
+- `.agents/reviewer_m1_2/progress.md` — Liveness and progress heartbeat
+- `.agents/reviewer_m1_2/DISPATCH.md` — Dispatch prompt log

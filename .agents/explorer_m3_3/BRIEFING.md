@@ -1,47 +1,52 @@
-# BRIEFING — 2026-09-08T13:23:55Z
+# BRIEFING — 2026-09-10T16:15:00Z
 
 ## Mission
-Investigate audio synthesis in SoundEngine.ts and design unit test specifications for Milestone M3 Ultimate Move System.
+Investigate Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish): overhaul particle effects in DarkFantasyVFX.ts, depth mist in GothicBackdrop.ts, and Vitest test design.
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_explorer
-- Roles: Explorer, Synthesizer
+- Archetype: explorer
+- Roles: Codebase Researcher / Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M3 (Ultimate Move System & Procedural Sprites / Cinematic FX)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Do NOT edit or modify source code files
-- Always wait for explicit user approval before proceeding with implementation
-- Files for content delivery, messages for coordination
+- Abide by communication guidelines and handoff protocol
+- Write only to own folder (.agents/explorer_m3_3/)
+- Verify all findings with exact line numbers and code references
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T13:23:55Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: not yet
 
 ## Investigation State
 - **Explored paths**:
-  - `src/audio/SoundEngine.ts` and `src/audio/AudioTypes.ts` (Web Audio graph, noise buffers, voice allocation, missing M3 procedural routines)
-  - `src/core/player/PlayerController.ts` & `src/input/KeyboardController.ts` (KeyU mapping, KeyX collision with Jump)
-  - `src/render/Camera.ts` & `src/core/engine/StageManager.ts` (Viewport geometry, frustum queries)
-  - `src/render/sprites/ProceduralSpriteFactory.ts` & `tests/unit/adversarial_sprites_crosshairs.test.ts` (164 baseline invariant and expansionKeys isolation)
-  - Full test baseline (`npx vitest run` -> 31 files, 389 tests passed; `npx tsc --noEmit` -> 0 errors)
+  - `src/render/vfx/DarkFantasyVFX.ts`
+  - `src/render/GothicBackdrop.ts`
+  - `src/core/weapons/AbyssalLightning.ts`
+  - `src/core/weapons/CursedAura.ts`
+  - `src/main.ts`
+  - `tests/unit/DarkFantasyVFX.test.ts`
+  - `tests/unit/ChallengerM2_2.test.ts`
+  - `tests/unit/DarkFantasySprites.spec.ts`
 - **Key findings**:
-  - SoundEngine needs 3 procedural synthesis methods for M3: `playUltimateSiren` (wailing dual-sawtooth bandpass sweep), `playFlyoverRoar` (Doppler swept brown noise + turbine drone), `playApocalypticBlast` (hypersonic crack + resonant pink explosion + sub-bass seismic sweep).
-  - KeyU is strictly the dedicated Ultimate input key because KeyX is already bound to 'jump' in `KeyboardController.ts`.
-  - UltimateManager state machine progresses through 4 phases: Freeze (0.5s) -> Strike Pass (0.6s) -> Detonation (0.4s) -> Recovery (0.3s). Total cycle: 1.8s (108 ticks @ 60Hz).
-  - Viewport query strictly clears 100% of on-screen infantry minions, inflicts 120 burst damage to bosses (respecting health gates), vaporizes hostile projectiles, preserves off-screen minions, and inflicts zero friendly fire against player, allies, or POWs.
-  - ProceduralSpriteFactory default `getAllKeys()` must return exactly 164 keys to satisfy Oracle 1E in `adversarial_sprites_crosshairs.test.ts`. Expansion keys must be partitioned in `expansionKeys: Set<string>`.
-- **Unexplored areas**: None. All mission focus areas thoroughly investigated and documented.
+  - `DarkFantasyVFX.ts` currently lacks branching lightning arcs, true 2D swirling soul motes, directional elongated gore, and additive blending (`lighter`).
+  - `AbyssalLightning.ts` and `CursedAura.ts` dynamically allocate heap arrays (`.push` and `.splice`) rather than using zero-garbage pooling.
+  - `GothicBackdrop.ts` mist lacks true multi-frequency undulation and ignores `camY` in `renderForegroundMist`.
+  - Formulated full architecture for recursive lightning forks, cyan-purple dissipation, 2D swirling soul motes with soft additive blending, 3D tumbling bone shards, and multi-tier occult level-up/sigil seals.
+  - Formulated 3-layer depth mist pipeline with sliced-strip sinusoidal undulation and 2D camera tracking.
+  - Designed comprehensive 8-suite Vitest test plan for `tests/unit/DarkFantasyVFX.spec.ts`.
+- **Unexplored areas**: None remaining for this mission scope.
 
 ## Key Decisions Made
-- Fully authored 8 test suites with 24 tests in `tests/unit/ultimate_move_system.test.ts` specification.
-- Documented exact Web Audio synthesis node chains in `handoff.md`.
-- Completed handoff report for Worker M3.
+- Maintained strict backward compatibility with 500-capacity constructor default.
+- Specified zero-allocation representation for lightning segments using `LIGHTNING_SEGMENT` particles.
+- Enforced canvas state hygiene (balanced `save`/`restore` and resetting `globalCompositeOperation` to `'source-over'`).
+- Documented full findings and specifications in `handoff.md`.
 
 ## Artifact Index
-- DISPATCH.md — Task history
-- BRIEFING.md — Working memory
-- progress.md — Liveness heartbeat
-- handoff.md — Comprehensive M3 investigation report and unit test specification
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/DISPATCH.md` — record of incoming dispatch messages
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/BRIEFING.md` — persistent working memory
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/progress.md` — heartbeat and task status
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md` — structured 5-component handoff report

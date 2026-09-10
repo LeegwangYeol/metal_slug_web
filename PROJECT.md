@@ -120,3 +120,32 @@ Survival demands lethal precision, automated occult weaponry, soul-essence harve
 | **M3: Occult Arsenal, Upgrades & Horde Director** | 5 auto-firing weapons, rogue-lite level-up modal, passives & synergies, escalating wave spawner | Agents 31–45 | M1, M2 | **DONE** |
 | **M4: Automated E2E Playtesting & Hardening** | Playwright 30s+ survival loop test, visual proof screenshots, comprehensive unit tests | Agents 46–55 | M3 | **DONE** |
 | **M5: Deployment & Live Production Verification** | Clean build, 100% green tests, git push to origin/main, Vercel verification | Agents 56–60 | M4 | **DONE** |
+
+---
+
+## 🔄 Enhancement & Bug-Fix: Clean Restart Architecture & Visual Fidelity Overhaul
+
+### 1. Game Restart State Engine (R1)
+- **Lifecycle Cleanliness**:
+  - Unbind/cancel previous `requestAnimationFrame` to prevent duplicate loop drift.
+  - Reset `lastTime = performance.now()` and `accumulator = 0` to prevent infinite `while (accumulator >= FIXED_TIMESTEP)` loops.
+  - Full purge and re-initialization of `HordeManager` (2,048 pooled entities), `SpatialHashGrid`, and `LootManager` (1,500 pooled gems).
+  - Reset `Player` state (HP, Level 1, inventory, position to (0,0), alive status).
+  - Reset `WeaponManager` to starter Rank 1 Arcane Scythe.
+  - Reset `WaveDirector` to Phase 1.
+  - Reset `UpgradeModal` and unpause simulation.
+  - Canvas click and Spacebar listener hooks for Game Over plaque resurrection.
+
+### 2. High-Fidelity Visuals & Atmospheric Polish (R2)
+- **Sprite Overhaul**:
+  - Multi-layered procedural character and monster rendering with anatomical depth.
+  - Grim Sorcerer with hooded cowl, ragged crimson robes, and glowing eyes.
+  - Skeletal warriors with weathered bone texturing and rusted iron scythes.
+  - Ghouls with decaying flesh gradients and necrotic pustules.
+  - Translucent additive-blended banshee specters.
+  - Death Knights in heavy obsidian plate with gold filigree.
+- **Lighting, Shadows & VFX**:
+  - Dynamic radial player torch/spell lighting.
+  - Ground contact drop shadows beneath all entities.
+  - Persistent fading blood decals on the terrain.
+  - Abyssal lightning arcs, swirling soul motes, and volumetric depth mist.

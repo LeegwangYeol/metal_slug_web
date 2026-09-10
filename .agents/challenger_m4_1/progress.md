@@ -1,19 +1,20 @@
-# Progress Tracking — challenger_m4_1
+# Progress Log
 
-Last visited: 2026-09-10T11:13:30+09:00
+Last visited: 2026-09-10T19:07:30Z
 
-## Status
-Empirical verification and adversarial challenge completed with 100% green results. Preparing handoff report and verdict.
-
-## Checklist
-- [x] Record DISPATCH.md
-- [x] Initialize BRIEFING.md
-- [x] Initialize progress.md
-- [x] Read mandatory files (ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m4_e2e_artifacts/handoff.md)
-- [x] Inspect `tests/e2e/ui_overhaul_artifacts.spec.ts`
-- [x] Adversarial Test 1: Multiple run repeatability & determinism check (5x sequential + repeat-each 3x) -> PASSED (0 flakes)
-- [x] Adversarial Test 2: Edge case test - directory resilience when `artifacts/ui_overhaul/` is deleted -> PASSED (graceful auto-recreation)
-- [x] Adversarial Test 3: Binary PNG validation - magic bytes (`89 50 4E 47 0D 0A 1A 0A`), IHDR chunk header, width=960, height=540, non-empty -> PASSED (all 3 images verified, IHDR CRC32 verified)
-- [x] Adversarial Test 4: Verify test suite assertions and error handling -> PASSED (596 unit tests, 33 E2E tests, 0 TS errors)
-- [x] Compile handoff.md with explicit verdict (APPROVE)
-- [ ] Notify parent via send_message
+- Initialized briefing and progress log
+- Read all mandatory files: ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m4_2/handoff.md, restart_survival.spec.ts, src/main.ts
+- Constructed unit adversarial stress harness `tests/unit/ChallengerM4_1AdversarialHarness.test.ts`:
+  - 10x consecutive deaths and restarts: verified zero RAF loop accumulation, zero memory leaks, accumulator <= 1/60.
+  - Rapid key hammering stress test (200 Spacebar/click events during 0.5s death debounce): verified zero premature resurrections.
+  - loopEpoch invalidation: verified stale callbacks from previous epochs are discarded with 0 steps, 0 renders, 0 RAF re-schedules.
+  - Accumulator bounding under 10-second lag spikes.
+- Constructed Playwright browser stress harness `tests/e2e/challenger_m4_restart_stress.spec.ts`:
+  - 5x consecutive deaths & restarts in Chromium browser with real RAF rate, hammering keys during 0.5s debounce.
+  - Verified simulation rate matches single RAF loop (no dual loop speedup).
+  - Verified accumulator <= 1/60 throughout.
+- Verified full Playwright E2E suite (18 tests passed).
+- Verified full Vitest unit suite (29 files, 376 tests passed).
+- Verified TypeScript compilation (`npx tsc --noEmit`) and Vite production build (`npm run build`).
+- Verified 3 visual proof artifacts in `artifacts/dark_fantasy/` strictly exceed 50KB.
+- Writing handoff report `handoff.md`.

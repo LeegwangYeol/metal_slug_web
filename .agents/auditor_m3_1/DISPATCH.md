@@ -1,32 +1,23 @@
-## 2026-09-10T01:53:09Z
-You are auditor_m3_1.
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m3_1
-Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+## 2026-09-10T18:29:37Z
+You are auditor_m3_1 (role: Forensic Integrity Auditor).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m3_1
 
-MANDATORY READING:
-1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_ui_respawn/handoff.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_2/handoff.md
 
-TASK:
-Perform a strict forensic integrity audit of Milestone 3 changes:
-- Inspect git status and git diff across all files touched by Milestone 3:
-  - `src/core/player/PlayerController.ts`
-  - `src/core/player/PlayerKinematics.ts`
-  - `src/core/player/PlayerTypes.ts`
-  - `src/input/KeyboardController.ts`
-  - `src/render/CanvasRenderer.ts`
-  - `src/ui/HUDOverlay.ts`
-  - `src/main.ts`
-  - `tests/unit/death_respawn_ui.test.ts`
-- Audit checks:
-  - Check for cheating, fake timers, mock shortcuts, hardcoded test strings, or dummy stub methods.
-  - Verify that the death knockback arc, 10s continue countdown, tactical parachute respawn, on-screen tutorial placard, and HUD metallic polish are authentically simulated and rendered at runtime.
-  - Ensure NO existing tests were deleted, commented out, or weakened.
-- Run independent builds and tests:
-  - `npx tsc --noEmit`
-  - `npm run build`
-  - `npm test` (`npx vitest run`)
-- Deliver an explicit verdict in your handoff.md: CLEAN or INTEGRITY VIOLATION, with exhaustive evidence chain.
-- When finished, send a message to parent (ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654).
+Mission:
+Perform a strict forensic integrity audit on Milestone 3:
+1. Examine code in `src/render/vfx/DarkFantasyVFX.ts`, `src/render/GothicBackdrop.ts`, `src/main.ts`, and `tests/unit/DarkFantasyVFX.spec.ts`.
+2. Verify:
+   - Genuine, authentic implementations of dynamic lighting, drop shadows, decals, branching lightning, swirling soul particles, and depth mist.
+   - Zero hardcoded mock returns, zero empty canvas stubs, zero bypassed render routines.
+   - Tests in `tests/unit/DarkFantasyVFX.spec.ts` execute real assertions on real particle/decal/lighting math without mocking out the systems.
+3. Run `npm test`, `npx tsc --noEmit`, and `npm run build`.
+
+Write your forensic report in `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m3_1/handoff.md`.
+Explicitly state your verdict: `CLEAN` or `INTEGRITY VIOLATION`.
+When complete, send a message to orchestrator with your verdict.

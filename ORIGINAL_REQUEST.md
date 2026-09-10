@@ -292,3 +292,32 @@ Completely halt any coding. Redo fundamental planning, architecture, and core de
 
 
 
+
+## 2026-09-10T15:22:47Z
+
+Use a very large team of 60 agents.
+
+This is a focused enhancement and bug-fix task for the "Grim Harvest: Undead Siege" game. The team must fix a critical infinite loop bug upon game restart and significantly upgrade the dark fantasy graphics to be more polished and visually impressive.
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Fix Game Restart Bug
+Investigate and resolve the issue where restarting the game after a game over or victory causes an infinite loop or failure to properly reset. The game must cleanly re-initialize all states (player, horde, grid, weapons) and start a new session smoothly.
+
+### R2. Significant Graphics Upgrade
+The current dark fantasy graphics are considered "too poor/crude". The team must completely overhaul the visual fidelity of the game. Improve sprite rendering, enhance particle VFX (lighting, blood, magic effects), add high-quality textures or procedural visual polish, and make the overall aesthetic much more professional and visually striking while maintaining the dark fantasy theme.
+
+## Acceptance Criteria
+
+### Verification & Deployment
+- [ ] Restart Verification: A Playwright E2E test intentionally triggers a Game Over, clicks the Restart button, and successfully survives for another 15 seconds without any infinite loops or engine crashes.
+- [ ] Visual Proof: Playwright screenshots clearly demonstrate a significant leap in visual quality (better lighting, richer textures, improved VFX) compared to the previous version.
+- [ ] 100% Green Tests: Unit tests and E2E tests must pass cleanly.
+- [ ] Deployment: Git push to `origin/main` is verified and Vercel build succeeds.
+
+## 2026-09-10T15:27:30Z
+
+승인 (Explicit user approval received to execute the restart bug-fix and high-fidelity dark fantasy graphics overhaul using the 60-agent swarm.)

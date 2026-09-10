@@ -212,4 +212,40 @@ export class WeaponManager {
     this.weapons.clear();
     this.projectilePool.clear();
   }
+
+  /**
+   * Resets WeaponManager, clearing weapon pools, active projectiles/slashes,
+   * resetting simulation clocks and cooldown buffers, and re-equipping starter weapon.
+   */
+  public reset(starterWeaponId: string = 'scythe', starterRank: number = 1): void {
+    for (const weapon of this.weapons.values()) {
+      if ((weapon as any).projectilePool?.clear) {
+        (weapon as any).projectilePool.clear();
+      }
+      if (Array.isArray((weapon as any).activeSlashes)) {
+        (weapon as any).activeSlashes.length = 0;
+      }
+      if (Array.isArray((weapon as any).skulls)) {
+        (weapon as any).skulls.length = 0;
+      }
+      if (Array.isArray((weapon as any).activeBolts)) {
+        (weapon as any).activeBolts.length = 0;
+      }
+      if (Array.isArray((weapon as any).activeRings)) {
+        (weapon as any).activeRings.length = 0;
+      }
+      weapon.timer = 0;
+    }
+
+    this.weapons.clear();
+    this.projectilePool.clear();
+
+    this.simulationTime = 0;
+    this.hitCooldownBuffer.fill(-999);
+    this.scratchEnemyIds.fill(0);
+
+    if (starterWeaponId) {
+      this.addWeapon(starterWeaponId, starterRank);
+    }
+  }
 }

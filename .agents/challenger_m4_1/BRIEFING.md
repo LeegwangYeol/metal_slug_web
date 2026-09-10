@@ -1,57 +1,50 @@
-# BRIEFING — 2026-09-10T11:13:40+09:00
+# BRIEFING — 2026-09-10T19:07:00Z
 
 ## Mission
-Adversarially challenge screenshot artifact generation and resilience for UI overhaul E2E suite (`tests/e2e/ui_overhaul_artifacts.spec.ts`), testing determinism, canvas dimensions, directory resilience, and PNG/IHDR validity.
+Adversarially challenge and stress-test the Restart Lifecycle and Debounce Engine (M4-2 verification).
 
 ## 🔒 My Identity
-- Archetype: empirical-challenger
+- Archetype: challenger
 - Roles: critic, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_1
-- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Milestone: m4
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: M4
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Run verification code empirically; do not trust claims or logs
-- Only empirical reproduction counts as a bug
-- Deliver explicit verdict in handoff.md: APPROVE or REQUEST_CHANGES
+- Empirically verify: generators, oracles, stress harnesses. Do NOT trust claims or logs.
+- Write handoff report with 5 components to handoff.md.
 
 ## Current Parent
-- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Updated: not yet
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-10T19:07:00Z
 
 ## Review Scope
-- **Files to review**:
-  - `tests/e2e/ui_overhaul_artifacts.spec.ts`
-  - `artifacts/ui_overhaul/` (generated artifacts)
-- **Interface contracts**:
-  - `ORIGINAL_REQUEST.md`
-  - `COLLABORATION.md`
-  - `PROJECT.md`
-  - `.agents/worker_m4_e2e_artifacts/handoff.md`
-- **Review criteria**:
-  - Repeatability and determinism across multiple runs (PASSED: 5x sequential runs, 3x repeat-each, 0 flakes)
-  - Strict 960x540 canvas resolution (PASSED: buffer width/height 960x540, client 960x540)
-  - Proper directory creation if deleted prior to test run (PASSED: `artifacts/ui_overhaul` auto-created by `beforeAll`)
-  - Binary PNG header (`89 50 4E 47 0D 0A 1A 0A`) and IHDR chunks for 3 screenshots (PASSED: all 3 match magic bytes, IHDR chunk length 13, dimensions 960x540, valid CRC32)
+- **Files to review**: src/main.ts, tests/e2e/restart_survival.spec.ts, .agents/worker_m4_2/handoff.md
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md
+- **Review criteria**: correctness, empirical stability, debounce timing, loopEpoch safety, accumulator bounding, zero RAF accumulation
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Hypothesis 1: Deleting `artifacts/ui_overhaul` causes tests to fail with ENOENT -> REJECTED: `test.beforeAll` creates directory recursively.
-  - Hypothesis 2: Rapid consecutive test runs flake on canvas rendering -> REJECTED: 5 consecutive runs and repeat-each passed 100% reliably.
-  - Hypothesis 3: Rendered canvas dimensions drift or letterbox in headless Chrome -> REJECTED: Canvas internal buffer and rendered bounds strictly adhere to 960x540.
-  - Hypothesis 4: PNG files are blank/empty or corrupt -> REJECTED: IDAT decompressed to exact expected uncompressed scanline size (1,555,740 bytes) with rich entropy (177-256 distinct bytes).
-- **Vulnerabilities found**: None in test implementation or artifact generation.
-- **Untested angles**: Extreme GPU driver variations (unsupported in CI/headless environment).
+  1. Multiple consecutive restarts causing RAF loop accumulation / dual simulation loops. (DISPROVEN: Exactly 1 RAF loop active across 10 unit cycles and 5 browser cycles).
+  2. Memory leaks and pooled entity drift across restarts. (DISPROVEN: pool counts strictly conserved at poolAvailable=2013, activeCount=35, activeLoot=0, activeProjectiles=0).
+  3. Accumulator unbounded growth / freeze death spiral. (DISPROVEN: Accumulator bounded to <= 1/60 across normal frames and clamped with reset under 10s lag spikes).
+  4. Rapid key hammering / click spamming causing premature resurrection during 0.5s death debounce. (DISPROVEN: Debounce strictly guards resurrection; inputs prior to deathTimer >= 0.5s are 100% ignored).
+  5. Stale callbacks from previous epochs executing post-restart. (DISPROVEN: loopEpoch check strictly aborts prior callbacks with 0 steps and 0 renders).
+- **Vulnerabilities found**: None in current implementation.
+- **Untested angles**: Extreme GPU context loss (handled by canvas clearing).
 
 ## Loaded Skills
-- None specified by dispatch
+None.
 
 ## Key Decisions Made
-- Confirmed all adversarial tests passed. Verdict: APPROVE.
+- Authored adversarial test harness `tests/unit/ChallengerM4_1AdversarialHarness.test.ts` with 4 test suites.
+- Authored Playwright browser stress test `tests/e2e/challenger_m4_restart_stress.spec.ts` testing 5 consecutive browser restarts with debounce hammering.
+- Full Vitest suite (29 files, 376 tests) and Playwright suite (18 tests) 100% green.
+- Verdict: APPROVE.
 
 ## Artifact Index
-- `.agents/challenger_m4_1/DISPATCH.md` — Initial dispatch message
-- `.agents/challenger_m4_1/progress.md` — Liveness and progress tracking
-- `.agents/challenger_m4_1/handoff.md` — Final verification report and verdict
+- handoff.md — Final adversarial verification report
+- tests/unit/ChallengerM4_1AdversarialHarness.test.ts — Unit adversarial stress harness
+- tests/e2e/challenger_m4_restart_stress.spec.ts — Browser adversarial stress harness

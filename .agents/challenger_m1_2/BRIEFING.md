@@ -1,51 +1,54 @@
-# BRIEFING — 2026-09-10T01:12:00Z
+# BRIEFING — 2026-09-11T00:47:00+09:00
 
 ## Mission
-Empirically challenge Milestone 1 camera boundaries, boss arena dimensions, and spawner out-of-bounds invariants.
+Adversarially verify pool and entity invariants across restarts for HordeManager, SpatialHashGrid, LootManager, and WeaponManager.
 
 ## 🔒 My Identity
 - Archetype: challenger
 - Roles: critic, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2
-- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Milestone: Milestone 1
-- Instance: 2 of 2 (challenger_m1_2)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: m1
+- Instance: 2 of 2
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Run tests and empirical checks independently; do not trust worker claims
-- Must reproduce any bug empirically
+- Empirically verify all invariants — run tests and harnesses directly
+- No phantom hits or ghost entities
+- Wait for explicit user approval before proceeding with implementation
 
 ## Current Parent
-- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Updated: not yet
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-11T00:42:01+09:00
 
 ## Review Scope
-- **Files to review**: `src/render/Camera.ts`, `src/render/CanvasRenderer.ts`, `src/main.ts`, `tests/unit/adversarial_m1_camera_arenas_spawner.test.ts`
-- **Interface contracts**: Mid-boss arena width >= 1100px (1820 - 720 = 1100), end-boss arena width >= 1100px (2900 - 1800 = 1100), forward deadzone >= 528px visible reaction space, minion wave spawnX >= cameraX + 960 and spawnX >= cameraX + 480.
-- **Review criteria**: Mathematical rigor, empirical verification, zero test failures in `npm test`.
-
-## Key Decisions Made
-- Created `tests/unit/adversarial_m1_camera_arenas_spawner.test.ts` (17 tests) covering all deadzone, boss arena, and wave spawner invariants, including a 1,000-run randomized PRNG stress generator.
-- All 37 test files (500 tests) passed in `npm test` (100% green).
-- Mathematical proof established for forward deadzone reaction space (538px >= 528px).
-- Mathematical proof established for arena widths (1100px each) and spawner offsets (cameraX + 1000 >= cameraX + 960 > cameraX + 480).
-- Delivered verdict: APPROVE with caveat on legacy E2E assertion at `ultimate_and_crisis_expansion.spec.ts:355`.
-
-## Artifact Index
-- DISPATCH.md — Dispatch log
-- BRIEFING.md — Situational awareness
-- progress.md — Liveness heartbeat
-- tests/unit/adversarial_m1_camera_arenas_spawner.test.ts — Adversarial challenge suite
-- handoff.md — Final challenge report and verdict
+- **Files to review**: `src/main.ts`, `src/core/HordeManager.ts`, `src/core/SpatialHashGrid.ts`, `src/core/systems/LootManager.ts`, `src/core/weapons/WeaponManager.ts`, `src/core/weapons/Projectile.ts`
+- **Interface contracts**: `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md`
+- **Review criteria**: pool/entity invariants across restarts, ghost entities, projectile cleanup, weapon reset
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - H1: Deadzone allows <528px forward reaction space under high speeds or fast scrolling. (REFUTED: deadzoneRight=422 locks reaction space at >= 538px under all speeds up to 2000 px/s).
-  - H2: Mid-boss or End-boss arenas are narrower than 1100px or entities escape viewport frustum. (REFUTED: both arenas are exactly 1100px, camera pan covers [720, 1820] and [1800, 2900], and boss entities remain visible across full travel range).
-  - H3: Wave spawners pop minions inside the active 960px screen frustum or violate legacy >= cameraX + 480 invariant. (REFUTED: spawnBaseX is cameraX + 1000, guaranteeing at least 40px outside viewport and +520px above legacy invariant across 1,000 randomized camera positions).
-- **Vulnerabilities found**: None in Milestone 1 implementation. (Legacy E2E assertion expecting 1200 maxX in `ultimate_and_crisis_expansion.spec.ts:355` requires updating for M4).
-- **Untested angles**: Full M2 platform drop-through and M3 continue/respawn flow (deferred to M2/M3).
+  1. Spawning 1,000 enemies + kills causes counter drift or pool leak after restart -> PASSED (35 active, 2,013 pool, 35 spawned, 0 killed).
+  2. SpatialHashGrid contains ghost entities or phantom collision hits after restart -> PASSED (0 ghost entities across all 6,241 cells, 0 phantom hits).
+  3. LootManager leaks active items or retains stale velocities/attraction -> PASSED (0 active, 1,500 pooled, 100% sanitized).
+  4. WeaponManager retains active projectiles or sub-weapon state -> PASSED (0 active projectiles, Rank 1 Scythe equipped).
+  5. Accumulator lag spike causes infinite loop hang -> PASSED (clamped to MAX_SUB_STEPS = 5).
+  6. ProjectilePool.clear() infinite loop vulnerability -> VULNERABILITY FOUND & DOCUMENTED.
+- **Vulnerabilities found**:
+  - `ProjectilePool.clear()` uses `while (this.activeCount > 0)` calling `free(...)`. If an entity in `activeIndices` has `!p.active`, `free()` returns early without decrementing `activeCount`, leading to an infinite loop at 100% CPU.
+- **Untested angles**:
+  - Multi-threaded WebWorker simulation (single-threaded in current architecture).
 
 ## Loaded Skills
 None
+
+## Key Decisions Made
+- Authored and verified `tests/unit/ChallengerM1_2RestartAdversarial.test.ts` (8 tests passing).
+- Verified full suite: 21 test files, 246 tests passing.
+- Verdict: APPROVE with Advisory Finding for `ProjectilePool.clear()`.
+
+## Artifact Index
+- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/DISPATCH.md — Dispatch log
+- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/progress.md — Liveness & progress tracking
+- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/handoff.md — Final handoff report
+- tests/unit/ChallengerM1_2RestartAdversarial.test.ts — Empirical adversarial test suite

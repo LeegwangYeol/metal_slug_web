@@ -1,66 +1,54 @@
-# BRIEFING — 2026-09-08T02:46:25Z
+# BRIEFING — 2026-09-10T16:06:00Z
 
 ## Mission
-Adversarially stress-test Ally NPC and Rocket Launcher kinematics, targeting, edge cases, memory leaks, and numerical stability for Milestone M2.
+Adversarially challenge and stress-test the Milestone 2 sprite engine: 60Hz rendering performance, 1,000 entities across 120 frames, 0 NaN coords, 0 canvas exceptions, stable frame execution, 100% offscreen atlas caching hit rate, test suite pass.
 
 ## 🔒 My Identity
-- Archetype: empirical_challenger
+- Archetype: challenger
 - Roles: critic, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M2 (Autonomous Ally NPCs & Diverse Items/Weapons)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 2 Sprite Engine
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Run verification code empirically (do not trust worker logs or claims)
-- If cannot reproduce a bug empirically, it does not count
-- .agents/ holds only agent metadata — no source or test code here
+- Report verdict: APPROVE or REQUEST_CHANGES in handoff.md
+- Send message to orchestrator with verdict
+- .agents/ holds only metadata (plans, progress, handoffs) — NEVER place source code, tests, or data files here
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T02:46:25Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-10T16:06:00Z
 
 ## Review Scope
-- **Files to review**:
-  - `src/core/entities/allies/AllyNPC.ts`
-  - `src/core/entities/allies/AllyKiBlast.ts`
-  - `src/core/weapons/RocketLauncherWeapon.ts`
-  - `tests/unit/allies_system.test.ts`
-  - `tests/unit/diverse_weapons_items.test.ts`
-  - `tests/unit/m2_challenger_stress.test.ts`
-  - `tests/unit/m2_ally_rocket_empirical_challenge.test.ts`
-- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md, worker_m2_1/handoff.md
-- **Review criteria**:
-  - Target acquisition (0 enemies, 50 enemies, dead enemies, out of range)
-  - Jump impulse & gravity trajectory over 120 frames (landing, no floating)
-  - Rocket launcher homing behavior (moving enemies, dead enemies mid-flight, lifetime expiration)
-  - Memory leaks, NaN coordinates, infinite loops
-  - Explicit verdict: APPROVE or REQUEST_CHANGES
+- **Files to review**: `src/render/sprites/DarkFantasySprites.ts`, `tests/unit/DarkFantasySprites.spec.ts`
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md
+- **Review criteria**: 60Hz rendering performance, 0 NaN coords, 0 canvas exceptions, stable frame execution, 100% offscreen atlas caching hit rate, test suite pass
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Target acquisition with 0, 50, dead, out-of-range, and destroyed targets: Confirmed robust.
-  - Jump impulse & gravity trajectory over 120 frames: Confirmed exact -350 px/s takeoff, smooth parabolic arc, apex at frame 22, touchdown at frame 43, zero floating across 120 frames.
-  - Rocket launcher guidance & homing: Confirmed dynamic chasing of moving target, clean retargeting on mid-flight target death, solid wall detonation, and 2.5s lifetime detonation.
-  - Memory leaks: Confirmed dead rockets and ki blasts are 100% purged from engine and spatialGrid.
-  - Numerical limits: Confirmed zero NaNs for zero distance, zero dt, zero velocity vectors.
+  - 60Hz rendering performance: 1,000 entities blitted across 120 frames in headless simulation (VERIFIED: avg 0.34ms-1.35ms << 16.67ms).
+  - 0 NaN / infinite coordinates: Verified across 120,120 drawImage calls (VERIFIED: 0 NaNs).
+  - 0 canvas rendering exceptions: Verified across 120 frames (VERIFIED: 0 exceptions).
+  - 100% offscreen atlas caching hit rate: Verified 12,000 queries with 0 dynamic canvas allocations (VERIFIED: 100.00%).
+  - Adversarial fuzzing: Extreme coordinates (1e7), corrupted enemy types, flash threshold boundaries (0.05, 0.00), dead entity culling (VERIFIED).
+  - Full game integration: 120 ticks of GrimHarvestGame with 1,000 active enemies (VERIFIED).
 - **Vulnerabilities found**:
-  - Non-blocking logic finding in `AllyNPC.ts:267`: `typeStr.includes('BOSS')` catches `'MID_BOSS_VEHICLE'` before `else if (typeStr === 'MID_BOSS_VEHICLE')`, assigning mid-bosses weight 100 instead of 50.
+  - None in DarkFantasySprites. Implementation is resilient, invariant-preserving, and performant.
 - **Untested angles**:
-  - Web Audio synthetic audio buffer underruns during rapid firing (presentation tier, handled in M3).
+  - WebGL / GPU hardware shader compilation (outside Canvas 2D engine scope).
 
 ## Loaded Skills
 - None specified in dispatch
 
 ## Key Decisions Made
-- Authored and verified `tests/unit/m2_ally_rocket_empirical_challenge.test.ts` with 17 rigorous stress tests.
-- Re-verified all M2 suites (56 of 56 tests passed).
-- Verified production build (`npm run build` succeeds).
-- Verdict determined: APPROVE with Non-Blocking Advisory Finding.
+- Constructed dedicated adversarial stress test suite in `tests/unit/ChallengerM2_1AdversarialHarness.test.ts` (9 tests, all passing).
+- Verified full project regression suite (24 suites, 285 tests passed 100%).
+- Verified TypeScript compilation (`npx tsc --noEmit`) and production build (`npm run build`).
+- Verdict: APPROVE.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1/DISPATCH.md — Dispatch prompt
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1/BRIEFING.md — Situational awareness
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1/progress.md — Liveness & progress tracking
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m2_1/handoff.md — Final challenge report
+- handoff.md — Final adversarial verification and challenge report
+- progress.md — Liveness and status heartbeat
+- tests/unit/ChallengerM2_1AdversarialHarness.test.ts — Headless 120-frame 1,000-entity stress harness

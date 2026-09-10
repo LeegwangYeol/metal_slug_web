@@ -1,47 +1,57 @@
-# BRIEFING — 2026-09-03T16:50:00Z
+# BRIEFING — 2026-09-10T15:33:00Z
 
 ## Mission
-Investigate project build, test suite baseline (TypeScript build, Vitest, Playwright), catalog test metrics, verify invariants (164-key sprite invariant, pre-existing tests), and write diagnostic baseline report.
+Investigate Milestone 1 (Restart State Engine & Lifecycle Architecture) across WeaponManager, UpgradeSystem, UpgradeModal, WaveDirector, Camera/HUD, and Vitest test design for restart.spec.ts.
 
 ## 🔒 My Identity
-- Archetype: Teamwork explorer
-- Roles: Read-only investigator, synthesizer
-- Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/
-- Original parent: f3526e56-fca6-4e0a-9a39-1b1c3f42580e
-- Milestone: M1_3 (M1 Verification & Diagnostic Baseline)
+- Archetype: explorer
+- Roles: Codebase Researcher / Explorer
+- Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 1 (Restart State Engine & Lifecycle Architecture)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Do NOT modify source code files
-- Only write metadata, reports, and logs in /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/
+- Do not modify source code files
+- Wait for explicit user approval before implementation (handled by parent/worker)
+- Produce 5-component handoff report in .agents/explorer_m1_3/handoff.md
+- Maintain progress.md heartbeat
 
 ## Current Parent
-- Conversation ID: f3526e56-fca6-4e0a-9a39-1b1c3f42580e
-- Updated: 2026-09-03T16:38:00Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: not yet
 
 ## Investigation State
 - **Explored paths**:
-  - `npm run build` and `npx tsc --noEmit`
-  - `npx vitest run` and individual unit test suites (`iron_nokana_boss.test.ts`, `adversarial_sprites_crosshairs.test.ts`)
-  - `npx playwright test --list` and `npx playwright test`
-  - `src/core/entities/boss/CrisisEventManager.ts`, `IronNokanaBoss.ts`, `EnvironmentalHazard.ts`
-  - `tests/unit/boss_crisis_events.test.ts`, `tests/unit/iron_nokana_boss.test.ts`
+  - `src/main.ts` (GrimHarvestGame assembly, loop, event hooks, restart requirements)
+  - `src/core/weapons/WeaponManager.ts` & occult weapon implementations (BoneSpear, ArcaneScythe, SoulOrbiters, etc.)
+  - `src/core/systems/UpgradeSystem.ts` & `src/ui/UpgradeModal.ts`
+  - `src/core/systems/WaveDirector.ts`
+  - `src/render/Camera.ts` & `src/ui/GothicHUD.ts`
+  - `src/core/entities/Player.ts` & `PlayerProgression.ts`
+  - `src/core/HordeManager.ts` & `LootManager.ts` & `DarkFantasyVFX.ts`
+  - `src/input/KeyboardController.ts` & `TouchVirtualPad.ts`
+  - `tests/unit/*.test.ts` (210 tests passing across 18 test files)
 - **Key findings**:
-  - `npm run build` / `tsc -b`: 3 compilation errors, 100% confined to `tests/unit/boss_crisis_events.test.ts` (invalid import `InputManager`, non-existent export `createPlatform`, `new PlayerController` argument mismatch). Production source code compiles with 0 errors.
-  - Vitest: 26 test files, 307 tests collected. 24 files / 305 tests passed.
-  - 100% pass across all 24 pre-existing unit test suites (294/294 passing). Zero pre-existing tests broken.
-  - Only 2 unit test files failed: `boss_crisis_events.test.ts` (failed to load due to TS errors; 10 tests pending) and `iron_nokana_boss.test.ts` (11 passed, 2 failed due to phase lifecycle expectations in tests).
-  - Playwright E2E: 17/17 tests passing (100% green) across all 4 spec files.
-  - 164-key ProceduralSpriteFactory invariant: fully verified intact via `adversarial_sprites_crosshairs.test.ts` (17/17 passed, exactly 164 keys).
-- **Unexplored areas**: None. All diagnostic areas required by task are fully evaluated.
+  1. `main.ts` completely lacks `restart()` and has no event listeners on canvas click or Spacebar for resurrection when dead.
+  2. `start()` in `main.ts` lacks a sub-step cap on `while (this.accumulator >= FIXED_TIMESTEP)`, creating infinite main thread freezes on large timestamp jumps.
+  3. `WeaponManager.clear()` does not purge sub-weapon pools (e.g. `BoneSpear.projectilePool`), does not reset `simulationTime` or hit buffers, and leaves weapons empty instead of starter Arcane Scythe Rank 1.
+  4. `UpgradeSystem.reset()` clears all weapons; needs to re-add starter `weapon_scythe` Rank 1.
+  5. `UpgradeModal.close()` does not clear cards or selections; modal and pause state can remain frozen without explicit `reset()`.
+  6. `WaveDirector.reset()` already exists and cleanly restores Phase 1 / 0:00 / baseline difficulty.
+  7. `Camera.reset()` and `GothicHUD.reset()` already exist and zero shake/trauma and HUD indicators.
+  8. `Player.ts` and `HordeManager.ts` require concise `reset()` methods.
+  9. Headless unit testing via `new GrimHarvestGame()` without container is 100% viable in Vitest/Node.
+- **Unexplored areas**: None for Milestone 1 scope.
 
 ## Key Decisions Made
-- Confirmed full baseline metrics.
-- Formulated exact root cause analysis for all compilation and test failures in M1 files.
-- Documenting complete diagnostic baseline report in handoff.md.
+- Fully designed `GrimHarvestGame.restart()` orchestration covering all 13 subsystem reset steps.
+- Designed accumulator safety ceiling (`maxSubSteps = 5`) in `main.ts` to prevent main thread freeze.
+- Designed comprehensive 8-suite Vitest test plan for `tests/unit/restart.spec.ts`.
+- Synthesized complete 5-component report in `.agents/explorer_m1_3/handoff.md`.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/DISPATCH.md — Incoming message history
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/BRIEFING.md — Persistent working memory
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/progress.md — Liveness heartbeat and step progress
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/handoff.md — Final diagnostic baseline report
+- handoff.md — Final investigation and recommendations report
+- progress.md — Liveness and execution status
+- BRIEFING.md — Persistent working memory
+- DISPATCH.md — Incoming instruction log

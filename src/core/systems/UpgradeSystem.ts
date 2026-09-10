@@ -318,13 +318,16 @@ export class UpgradeSystem {
   constructor(player?: Player, statsManager?: PlayerStatsManager) {
     this.player = player;
     this.statsManager = statsManager;
-    this.reset();
+    this.reset('');
   }
 
-  public reset(): void {
+  public reset(starterWeaponId: string = '', starterRank: number = 1): void {
     this.weapons.clear();
     this.passives.clear();
     this.evolvedWeapons.clear();
+    if (starterWeaponId) {
+      this.addWeapon(starterWeaponId, starterRank);
+    }
   }
 
   // --- Weapon Queries & Slots ---

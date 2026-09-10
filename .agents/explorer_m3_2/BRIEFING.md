@@ -1,47 +1,52 @@
-# BRIEFING — 2026-09-08T04:24:00Z
+# BRIEFING — 2026-09-10T16:16:00Z
 
 ## Mission
-Investigate ProceduralSpriteFactory.ts and CanvasRenderer.ts for Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX) with strict test preservation and 164-key invariant.
+Investigate Milestone 3 architecture for Entity Contact Drop Shadows and Ground Decal System in metal_slug_web.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: investigation, synthesis
+- Roles: Codebase Researcher / Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M3
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 3
 
 ## 🔒 Key Constraints
-- Read-only investigation — do NOT implement or modify source code files
-- Preserve the crucial invariant: default getAllKeys() MUST return exactly 164 keys
-- Write only to our own directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2
-- Communicate via send_message to parent (id: 05969896-3516-4d88-a516-8ffeaafab39c)
+- Read-only investigation — do NOT implement
+- Variable shadow radius scaled to entity bounds (Player: 18x7, Skeleton: 14x5, Ghoul: 16x6, Death Knight: 24x9, Banshee: floating diffuse shadow)
+- Ground Decal System: persistent blood splatters, blast scorch marks, zero-allocation circular buffer (e.g. 500 pooled decals)
+- Always wait for explicit user approval before proceeding with implementation
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T04:20:26Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-10T16:16:00Z
 
 ## Investigation State
 - **Explored paths**:
-  - `src/render/sprites/ProceduralSpriteFactory.ts` (lines 381-411, 450-480, 1140-1250)
-  - `src/render/CanvasRenderer.ts` (lines 1-1006 complete inspection)
-  - `tests/unit/adversarial_sprites_crosshairs.test.ts` (tasks 1-4, exact 164-key & category audit assertions)
-  - `tests/unit/render_components.test.ts` (suite assertions for factory & renderer)
-  - `src/main.ts` (`compileSceneState()`, entity render mapping, sound bus wiring)
-  - `src/audio/SoundEngine.ts` and `src/audio/AudioTypes.ts`
-  - `src/core/entities/items/ItemPickup.ts`, `src/core/entities/boss/IronNokanaBoss.ts`, `src/core/entities/boss/EnvironmentalHazard.ts`
+  - `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`
+  - `src/main.ts` (render pipeline, loop, restart hooks)
+  - `src/render/vfx/DarkFantasyVFX.ts` (particle pool, renderGround, renderAir)
+  - `src/render/sprites/DarkFantasySprites.ts` (baked vector shadow drawers, damage flashing)
+  - `src/render/GothicBackdrop.ts`, `src/render/DarkFantasyPalette.ts`
+  - `src/core/entities/EnemyTypes.ts`, `src/core/entities/Enemy.ts`, `src/core/entities/Player.ts`
+  - `src/core/systems/LootManager.ts`
+  - `src/core/weapons/AbyssalLightning.ts`, `src/core/weapons/CursedAura.ts`
+  - Test suites: `DarkFantasyVFX.test.ts`, `ChallengerM2_1AdversarialHarness.test.ts`, `ChallengerM3_2.test.ts`
 - **Key findings**:
-  1. Invariant 164 keys: `adversarial_sprites_crosshairs.test.ts` Oracle 1E strictly asserts `expect(allKeys.length).toBe(164)` and category counts: player: 67, rebel: 21, pow: 9, ironTechnical: 7, tetsuyuki: 8, projectile: 13, casings: 4, explosions: 18, hud: 17.
-  2. Isolation mechanism: `polishKeys` set already filters 14 keys from `getAllKeys(includePolish = false)`. Adding `expansionKeys: Set<string>` and updating `getAllKeys(includePolish = false, includeExpansion = false)` isolates all 41 new expansion sprites completely while keeping `hasSprite()`, `getSprite()`, and `drawSprite()` 100% accessible.
-  3. Cinematic FX in CanvasRenderer: CanvasRenderer lacks passes for Screen Flash, Tactical Bomber Airstrike flyover, Shockwave rings, Item crates, Allies, and Crisis warning reticles. Adding optional fields to `RenderSceneState` ensures zero breakage for existing tests while enabling full cinematic presentation.
-- **Unexplored areas**: None for M3 sprite & render architecture.
+  - Shadows currently baked inside procedural sprites flash white/crimson on damage and clip across adjacent enemies; moving to a dedicated pre-entity pass solves both issues.
+  - Pre-rendered offscreen radial gradient shadow atlas ensures <0.5ms blit time for 700+ entities/gems at 60 FPS.
+  - Soul Gems currently lack contact shadows; adding floor-pinned shadows creates convincing 3D hover depth with existing sinusoidal bobbing.
+  - Banshee floating diffuse shadow can dynamically modulate radius and alpha inversely with float height.
+  - No ground decal system currently exists; `DarkFantasyVFX.renderGround` only draws spell circles.
+  - Formulated 500-slot zero-allocation circular buffer decal system covering blood splatters, pooling cores, lightning scorches, and death sigil craters.
+- **Unexplored areas**: Implementation phase (waiting on user/orchestrator direction).
 
 ## Key Decisions Made
-- Use `registerExpansionSprite(...)` pattern to auto-populate `expansionKeys: Set<string>` to prevent accidental key leakage.
-- Extend `RenderSceneState` with optional fields (`allies?`, `items?`, `hazards?`, `cinematicFX?`) to preserve existing call signatures.
-- Place screen flash overlay in Pass 4.8 right before the HUD (Pass 5) so HUD score/lives/ammo stay legible during full-screen detonations.
+- Formulated dedicated Pre-Entity Contact Drop Shadow Pass architecture with offscreen stamp atlas.
+- Formulated Zero-Allocation Circular Buffer Ground Decal System (500 capacity, O(1) wrap-around).
+- Documented complete 5-component handoff report in `handoff.md`.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/DISPATCH.md — record of incoming dispatch instructions
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/BRIEFING.md — persistent working memory
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/progress.md — liveness heartbeat
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/handoff.md — comprehensive investigation report
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/DISPATCH.md — Incoming dispatches
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/BRIEFING.md — Working memory
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/progress.md — Liveness heartbeat
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/handoff.md — Final investigation report

@@ -1,71 +1,56 @@
-# BRIEFING — 2026-09-10T10:56:30+09:00
+# BRIEFING — 2026-09-10T18:34:00Z
 
 ## Mission
-Adversarially challenge and stress-test M3 Death, Parachute Respawn, and Continue state machines with empirical verification.
+Adversarially challenge and stress-test the Milestone 3 VFX and Lighting engines (particle pooling, decal cycling, 120-frame canvas stability, extreme dt fuzzing).
 
 ## 🔒 My Identity
-- Archetype: EMPIRICAL CHALLENGER
+- Archetype: challenger
 - Roles: critic, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m3_1
-- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Milestone: M3 (UI, Death/Respawn, Continue Countdown & Tutorial Overhaul)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 3 (Dynamic Lighting & Rich VFX)
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Empirical verification mandatory — must run tests and oracles directly
-- No assertions accepted on faith; reproduce and test all edge cases
-- Verdict must be explicit: APPROVE or REQUEST_CHANGES
-- Never place source code, tests, or data files in .agents/
+- Ground every challenge in empirical evidence via executable tests/harnesses
+- Zero tolerance for unverified claims: if a bug cannot be reproduced empirically, it does not count
+- .agents/ holds only metadata (plans, progress, handoffs). NEVER place source code, tests, or data files here. Project tests must be co-located or executed via proper test runner.
 
 ## Current Parent
-- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
 - Updated: not yet
 
 ## Review Scope
-- **Files to review**:
-  - `src/core/player/PlayerController.ts`
-  - `src/core/player/PlayerKinematics.ts`
-  - `src/core/player/PlayerTypes.ts`
-  - `src/core/physics/PlatformPhysics.ts`
-  - `src/ui/HUDOverlay.ts`
-  - `src/render/CanvasRenderer.ts`
+- **Files reviewed**:
+  - `src/render/vfx/DarkFantasyVFX.ts`
+  - `src/render/GothicBackdrop.ts`
   - `src/main.ts`
-  - `tests/unit/death_respawn_ui.test.ts`
-  - `tests/unit/adversarial_m3_respawn_continue_challenge.test.ts`
-- **Interface contracts**: `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md`
-- **Review criteria**:
-  - Lethal damage immunity & life invariant during DYING & RESPAWNING_PARACHUTE
-  - Continue countdown boundary conditions (0.1s, 5.0s, 9.9s vs 10.0s expiry)
-  - Parachute touchdown resolution on elevated platforms vs ground (no clipping or snapping)
-  - Mid-air parachute steering (vx = ±40) and bullet firing during descent
-  - Test suite cleanliness, 100% pass rate, zero regressions
-
-## Key Decisions Made
-- Created comprehensive empirical stress suite: `tests/unit/adversarial_m3_respawn_continue_challenge.test.ts` (18 tests).
-- Discovered vulnerability gap in `PlayerController.takeDamage()` where parachute descent exceeding 2.5s allows mid-air death, stuck `isParachuting = true` flag during death arc and continue countdown, and negative lives.
-- Discovered failing test in `tests/unit/challenger_boss_and_stability.test.ts:369:32` (`expected 87 to be less than 80`).
-- Issued verdict: `REQUEST_CHANGES`.
-
-## Artifact Index
-- `.agents/challenger_m3_1/progress.md` — Liveness & progress heartbeat
-- `.agents/challenger_m3_1/DISPATCH.md` — Dispatch history
-- `.agents/challenger_m3_1/handoff.md` — Final 5-component handoff report
-- `tests/unit/adversarial_m3_respawn_continue_challenge.test.ts` — Empirical test suite (18 passing tests)
+  - `tests/unit/DarkFantasyVFX.spec.ts`
+  - `tests/unit/ChallengerM3_VFX_Adversarial.test.ts`
+- **Interface contracts**: `PROJECT.md`, `COLLABORATION.md`, `worker_m3_2/handoff.md`
+- **Review criteria**: Particle pooling, decal cycling, memory stability, NaN/Inf immunity, 120-frame 60Hz canvas execution, dt fuzzing.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Damage rejection during DYING: Confirmed safe (rejected, no double-kill).
-  - Continue countdown boundaries: Confirmed safe (0.1s, 5.0s, 9.9s continue cleanly; >=10.0s unconditionally dead).
-  - Parachute touchdown resolution: Confirmed safe (lands cleanly on Y=125, Y=175, upper stacked platforms, ground Y=230).
-  - Mid-air steering & firing: Confirmed safe (vx=±40, firing pistol/HMG/grenades, aim UP all work with canopy attached).
-  - Parachute descent damage immunity: VULNERABILITY FOUND. Parachute descent to ground takes 3.5s, but invulnerabilityTimer expires at 2.5s. `takeDamage()` does not guard `RESPAWNING_PARACHUTE`, allowing mid-air death, persistent parachute sprite on corpse, and negative lives (`lives = -1`).
-  - Overall test suite integrity: FAILED TEST in `challenger_boss_and_stability.test.ts`.
+  - H1: Spawning 1,000 particles and 600 decals will wrap cleanly in the 500-slot ring buffer with zero heap leaks and zero index out-of-bounds. [VERIFIED — PASSED]
+  - H2: Run 120 consecutive frames at 60Hz: zero NaN coordinates, zero canvas rendering exceptions, and stable frame execution times (avg < 1.0ms). [VERIFIED — PASSED]
+  - H3: Extreme dt fuzzing ($dt = 0, 10, -1, -50, 1000$) and vector singularities (zero-length, subnormal floats, coincident coords) maintain stability without crashing or producing NaNs. [VERIFIED — PASSED]
 - **Vulnerabilities found**:
-  - `PlayerController.ts`: Missing `RESPAWNING_PARACHUTE` in `takeDamage` guard; missing `isParachuting = false` reset in `takeDamage()` and `startContinueCountdown()`; missing `Math.max(0, ...)` on `lives` decrement.
-  - `tests/unit/challenger_boss_and_stability.test.ts`: Flaky/exceeded entity count assertion (87 < 80).
-- **Untested angles**:
-  - Touchscreen controls overlay bindings for continue screen and help toggle.
+  - Parallel test runner CPU contention caveat: When running all 26 test suites concurrently on multi-core systems, CPU scheduler contention can cause wall-clock benchmark spikes in M1's `HordeStressAdversarial.test.ts` (p95 threshold 25ms). Capping concurrency via `maxThreads=4` yields 100% clean passes (p95=12.3ms to 24.6ms) across all 329 tests.
+- **Untested angles**: None within M3 scope.
 
 ## Loaded Skills
-- None
+- None requested
+
+## Key Decisions Made
+- Created `tests/unit/ChallengerM3_VFX_Adversarial.test.ts` containing 10 rigorous stress tests.
+- Tested 1,000-particle burst, 600-decal wrap, 50,000 churn heap delta, 120-frame headless canvas loop, full game loop integration, and extreme dt fuzzing.
+- Verdict: **APPROVE**.
+
+## Artifact Index
+- `.agents/challenger_m3_1/DISPATCH.md` — Incoming dispatch messages
+- `.agents/challenger_m3_1/BRIEFING.md` — Situational awareness and state
+- `.agents/challenger_m3_1/progress.md` — Step-by-step progress and liveness heartbeat
+- `.agents/challenger_m3_1/handoff.md` — Final adversarial challenge report
+- `tests/unit/ChallengerM3_VFX_Adversarial.test.ts` — Executable adversarial test suite

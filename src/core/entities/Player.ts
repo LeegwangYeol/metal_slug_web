@@ -88,6 +88,42 @@ export class Player {
     this.progression = new PlayerProgression(baseXP);
   }
 
+  /**
+   * Resets player entity position, kinematics, alive status, stats, and progression.
+   */
+  public reset(startX: number = 0, startY: number = 0, customStats?: Partial<PlayerStats>): void {
+    this.position.x = startX;
+    this.position.y = startY;
+    this.velocity.x = 0;
+    this.velocity.y = 0;
+    this.bounds.x = startX - Player.COLLISION_RADIUS;
+    this.bounds.y = startY - Player.COLLISION_RADIUS;
+    this.bounds.width = Player.COLLISION_RADIUS * 2;
+    this.bounds.height = Player.COLLISION_RADIUS * 2;
+
+    this.isAlive = true;
+    this.facingAngle = 0;
+    this.facingDirection = 1;
+    this.invulnerabilityTimer = 0;
+
+    const rawSpeed = customStats?.moveSpeed ?? DEFAULT_PLAYER_STATS.moveSpeed;
+    const initialSpeed = (rawSpeed > 0 && rawSpeed <= 5) ? rawSpeed * Player.BASE_MOVE_SPEED : rawSpeed;
+
+    this.stats.maxHealth = customStats?.maxHealth ?? DEFAULT_PLAYER_STATS.maxHealth;
+    this.stats.currentHealth = customStats?.currentHealth ?? (customStats?.maxHealth ?? DEFAULT_PLAYER_STATS.currentHealth);
+    this.stats.healthRegen = customStats?.healthRegen ?? DEFAULT_PLAYER_STATS.healthRegen;
+    this.stats.armor = customStats?.armor ?? DEFAULT_PLAYER_STATS.armor;
+    this.stats.moveSpeed = initialSpeed;
+    this.stats.might = customStats?.might ?? DEFAULT_PLAYER_STATS.might;
+    this.stats.area = customStats?.area ?? DEFAULT_PLAYER_STATS.area;
+    this.stats.projSpeed = customStats?.projSpeed ?? DEFAULT_PLAYER_STATS.projSpeed;
+    this.stats.cooldownReduction = customStats?.cooldownReduction ?? DEFAULT_PLAYER_STATS.cooldownReduction;
+    this.stats.magnetRadius = customStats?.magnetRadius ?? DEFAULT_PLAYER_STATS.magnetRadius;
+    this.stats.luck = customStats?.luck ?? DEFAULT_PLAYER_STATS.luck;
+
+    this.progression.reset();
+  }
+
   public get level(): number {
     return this.progression.getLevel();
   }

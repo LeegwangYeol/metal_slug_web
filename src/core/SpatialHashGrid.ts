@@ -74,6 +74,8 @@ export class SpatialHashGrid {
   public clear(): void {
     this.cellHeads.fill(-1);
     this.entityNext.fill(-1);
+    this.entityX.fill(0);
+    this.entityY.fill(0);
   }
 
   /**

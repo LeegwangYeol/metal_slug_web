@@ -1,51 +1,48 @@
-# BRIEFING — 2026-09-08T05:23:00Z
+# BRIEFING — 2026-09-11T03:50:40+09:00
 
 ## Mission
-Investigate existing Playwright test harness and execution architecture for Milestone M4 (Playwright E2E Integration & Visual Proof Screenshots).
+Investigate Milestone 4 (Playwright E2E verification, restart lifecycle, death debounce, and blueprint for restart_survival.spec.ts).
 
 ## 🔒 My Identity
-- Archetype: Explorer
-- Roles: Investigation, Synthesis
+- Archetype: explorer
+- Roles: Codebase Researcher / Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M4 (Playwright E2E Integration & Visual Proof Screenshots)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 4 (Automated E2E Verification & Visual Proof Suite)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Do NOT edit or modify source code files
-- Only write metadata, reports, and handoffs in working directory
-- Communicate with caller agent (parent) via send_message
+- Must read ORIGINAL_REQUEST.md first, COLLABORATION.md, PROJECT.md, src/main.ts, playwright.config.ts, tests/e2e/horde_survival.spec.ts
+- Write report to /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/handoff.md
+- Update progress.md
+- Report back to parent via send_message
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T05:17:36Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: not yet
 
 ## Investigation State
 - **Explored paths**:
-  - `playwright.config.ts`, `package.json`, `vite.config.ts`, `index.html`
-  - `tests/e2e/game_initialization.spec.ts`
-  - `tests/e2e/gameplay_controls.spec.ts`
-  - `tests/e2e/visual_verification.spec.ts`
-  - `tests/e2e/death_animations_screenshots.spec.ts`
-  - `src/main.ts` (window globals exposure, game loop, rAF, step, render)
-  - `src/input/KeyboardController.ts` (KeyU mapping, edge triggers, action setters)
-  - `src/core/player/UltimateManager.ts` (4 phases, minion wipe, boss burst, frustum safety)
-  - `src/core/entities/boss/IronNokanaBoss.ts` & `CrisisEventManager.ts`
-  - `src/core/entities/allies/AllyNPC.ts` & `AllyKiBlast.ts`
+  - `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`
+  - `playwright.config.ts`, `package.json`
+  - `src/main.ts`, `src/core/entities/Player.ts`, `src/ui/GothicHUD.ts`
+  - `tests/e2e/game_initialization.spec.ts`, `tests/e2e/horde_survival.spec.ts`
+  - `tests/unit/restart.spec.ts`, `tests/unit/ChallengerRestartEngine_M1_1.test.ts`
 - **Key findings**:
-  - Vite preview server runs on port 4173 via `playwright.config.ts` (`webServer.command = 'npm run preview'`).
-  - Pre-requisite: `npm run build` must be executed so that `dist/` is present and up-to-date before running Playwright.
-  - Window globals exposed in `src/main.ts`: `__GAME__`, `__ENGINE__`, `__AUDIO_CTX__`, `__CORPSE_MANAGER__`.
-  - Input dispatch supports both genuine Playwright browser keyboard events (`page.keyboard.press('KeyU')`) and programmatic control (`game.keyboard.setAction('ultimate', true)`).
-  - Flakiness-free screenshot architecture uses `game.stop()` to pause the rAF loop, manual `game.step(1/60)` stepping, and `game.render()` before `canvas.screenshot()`.
-  - All 34 Vitest test files (453 tests) and all 4 existing Playwright E2E specs (17 tests) currently pass 100%.
-- **Unexplored areas**: None. Complete blueprint ready for Worker agent to implement M4.
+  - Playwright uses Vite preview on port 4173 with single worker (`workers: 1`) and 90s timeout.
+  - Page attaches `window.__game` and `window.__GAME__` on `DOMContentLoaded`.
+  - Player death halts physics steps naturally via `!player.isAlive`; `isPaused` stays false.
+  - `deathTimer` accumulates dt; `canResurrect()` strictly enforces 0.5s debounce.
+  - Spacebar (non-repeat) and Canvas click safely trigger `restart()`.
+  - `restart()` cleanly resets RAF epoch, player (HP 100, lvl 1), starter scythe, 35 swarm enemies, 0 accumulator debt, and 0 elapsed time.
+  - Note: `isGameOver` is not explicitly declared as a property on `GrimHarvestGame` (`!player.isAlive` is used); tests can use `g.isGameOver ?? !g.player.isAlive` or a getter can be added.
+- **Unexplored areas**: None within the scope of this investigation.
 
 ## Key Decisions Made
-- Confirmed dual-mode testing blueprint: dynamic real-time keyboard test for Ultimate Move + deterministic frame stepping for visual proof screenshots in `artifacts/expansion/`.
+- Structured the blueprint for `tests/e2e/restart_survival.spec.ts` with 3 primary test specs: (1) Game Over, Debounce & Invariant Verification, (2) Autonomous 15s Survival Loop, (3) Visual Proof Screenshot Generation (>50KB).
 
 ## Artifact Index
-- DISPATCH.md — Recorded prompt/dispatch
-- BRIEFING.md — Persistent working memory
-- progress.md — Heartbeat and activity log
-- handoff.md — Final investigation report
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/DISPATCH.md` — Recorded dispatch prompt
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/BRIEFING.md` — Working memory and context
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/progress.md` — Liveness and task progress
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/handoff.md` — 5-component handoff report

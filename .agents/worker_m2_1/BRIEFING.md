@@ -1,66 +1,58 @@
-# BRIEFING — 2026-09-08T02:31:30Z
+# BRIEFING — 2026-09-11T00:59:15Z
 
 ## Mission
-Implement and polish Milestone M2: Autonomous Ally NPCs & Diverse Items/Weapons, fixing targeting, jumping kinematics, rocket launcher blast radius, item pickup initial velocity, PowEntity ally spawning/PrisonerEntity alias, and unit test alignments to ensure 100% test pass rate with zero regressions.
+Elevate procedural sprite rendering in DarkFantasySprites.ts to high-fidelity dark fantasy art across all 5 entities with 120-entry offscreen caching, and implement comprehensive Vitest unit tests in DarkFantasySprites.spec.ts.
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_worker
-- Roles: implementer, qa, specialist
+- Archetype: worker
+- Roles: implementer, qa
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M2 (Autonomous Ally NPCs & Diverse Items/Weapons)
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 2
 
 ## 🔒 Key Constraints
-- Exclusive file ownership:
-  - src/core/entities/allies/AllyNPC.ts
-  - src/core/weapons/RocketLauncherWeapon.ts
-  - src/core/entities/items/ItemPickup.ts
-  - src/core/entities/pow/PowEntity.ts
-  - src/core/entities/pow/PrisonerEntity.ts
-  - tests/unit/allies_system.test.ts
-  - tests/unit/diverse_weapons_items.test.ts
-  - tests/unit/pow_system.test.ts
-- Genuine implementations only (DO NOT cheat, mock results, or fabricate outputs)
-- Run all required verification commands and include full outputs
-- Write handoff.md following 5-component protocol
-- Communicate via send_message to parent (05969896-3516-4d88-a516-8ffeaafab39c)
+- Exclusive write ownership:
+  - src/render/sprites/DarkFantasySprites.ts
+  - tests/unit/DarkFantasySprites.spec.ts
+- DO NOT CHEAT. All implementations must be genuine.
+- Zero NaN coordinates, zero unbounded memory allocations.
+- Maintain 120 cached entries (5 entities x 4 frames x 2 facings x 3 damage states).
+- Safe headless fallback in test environments (safe gradient checks if canvas methods are mocked).
+- Verify with vitest, npm test, tsc, build.
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T02:31:30Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-11T00:59:15Z
 
 ## Task Summary
-- **What to build**: Fix AllyNPC pending entity visibility and jump kinematics; fix RocketLauncherWeapon pending entity steering and explosion distance calculation; set ItemPickup default initialVelocity to (0,0); add spawnsAlly and PrisonerEntity alias to PowEntity; create PrisonerEntity.ts re-export; adjust unit tests in allies_system.test.ts, diverse_weapons_items.test.ts, and pow_system.test.ts.
-- **Success criteria**: npx tsc passes with 0 errors; all targeted unit tests pass; all 28 test suites in tests/unit/ pass (339/339 tests).
-- **Interface contracts**: PROJECT.md / COLLABORATION.md
-- **Code layout**: src/core/entities/allies/, src/core/weapons/, src/core/entities/items/, src/core/entities/pow/, tests/unit/
+- **What to build**: High-fidelity dark fantasy procedural sprites (Grim Sorcerer, Skeleton, Ghoul, Banshee, Death Knight) with offscreen caching and unit test suite.
+- **Success criteria**: 120 cached entries, 60fps performance, zero NaNs, headless-safe gradients, full vitest + tsc + build pass.
+- **Interface contracts**: PROJECT.md, DarkFantasySprites.ts API
+- **Code layout**: src/render/sprites/DarkFantasySprites.ts, tests/unit/DarkFantasySprites.spec.ts
 
 ## Change Tracker
 - **Files modified**:
-  - `src/core/entities/allies/AllyNPC.ts`: Added `justJumped` flag to prevent gravity leak on takeoff; included pending `entitiesToAdd` in `findBestTarget`.
-  - `src/core/weapons/RocketLauncherWeapon.ts`: Included pending `entitiesToAdd` in `steerTowardsNearestEnemy`; used `entity.position ?? BoundingBox.getCenter(entity.bounds)` in `detonate`.
-  - `src/core/entities/items/ItemPickup.ts`: Added optional `initialVelocity: Vector2D = vec2(0, 0)` to constructor.
-  - `src/core/entities/pow/PowEntity.ts`: Added `spawnsAlly` constructor parameter and event emission; added `export { PowEntity as PrisonerEntity }`.
-  - `src/core/entities/pow/PrisonerEntity.ts`: Created re-exporting `PowEntity`.
-  - `tests/unit/allies_system.test.ts`: Updated line 69 spawn position to `vec2(100, 200)` for follow locomotion test.
-  - `tests/unit/diverse_weapons_items.test.ts`: Removed unused imports `WeaponType` and `ItemPickupEntity`; updated gravity fall loop to 60 frames.
-  - `tests/unit/pow_system.test.ts`: Calibrated sample thresholds to 153-weight table.
-- **Build status**: PASS (`npx tsc --noEmit` clean, 0 errors)
+  - `src/render/sprites/DarkFantasySprites.ts`: High-fidelity dark fantasy vector drawer implementations for Grim Sorcerer, Skeleton, Ghoul, Banshee, and Death Knight with headless-safe gradient utilities (`safeLinearGradient`, `safeRadialGradient`, `safeBezierCurveTo`), matched silhouette masked entity drawers, and strict `globalCompositeOperation` restoration.
+  - `tests/unit/DarkFantasySprites.spec.ts`: Comprehensive Vitest specification suite with 6 suites and 22 unit tests covering cache pre-rendering, canvas invariants (zero NaNs, balanced save/restore), entity visual feature verification, headless fallback rendering, flash timer threshold mapping, and 60Hz 1,000-entity cached blitting benchmark.
+- **Build status**: PASS (22 test suites, 269 tests passing; tsc clean; vite build clean in 225ms)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: 28/28 test files passed, 339/339 tests passed (100% green)
-- **Lint status**: 0 errors
-- **Tests added/modified**: `allies_system.test.ts`, `diverse_weapons_items.test.ts`, `pow_system.test.ts`
+- **Build/test result**: PASS (vitest 22/22 suites, 269/269 tests pass 100%)
+- **Lint status**: Clean (tsc --noEmit exits 0)
+- **Tests added/modified**: `tests/unit/DarkFantasySprites.spec.ts` (22 comprehensive unit tests added)
 
 ## Loaded Skills
 - None
 
 ## Key Decisions Made
-- Cleanly applied Explorer 1, 2, and 3 recommendations. All changes strictly respect file ownership and architectural invariants.
+- Implemented robust fallback helpers (`safeLinearGradient`, `safeRadialGradient`, `safeBezierCurveTo`) in `DarkFantasySprites.ts` to seamlessly handle headless environments without `document.createElement('canvas')` or where gradient methods return undefined or throw.
+- Maintained exact 120-entry cache layout (5 entities x 4 frames x 2 facings x 3 flash states) with bounding boxes tailored to each entity (up to 72x72 for Death Knight, 64x64 for Player/Banshee, 56x56 for Ghoul/Skeleton).
+- Handled `globalCompositeOperation = 'lighter'` for Banshee spectral wisps and Death Knight / Grim Sorcerer runes with guaranteed `source-over` restoration in both cached pre-render and runtime fallback modes.
+- Verified cached blitting performance: 1,000 entities blitted in 0.556ms (well under 5.0ms target budget for 60Hz frame).
 
 ## Artifact Index
 - DISPATCH.md — Assignment instructions
-- BRIEFING.md — Persistent working state
-- progress.md — Heartbeat progress
-- handoff.md — 5-component handoff report
+- BRIEFING.md — Situational awareness
+- progress.md — Liveness & status tracking
+- handoff.md — 5-Component handoff report

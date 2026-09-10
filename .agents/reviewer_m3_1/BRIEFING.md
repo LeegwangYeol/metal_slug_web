@@ -1,71 +1,59 @@
-# BRIEFING — 2026-09-10T01:55:00Z
+# BRIEFING — 2026-09-11T03:32:00+09:00
 
 ## Mission
-Perform an objective and adversarial code review of Milestone 3 death knockback arc, tactical parachute respawn, and continue countdown mechanics.
+Review and adversarial critique of Milestone 3: Dynamic Lighting, Rich VFX & Atmospheric Polish.
 
 ## 🔒 My Identity
-- Archetype: reviewer_critic
+- Archetype: reviewer
 - Roles: reviewer, critic
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1
-- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
 - Milestone: Milestone 3
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Check for integrity violations (hardcoded test results, facade implementations, bypassed work, fabricated verification)
-- Evidence-based findings with concrete file:line locations
-- Deliver explicit verdict APPROVE or REQUEST_CHANGES in handoff.md
-- Communicate to parent dc4b76ec-2c8d-41af-8152-fb6d5ed83654 via send_message
+- Explicitly state verdict: APPROVE or REQUEST_CHANGES
+- Verify dual-pass dynamic lighting, contact drop shadows, decal ring buffer, arcane particles, atmospheric mist
+- Check for integrity violations (hardcoded test data, fake implementations, bypassed logic)
+- Run independent tests and type checks
 
 ## Current Parent
-- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
-- Updated: 2026-09-10T01:53:08Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-11T03:32:00+09:00
 
 ## Review Scope
-- **Files to review**:
-  - `src/core/player/PlayerController.ts`
-  - `src/core/player/PlayerKinematics.ts`
-  - `src/core/player/PlayerTypes.ts`
-  - `src/render/CanvasRenderer.ts`
-  - `src/ui/HUDOverlay.ts`
-  - `src/input/KeyboardController.ts`
-  - `src/main.ts`
-  - `tests/unit/death_respawn_ui.test.ts`
-- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md
-- **Review criteria**: Correctness, completeness, quality, adversarial robustness, zero integrity violations
+- **Files to review**: src/render/vfx/DarkFantasyVFX.ts, src/render/GothicBackdrop.ts, src/main.ts, tests/unit/DarkFantasyVFX.spec.ts
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md, worker_m3_2/handoff.md
+- **Review criteria**: correctness, visual fidelity, performance, edge cases, integrity
 
 ## Review Checklist
 - **Items reviewed**:
-  - `PlayerController.ts` death impulse, gravity, ground sprawl friction, parachute respawn, continue countdown, input gating
-  - `PlayerKinematics.ts` state enum (`DYING`, `RESPAWNING_PARACHUTE`, `CONTINUE_COUNTDOWN`), snapshot interface
-  - `PlayerTypes.ts` isolatedModules-compliant re-exports
-  - `CanvasRenderer.ts` parachute cords & canopy rendering, invulnerability flashing, `player_death_0..3` frame selection
-  - `HUDOverlay.ts` metallic framing, cute Marco portrait, continue countdown screen, tutorial placard, ultimate meter
-  - `KeyboardController.ts` KeyH mapping, helpJustPressed edge latch
-  - `main.ts` tutorial auto-dismiss and toggle, player animFrame calculation, HUD state compilation
-  - `tests/unit/death_respawn_ui.test.ts` 19 unit tests
+  - Dynamic Radial Lighting (Dual-pass offscreen buffer destination-out + lighter, warm amber torch flicker, dynamic spell flashes)
+  - Contact Drop Shadows (Elliptical shadows under player, horde enemies, floating soul gems, banshee float modulation)
+  - Ground Decal System (500-slot ring buffer, 4 archetypes, multi-stage decay hold+fade, culling)
+  - Arcane Particles (Branching abyssal lightning, swirling soul motes, bone fragments with 3D tumble & bounce, occult rune circles)
+  - Atmospheric Mist (3-layer depth mist in GothicBackdrop.ts at 0.40, 0.65, 1.15)
+  - Layer Ordering in src/main.ts (Backdrop -> Decals -> Shadows -> Loot -> Enemies -> Player -> Weapons -> Air -> Mist -> Lighting -> HUD -> Modal)
+  - Integrity & Quality Analysis (No hardcoded data, zero runtime garbage, full numerical hygiene)
 - **Verdict**: APPROVE
-- **Unverified claims**: None. All claims independently verified via test and build executions.
+- **Unverified claims**: None. All claims independently verified via inspection and automated test execution.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Input locking during DYING state -> Verified: player inputs are ignored during death arc.
-  - Parachute steering and mid-air firing -> Verified: lateral speed ±40, aim and fire active.
-  - Platform vs ground landing during parachute descent -> Verified: `PlatformPhysics.resolveGroundContact` snaps player to platform top or ground Y=230.
-  - Zero-life continue countdown transition -> Verified: upon death with 0 lives, transitions to 10s countdown.
-  - Continue re-entry -> Verified: Fire or Jump resets lives to 3 and triggers parachute drop.
-  - Continue timer expiry -> Verified: cleanly transitions to DEAD and Game Over state.
-  - Zero integrity violations -> Verified: no dummy mocks, facades, or test-specific shortcuts.
-- **Vulnerabilities found**: None. Mechanics are robust and correctly bound.
+  - Pool saturation under burst load -> Verified FIFO oldest replacement without allocation
+  - Extreme dt values (0, 10, -1) -> Verified zero NaNs or Infinities
+  - Zero-length directional vectors (dirX=0, dirY=0) -> Verified no division-by-zero
+  - Identical lightning arc coords -> Verified no crash or NaNs
+  - Save/restore balance -> Verified 1:1 balance across all passes
+  - globalCompositeOperation hygiene -> Verified reset to 'source-over'
+  - CPU contention under parallel test runs -> Verified transient benchmark contention when 25 test suites run concurrently, passing with wide margin individually (1.09ms vs 8.0ms threshold) and clean 100% on subsequent full run
+- **Vulnerabilities found**: None. Robust fallbacks (e.g. for ctx.ellipse and offscreen canvases in headless environments).
 - **Untested angles**: None.
 
 ## Key Decisions Made
-- Confirmed full compliance with M3 requirements and user directives for charming retro aesthetics and smooth death/respawn loop.
+- Confirmed full compliance with Milestone 3 requirements.
 - Issued verdict: APPROVE.
 
 ## Artifact Index
-- DISPATCH.md — incoming dispatch instructions
-- BRIEFING.md — situational awareness and tracking
-- progress.md — liveness heartbeat
-- handoff.md — final review report with verdict
+- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1/handoff.md — Final review report

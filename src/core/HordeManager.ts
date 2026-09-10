@@ -460,6 +460,32 @@ export class HordeManager {
     this.spatialGrid.clear();
   }
 
+  /**
+   * Cleanly resets all pooled entities, indices, and counters back to factory pristine condition.
+   * Does NOT inflate totalKilled.
+   */
+  public reset(): void {
+    for (let i = 0; i < this.maxEnemies; i++) {
+      const enemy = this.pool[i];
+      enemy.active = false;
+      enemy.isAlive = false;
+      enemy.hp = 0;
+      enemy.vx = 0;
+      enemy.vy = 0;
+      enemy.pushVx = 0;
+      enemy.pushVy = 0;
+      enemy.flashTimer = 0;
+      enemy.behaviorTimer = 0;
+      this.freeIndices[i] = i;
+      this.indexInActive[i] = -1;
+    }
+    this.freeCount = this.maxEnemies;
+    this.activeCount = 0;
+    this.totalSpawned = 0;
+    this.totalKilled = 0;
+    this.spatialGrid.clear();
+  }
+
   private approach(current: number, target: number, maxDelta: number): number {
     return current < target
       ? Math.min(current + maxDelta, target)

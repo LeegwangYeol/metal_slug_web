@@ -1,7 +1,7 @@
-# BRIEFING — 2026-09-10T12:08:00Z
+# BRIEFING — 2026-09-10T15:49:00Z
 
 ## Mission
-Sentinel oversight for Autonomous Dark Fantasy Horde Survival Rebuild ("Grim Harvest: Undead Siege"). Discard all previous code, logic, and cute assets. Implement a serious, heavy dark-fantasy horde survival game from the very foundation (gothic aesthetic, undead swarms, occult magic, imposing environments). Implement Vampire Survivors-like core loop (auto-firing weapons, XP gems, level-ups, rogue-lite upgrades, synergies). Enforce automated Playwright 30s+ survival loop test, visual proof screenshots, 100% green tests, git push to origin/main, and Vercel build verification. Record user requests, maintain Claude collaboration, route to General orchestrator, monitor swarm execution via crons, and enforce independent victory audit.
+Sentinel oversight for focused enhancement and bug-fix task: "Grim Harvest: Undead Siege". Fix critical infinite loop bug upon game restart and significantly upgrade dark fantasy graphics to be more polished and visually impressive. Ensure clean state re-initialization (player, horde, grid, weapons), Playwright restart verification (trigger game over, click restart, survive >=15s without infinite loop), visual proof screenshots exceeding 50KB showing dramatic leap in visual quality (better lighting, richer textures, improved VFX), 100% green tests, and Vercel deployment. Maintain COLLABORATION.md, enforce RULE[user_global], route to General orchestrator, monitor swarm execution via crons, and enforce independent victory audit.
 
 ## 🔒 My Identity
 - Archetype: sentinel
@@ -11,8 +11,10 @@ Sentinel oversight for Autonomous Dark Fantasy Horde Survival Rebuild ("Grim Har
 - Active Orchestrator: 126ae93c-9f63-4451-b923-a4f1126318fc (completed)
 - Active Victory Auditor: f24ba739-c8ad-4cc4-8c81-691ba38f2f93 (completed)
 - Successor Orchestrator (Gen 2): c0a7538f-b163-4fae-9aaa-d9e17ebc0c62 (completed)
-- Dark Fantasy Rebuild Orchestrator: 6bab7276-2b23-4494-b27b-d0a93584d82f
-- Dark Fantasy Victory Auditor: [to be spawned on victory claim]
+- Dark Fantasy Rebuild Orchestrator: 6bab7276-2b23-4494-b27b-d0a93584d82f (completed)
+- Dark Fantasy Victory Auditor: 8b4fa0a7-ef67-4152-b4bc-d186908f7f14 (completed)
+- Enhancement & Bug-Fix Orchestrator: 16d4f03a-b906-4dcd-a7c3-e24f1752216b (active)
+- Enhancement & Bug-Fix Victory Auditor: TBD (to be spawned on victory claim)
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
@@ -20,39 +22,38 @@ Sentinel oversight for Autonomous Dark Fantasy Horde Survival Rebuild ("Grim Har
 - Must maintain COLLABORATION.md for Claude collaboration
 - Victory Audit is MANDATORY before reporting completion
 - Critical user command: "기획단부터 바꿔 새끼야" — redo fundamental planning, architecture, and core design documents from scratch before writing any code
+- User command: "Use a very large team of 60 agents" for restart bug fix & graphics overhaul
 
 ## User Context
-- **Last user request**: 2026-09-10T10:37:39Z — "기획단부터 바꿔 새끼야" (Change it completely from the planning/foundation stage). Completely halt any coding. Redo fundamental planning, architecture, and core design documents from scratch. Reflect a serious, heavy, dark-fantasy horde survival game from the very foundation.
-- **Approval status**: 🟢 Explicit user approval verified ("승인", 2026-09-10T10:36:45Z).
-- **Pending clarifications**: None. Swarm execution authorized.
+- **Last user request**: 2026-09-10T15:27:30Z — "승인" (Explicit user approval received to execute the restart bug-fix and high-fidelity dark fantasy graphics overhaul using the 60-agent swarm).
+- **Approval status**: 🟢 Explicit user approval verified.
+- **Pending clarifications**: None. Swarm actively executing.
 - **Delivered results**:
   - `ORIGINAL_REQUEST.md` (root & `.agents/`) updated with verbatim requests and approval.
-  - `PROJECT.md` completely overhauled with foundational dark fantasy horde architecture, spatial hash grid, wave director, occult arsenal, and 60-agent milestone roadmap.
-  - `COLLABORATION.md` completely overhauled with Claude collaboration guide and 60-agent swarm blueprint.
-  - Project Orchestrator spawned: `6bab7276-2b23-4494-b27b-d0a93584d82f`.
-  - **Milestone 1 Gate Result**: PASS.
-  - **Milestone 2 Gate Result**: PASS.
-  - **Milestone 3 Gate Result**: PASS (Remediations completed, 210/210 unit tests green, Monte Carlo boundary test 0% on-screen error, Reviewers APPROVE, Auditor CLEAN).
-  - **Milestone 4 (Automated E2E Playtesting & Hardening)**: In Progress (Gate 1 identified bot steering & CDP pipe saturation; Remediation Worker 2 `worker_df_m4_remed_2` actively executing fixes).
-  - **Milestone 5 (Deployment & Live Production Verification)**: Pending M4 Gate pass.
+  - `PROJECT.md` updated with Clean Restart State Engine and High-Fidelity Graphics specifications.
+  - `COLLABORATION.md` updated with Claude collaboration guide and authorized 60-agent blueprint.
+  - **Milestone 1 Gate Result**: 🟢 **PASSED GATE** (unanimous approval across Reviewers 1 & 2, Challengers 1 & 2, Forensic Auditor CLEAN; 247/247 unit tests 100% green, 0 tsc errors).
+  - **Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul)**: 🔄 **IN PROGRESS** (3 parallel Explorers dispatched).
+  - Crons active (Reporting `task-80`, Liveness `task-82`).
 
 ## Project Status
-- **Phase**: in progress (Milestone 4 — E2E Playtesting Remediation active)
+- **Phase**: in progress (Milestone 1 complete, Milestone 2 active)
 - **Route**: General (`teamwork_preview_orchestrator`)
 
 ## Victory Audit Status
-- **Triggered**: no
+- **Triggered**: no (execution in progress)
 - **Verdict**: pending
+- **Auditor ID**: TBD
 - **Retry count**: 0
 
 ## Crons & Subagents Tracking
-- **Cron 1 (Progress Reporting)**: c949f701-56e6-4b4f-902e-7db29e6ac6b2/task-62 (active, `*/8 * * * *`)
-- **Cron 2 (Liveness Check)**: c949f701-56e6-4b4f-902e-7db29e6ac6b2/task-64 (active, `*/10 * * * *`)
-- **Active Orchestrator**: 6bab7276-2b23-4494-b27b-d0a93584d82f
+- **Cron 1 (Progress Reporting)**: ac2e615f-16d0-4705-9e88-970a1e7a0368/task-80 (`*/8 * * * *`)
+- **Cron 2 (Liveness Check)**: ac2e615f-16d0-4705-9e88-970a1e7a0368/task-82 (`*/10 * * * *`)
+- **Active Orchestrator**: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
 
 ## Artifact Index
-- `/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md` — Authoritative verbatim user request
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md` — Agent copy of verbatim user request
+- `/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md` — Authoritative verbatim user requests
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md` — Agent copy of verbatim user requests
 - `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md` — Claude collaboration and swarm blueprint
 - `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md` — Foundational architecture and feature inventory
 - `/Users/user/teamwork_projects/metal_slug_web/.agents/sentinel/BRIEFING.md` — Sentinel working memory and state

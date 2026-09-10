@@ -1,30 +1,27 @@
-## 2026-09-08T03:04:02Z
+## 2026-09-10T16:10:12Z
+You are explorer_m3_3 (role: Codebase Researcher / Explorer).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3
 
-You are an Explorer subagent (teamwork_preview_explorer) for Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/src/render/vfx/DarkFantasyVFX.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/render/GothicBackdrop.ts
 
-You are READ-ONLY. DO NOT edit or modify source code files.
+Mission:
+Investigate Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish):
+1. Overhaul particle effects in `DarkFantasyVFX.ts`:
+   - Branching abyssal lightning arcs with jagged recursive forks, core glow, and cyan-purple dissipation.
+   - Swirling necrotic soul motes with floating sinusoidal drift and soft additive blending.
+   - Bone fragments and blood particles on enemy impact and death.
+   - Occult glowing rune circles on level-up and ultimate/sigil activation.
+2. Atmospheric depth mist in `GothicBackdrop.ts`:
+   - Multi-layered undulating graveyard mist drifting across the foreground and midground.
+3. Unit test design:
+   - Comprehensive Vitest test plan for `tests/unit/DarkFantasyVFX.spec.ts` asserting particle pooling, decal cycling, zero NaN coordinates, and composite cleanup.
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-
-YOUR MISSION & FOCUS:
-Investigate audio synthesis and unit test specifications for Milestone M3:
-1. Inspect `src/audio/SoundEngine.ts`:
-   - How are Web Audio procedural sound effects synthesized (e.g., siren, explosion shockwave, hydraulic hiss, ki blast)?
-   - What methods exist and what needs to be added for the Ultimate Move siren, flyover roar, and apocalyptic blast?
-2. Design the comprehensive unit test suite: `tests/unit/ultimate_move_system.test.ts`:
-   - Activation on dedicated KeyU input and stock/cooldown management
-   - 4-phase state progression (freeze -> strike -> detonation -> recovery)
-   - 100% elimination of on-screen minions (viewport bounding box)
-   - 120 HP burst damage to bosses
-   - Off-screen minion preservation (enemies outside viewport remain untouched)
-   - Zero friendly fire against player or allies
-   - Preservation of 164 baseline sprite key invariant
-3. Write your report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md`
-   and call send_message to parent.
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md`.
+Update your `progress.md`.
+When complete, send a message to orchestrator with your findings.

@@ -479,24 +479,27 @@ export class GothicBackdrop {
       }
     }
 
-    // 7. Layer 6: Rolling Ground Mist / Fog (Parallax 0.40 & 0.65)
+    // 7. Layer 6: Rolling Ground Mist / Fog (Parallax 0.40 & 0.65 with Undulating Waves)
     if (this.mistCanvas && this.enableMist) {
       const W = 1024;
       const H = 540;
 
-      // Sub-layer A (Lower ground mist)
-      const startX1 = -((((camX * 0.40 + elapsedTime * 20.0) % W) + W) % W);
+      // Sub-layer A (Lower ground creeping mist at Parallax 0.40)
+      const startX1 = -((((camX * 0.40 + elapsedTime * 18.0) % W) + W) % W);
       ctx.globalAlpha = 0.20;
-      for (let x = startX1; x < vw; x += W) {
+      for (let x = startX1; x < vw + W; x += W) {
         ctx.drawImage(this.mistCanvas, x, 0);
       }
 
-      // Sub-layer B (Mid swirling mist)
-      const startX2 = -((((camX * 0.65 - elapsedTime * 28.0) % W) + W) % W);
-      const startY2 = -((((camY * 0.65 + Math.sin(elapsedTime * 0.5) * 15) % H) + H) % H);
+      // Sub-layer B (Mid swirling mist at Parallax 0.65 with multi-harmonic sinusoidal undulation)
+      const startX2 = -((((camX * 0.65 - elapsedTime * 26.0) % W) + W) % W);
+      const undulationY =
+        14 * Math.sin((camX * 0.65) * 0.0035 + elapsedTime * 1.2) +
+        8 * Math.cos((camX * 0.65) * 0.007 - elapsedTime * 0.7);
+      const startY2 = -((((camY * 0.65 + undulationY) % H) + H) % H);
       ctx.globalAlpha = 0.14;
-      for (let x = startX2; x < vw; x += W) {
-        for (let y = startY2; y < vh; y += H) {
+      for (let x = startX2; x < vw + W; x += W) {
+        for (let y = startY2; y < vh + H; y += H) {
           ctx.drawImage(this.mistCanvas, x, y);
         }
       }
@@ -508,23 +511,42 @@ export class GothicBackdrop {
 
   /**
    * Foreground mist pass rendered after entities for atmospheric depth.
+   * Parallax 1.15 with horizontal drift and vertical camera responsiveness.
    */
   public renderForegroundMist(
     ctx: CanvasRenderingContext2D,
     camX: number,
-    _camY: number,
-    elapsedTime: number
+    camY: number = 0,
+    elapsedTime: number = 0
   ): void {
     if (!this.mistCanvas || !this.enableMist) return;
 
     ctx.save();
     const vw = this.viewportWidth;
+    const vh = this.viewportHeight;
     const W = 1024;
-    const startX = -((((camX * 0.85 + elapsedTime * 35.0) % W) + W) % W);
+    const H = 540;
+
+    // Layer 3: Cinematic Foreground Depth Mist (Parallax 1.15)
+    const startX = -((((camX * 1.15 + elapsedTime * 35.0) % W) + W) % W);
     ctx.globalAlpha = 0.10;
-    for (let x = startX; x < vw; x += W) {
+
+    for (let x = startX; x < vw + W; x += W) {
       ctx.drawImage(this.mistCanvas, x, 0);
     }
+
+    // Camera Y tracking for vertical arena movement
+    if (camY !== 0) {
+      const startY = -((((camY * 0.35 + Math.sin(elapsedTime * 0.6) * 10) % H) + H) % H);
+      if (Math.abs(startY) > 4) {
+        for (let x = startX; x < vw + W; x += W) {
+          for (let y = startY; y < vh + H; y += H) {
+            ctx.drawImage(this.mistCanvas, x, y);
+          }
+        }
+      }
+    }
+
     ctx.restore();
   }
 }

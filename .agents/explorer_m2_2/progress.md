@@ -1,15 +1,13 @@
-# Progress Log
+# Progress - explorer_m2_2
 
-Last visited: 2026-09-08T02:24:30Z
-Status: Completed investigation, writing handoff report
+Last visited: 2026-09-10T15:53:00Z
 
 - [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Read mandatory context files (ORIGINAL_REQUEST.md, PROJECT.md, COLLABORATION.md)
-- [x] Run vitest on diverse_weapons_items.test.ts (9 passed, 3 failed)
-- [x] Diagnose each failure and inspect source code:
-  - [x] Failure 1: Rocket homing pending entity omission
-  - [x] Failure 2: Rocket AOE epicenter distance offset (15px bounds center vs position)
-  - [x] Failure 3: ItemPickup initial upward velocity (-120 px/s vs 0 px/s)
-- [x] Formulate concrete fix strategy and test via scratch simulation
-- [ ] Write handoff.md
-- [ ] Send summary message to parent
+- [x] Read ORIGINAL_REQUEST.md, COLLABORATION.md, and PROJECT.md
+- [x] Inspect src/render/sprites/DarkFantasySprites.ts (Skeleton & Ghoul rendering)
+- [x] Analyze current minion rendering mechanics, sprite canvas dimensions, frame counts, and animation states
+- [x] Formulate high-fidelity procedural designs for Skeleton and Ghoul
+- [x] Formulate concrete Canvas2D drawing procedures (curves, gradients, layer ordering)
+- [x] Compile comprehensive handoff.md in .agents/explorer_m2_2/
+- [x] Update BRIEFING.md with findings and decisions
+- [x] Send coordination message to orchestrator

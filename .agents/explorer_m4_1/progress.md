@@ -1,18 +1,17 @@
-# Progress Log - Explorer M4 (Playwright E2E Integration)
+# Progress: Milestone 4 Explorer
 
-Last visited: 2026-09-08T05:23:00Z
+Last visited: 2026-09-11T03:50:30+09:00
 
 ## Status
-Investigation completed. Writing comprehensive handoff report with exact recipes and blueprints for Milestone M4 implementation.
+Complete
 
-## Steps
+## Tasks
 - [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Read mandatory context files (ORIGINAL_REQUEST.md, PROJECT.md, COLLABORATION.md)
-- [x] Inspect playwright.config.ts and package.json
-- [x] Inspect all files in tests/e2e/ (game_initialization, gameplay_controls, visual_verification, death_animations_screenshots)
-- [x] Analyze game start mechanism & web server configuration (Vite preview on port 4173)
-- [x] Analyze canvas keyboard/input event dispatching (page.keyboard.press, page.focus, KeyU)
-- [x] Analyze game engine state exposure (window.__GAME__, window.__ENGINE__, etc.)
-- [x] Formulate flakiness-free execution recipe (deterministic rAF freeze, step-based screenshots, explicit predicates)
-- [x] Synthesize findings and generate handoff.md
-- [ ] Send completion message to parent
+- [x] Read ORIGINAL_REQUEST.md
+- [x] Read COLLABORATION.md, PROJECT.md
+- [x] Read playwright.config.ts, tests/e2e/horde_survival.spec.ts, src/main.ts
+- [x] Investigate Playwright configuration & runner environment (preview port 4173, hooks)
+- [x] Investigate player death, deathDebounceTimer, restart triggers (Spacebar, click), invariants
+- [x] Formulate restart_survival.spec.ts blueprint
+- [x] Write handoff.md report (5-component Handoff Protocol)
+- [x] Send message to orchestrator parent

@@ -1,561 +1,674 @@
-# Milestone M4: Visual Proof Screenshot Capture System Design Report
+# Milestone M4: Automated E2E Verification & Visual Proof Suite — Architectural Specification & Capture Design
+
+**Agent**: `explorer_m4_3` (Role: Codebase Researcher / Explorer)  
+**Target Milestone**: Milestone 4 (Automated E2E Verification & Visual Proof Suite)  
+**Date**: 2026-09-11  
+**Target Test File**: `tests/e2e/restart_survival.spec.ts`  
+**Target Artifact Directory**: `artifacts/dark_fantasy/`  
+
+---
 
 ## 1. Observation
 
-### 1.1 Test Infrastructure & Configuration
-- **Playwright Configuration (`playwright.config.ts:8-16`)**:
+Direct code and environment observations across the project codebase:
+
+### 1.1 Test Infrastructure & Playwright Configuration
+- **File**: `playwright.config.ts` (lines 1–44)
   ```ts
-  webServer: {
-    command: 'npm run preview',
-    port: 4173,
-    reuseExistingServer: !process.env.CI,
-  },
-  use: {
-    baseURL: 'http://localhost:4173',
-    trace: 'off',
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+  export default defineConfig({
+    testDir: './tests/e2e',
+    timeout: 90000,
+    expect: { timeout: 10000 },
+    fullyParallel: false,
+    workers: 1,
+    webServer: {
+      command: 'kill -9 $(lsof -ti :4173) 2>/dev/null || true; npm run build && npm run preview',
+      url: 'http://localhost:4173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
     },
-  ],
+    use: {
+      baseURL: 'http://localhost:4173',
+      headless: true,
+      viewport: { width: 960, height: 540 },
+      deviceScaleFactor: 1,
+      trace: 'off',
+      video: 'off',
+      screenshot: 'only-on-failure',
+      launchOptions: {
+        args: ['--disable-gpu', '--disable-dev-shm-usage', '--no-sandbox'],
+      },
+    },
+    projects: [
+      {
+        name: 'chromium',
+        use: {
+          ...devices['Desktop Chrome'],
+          viewport: { width: 960, height: 540 },
+          deviceScaleFactor: 1,
+        },
+      },
+    ],
+  });
   ```
-- **Virtual Viewport & Scaling (`src/render/CanvasRenderer.ts:13-14, 260-285`)**:
-  - `VIRTUAL_WIDTH = 480`, `VIRTUAL_HEIGHT = 270`.
-  - Destination `#game-canvas` renders at 960x540 (2x retro integer scale) with letterbox margins (`ctx.imageSmoothingEnabled = false`).
-- **Global State Exposure (`src/main.ts:976-981`)**:
-  ```ts
-  (window as any).__GAME__ = game;
-  (window as any).__ENGINE__ = game.engine;
-  (window as any).__AUDIO_CTX__ = game.soundEngine.ctx;
-  (window as any).__CORPSE_MANAGER__ = game.corpseManager;
-  ```
-- **Deterministic Step Pattern (`tests/e2e/death_animations_screenshots.spec.ts:19-38, 71-76`)**:
-  Existing screenshot suites achieve 100% determinism without frame-timing jitter by:
-  1. Setting `#game-canvas` style to 960x540.
-  2. Calling `game.stop()` to pause the continuous `requestAnimationFrame` loop.
-  3. Configuring entity states, coordinates, and inputs.
-  4. Manually advancing the physics simulation with `game.step(1 / 60)` by exact frame counts.
-  5. Rendering via `game.render()`.
-  6. Capturing with Playwright's locator screenshot: `await page.locator('#game-canvas').screenshot({ path: outPath })`.
+  - **Single Worker (`workers: 1`)**: Prevents race conditions and port conflicts on `localhost:4173`.
+  - **Virtual Resolution**: The game simulation, camera, and HUD operate at a virtual resolution of `960x540` (`GrimHarvestGame.VIRTUAL_WIDTH = 960`, `GrimHarvestGame.VIRTUAL_HEIGHT = 540`), perfectly matching the Playwright browser viewport.
+  - **Automated Web Server Clean Start**: Kills any lingering process on port 4173 and runs `npm run build && npm run preview`.
 
-### 1.2 Ultimate Move Cinematic Timing & FX Parameters
-- **Phase Definitions & Durations (`src/core/player/UltimateManager.ts:24-33, 59-63`)**:
-  - `freezeDuration = 0.5s` (30 frames at 60Hz).
-  - `strikeDuration = 0.6s` (36 frames at 60Hz).
-  - `detonationDuration = 0.4s` (24 frames at 60Hz).
-  - `recoveryDuration = 0.3s` (18 frames at 60Hz).
-- **Strike Pass Progression (`src/core/player/UltimateManager.ts:262-276`)**:
-  ```ts
-  const progress = Math.min(1.0, Math.max(0.0, 1.0 - this.phaseTimer / this.strikeDuration));
-  this.flyoverProgress = progress;
-  this.strikePassX = camX - 100 + progress * (480 + 200);
-  this.strikePassY = 45;
-  ```
-  At `progress = 0.5` (18 frames after FREEZE):
-  - `strikePassX = camX + 240` (dead center of viewport).
-  - `bomber.dropBombs = true` (active when `progress > 0.25 && progress < 0.85`).
-  - `bomber.shadowY = 226` (projected ground shadow on sand).
-- **Detonation Flash & Shockwaves (`src/core/player/UltimateManager.ts:143-169`)**:
-  At `progress = 0.125` (3 frames into DETONATION):
-  - `screenFlashAlpha = 1.0 - progress = 0.875` (high-intensity blinding apocalyptic flash).
-  - `screenFlashColor = '#ffffff'` (pure white flash during first 30% of detonation).
-  - `shockwaves[0]`: Outer golden-orange ring (`radius: progress * 280 = 35px`, `alpha: 0.875`, `color: '#ff9900'`).
-  - `shockwaves[1]`: Inner white core ring (`radius: progress * 180 = 22.5px`, `alpha: 0.90`, `color: '#ffffff'`).
-  - `cameraShake`: `intensity = 18 * (1.0 - progress) = 15.75px` (maximum screen tremor).
-- **Renderer Cinematic Pass (`src/render/CanvasRenderer.ts:1033-1113`)**:
-  `renderCinematicFXPass` renders:
-  1. Camera shake translation jitter (`ctx.translate(shakeX, shakeY)`).
-  2. Ground shadow sprite (`tactical_bomber_shadow`).
-  3. Aircraft sprite (`tactical_bomber`).
-  4. Dropped bombs (`air_bomb_falling_0`).
-  5. Concentric expanding shockwave arcs.
-  6. Apocalypse full-screen flash overlay (`ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT)`).
+### 1.2 Main Game Render Pipeline
+- **File**: `src/main.ts` (lines 500–586)
+  The per-frame `render()` pipeline executes in 12 strictly sequenced passes:
+  1. `this.backdrop.render(ctx, camX, camY, this.elapsedTime)`: Celestial sky with blood moon eclipse (parallax 0.02), drifting storm clouds (parallax 0.05), distant graveyard skyline (parallax 0.15), ancient stone flagging floor (parallax 1.0), occult runic circles (interval 800px), tombstones & dead trees (cell 160px), and rolling ground mist (parallax 0.40 and 0.65).
+  2. `this.vfx.renderDecals(ctx, this.camera)`: Persistent blood splatters, blood pools, lightning scorch, and sigil scorches.
+  3. `this.vfx.renderGround(ctx, this.camera)`: Persistent ground spell circles and glyphs.
+  4. `this.vfx.renderContactDropShadows(ctx, this.camera, this.player, this.hordeManager, this.lootManager, this.elapsedTime)`: Grounded elliptical shadows beneath player (18x7), skeleton (14x5), ghoul (16x6), death knight (24x9), banshee (floating diffuse), and soul gems.
+  5. `DarkFantasySprites.drawLoot(ctx, item, this.camera, this.elapsedTime)`: Multi-faceted soul gems (emerald, ruby, violet abyssal, gold chest) with floating hover oscillations.
+  6. `DarkFantasySprites.drawEnemy(ctx, enemy, this.camera, this.elapsedTime)`: Procedural undead horde entities (Skeleton, Ghoul, Banshee, Death Knight).
+  7. `DarkFantasySprites.drawPlayer(ctx, this.player, this.camera, this.elapsedTime)`: Grim Sorcerer with peaked cowl, dark violet/crimson layered robes, bone scythe, glowing eye sockets.
+  8. `this.weaponManager.render(ctx, this.camera)`: Active Arcane Scythe slashes, Soul Orbiters flaming skulls, Abyssal Lightning bolts, Bone Spears, and Cursed Aura rings.
+  9. `this.vfx.renderAir(ctx, this.camera)`: Airborne particles (visceral blood droplets, bone fragments, swirling soul sparks, spell trails, loot glints).
+  10. `this.backdrop.renderForegroundMist(ctx, camX, camY, this.elapsedTime)`: Atmospheric foreground mist pass (parallax 1.15) drifting across screen.
+  11. `this.vfx.lighting.render(ctx, this.camera, { player, weaponManager, lootManager, elapsedTime })`: Dual-pass dynamic lighting engine (offscreen ambient darkness carving + additive bloom pass on main canvas).
+  12. `this.hud.render(ctx, hudSnapshot, dt)`: Gothic HUD with cracked iron vitality orb, XP bar, timer, skull kills, inventory slots, and Game Over resurrection plaque.
 
-### 1.3 Iron Nokana Boss & Crisis Environmental Hazards
-- **Iron Nokana Boss Specifications (`src/core/entities/boss/IronNokanaBoss.ts:191-255, 627-690`)**:
-  - `type: 'BOSS_IRON_NOKANA'`.
-  - Dimensions: 220px width x 140px height.
-  - Health: 400 HP.
-  - Dedicated `render(ctx, cameraX, cameraY)` method (lines 627-690) directly renders:
-    - Glowing red rage aura (`ctx.shadowColor = '#ff2200'`, `ctx.shadowBlur = 18`) when `isRaging = true`.
-    - Heavy tank tread assembly with 10 rotating wheels.
-    - Armored crawler chassis with front ram prow.
-    - Dorsal heavy mortar cannon (`rx + 25, ry + 12`).
-    - Rear Girida-O auxiliary turret (`rx + 140, ry - 5`) when `giridaDeployed = true`.
-    - Underbelly flame emitter (`rx + 5, ry + 100`) with flare when `isFlameActive = true`.
-    - Glowing weak point exhaust manifold when `weakPointExposed = true`.
-- **Environmental Hazard Entities (`src/core/entities/boss/EnvironmentalHazard.ts`)**:
-  - `ArtilleryTargetReticle` (lines 8-55): Pulsing red ground circle with targeting crosshairs.
-  - `ArtilleryShellHazard` (lines 61-166): Incoming mortar shell with yellow nose cone and smoke trail.
-  - `FallingDebrisHazard` (lines 171-250): Tumbling jagged rock fragments.
-  - `GroundFlameHazard` (lines 255-350): Raging ground fire and burning embers.
-- **Crisis Checkpoints (`src/core/entities/boss/CrisisEventManager.ts:50-194`)**:
-  - 75% HP: Artillery mortar strike with target reticles.
-  - 50% HP: Terrain platform collapse and camera contraction.
-  - 25% HP: Overdrive rage state (`isRaging = true`, speed x1.5).
+### 1.3 Procedural Sprite Architecture
+- **File**: `src/render/sprites/DarkFantasySprites.ts` (lines 23–234, 348–800)
+  - Offscreen caching: 120 cached entries (`Map<string, SpriteAtlasEntry>`) covering 5 entity types, 4 animation frames, 2 facing directions, and 3 flash states (`normal`, `white`, `crimson`).
+  - **Player (Grim Sorcerer)** (lines 348–600):
+    - Ground drop shadow: `rgba(8, 6, 12, 0.65)` radial ellipse (16x6).
+    - Weathered calcified bone scythe haft with dried blood leather wraps and pommel spur.
+    - Ethereal bone scythe blade with curved razor cutting edge and runic blade inscription.
+    - Layered tattered robes: dark tunic underlay, outer violet/abyssal robe with frayed tattered hem, drapery pleats, and embroidered crimson borders (`PALETTE.BLOOD_CRIMSON.VIVID`).
+    - Peaked cowl with dark crimson trim and deep void recess.
+    - Triple-layered occult eyes: radial lavender glow, arcane iris sockets, piercing white pupil pinpoints.
+  - **Undead Horde Minions & Elites** (lines 602–800):
+    - *Skeleton*: Segmented vertebrae column (T1–L4), anatomically curved 4-pair ribcage, sternum, pelvic girdle, calvaria bone shading, cracked skull hairline filigree, deep orbital cavities with crimson pinpoints, and hinged mandible jaw chatter.
+    - *Ghoul*: Hunched feral frame, decaying flesh gradients, necrotic pustules, jagged ivory claws.
+    - *Banshee*: Spectral wisp tail, translucent veil, cyan/purple additive blending.
+    - *Death Knight*: Obsidian heavy plate, horned crest helmet, gold filigree etchings, glowing blood greatsword.
 
-### 1.4 POW Rescue, Allies & Items
-- **POW Entity (`src/core/entities/pow/PowEntity.ts:71-115`)**:
-  - States: `TIED_UP`, `FREED`, `SALUTE`, `OFFERING_ITEM`, `ESCAPING`, `SAVED`.
-  - Freeing a POW drops collectible item crates and emits `'spawn_ally'`.
-- **Ally Companion (`src/core/entities/allies/AllyNPC.ts:9-38, 290-311`)**:
-  - Companion Hyakutaro Ichimonji.
-  - Fires `AllyKiBlast` (energy projectile) at 520 px/s with Hadouken voice/sound.
-- **Expansion Sprites in `src/render/sprites/ProceduralSpriteFactory.ts`**:
-  - Item crates: `item_crate_shotgun`, `item_crate_laser`, `item_crate_rocket`, `item_crate_medkit`, `item_crate_shield`.
-  - Ally sprites: `ally_hyakutaro_idle_0/1`, `ally_hyakutaro_walk_0/1`, `ally_hyakutaro_attack_0/1`, `ally_hyakutaro_celebrate_0/1`.
-  - POW sprites: `pow_tied_0/1`, `pow_freed`, `pow_salute_0`, `pow_drop_item`, `pow_escape_0-3`.
+### 1.4 Dynamic Lighting & VFX Systems
+- **File**: `src/render/vfx/DarkFantasyVFX.ts` (lines 76–155, 240–395, 719–798, 1290–1380, 1485–1855)
+  - **Dynamic Lighting Engine (`DynamicLightingEngine`)**:
+    - Dual-pass offscreen buffer (960x540) initialized with `ambientDarkness = 0.84`.
+    - Blits pre-baked viewport vignette (960x540).
+    - Carves radial light holes via `destination-out`:
+      * Player torch light: 200px radial light with multi-frequency breathing flicker (`flicker = 5.0 * sin(7.3t) + 2.5 * cos(19.1t) + 1.5 * sin(31.7t)`).
+      * Arcane Scythe arc illumination: 1.25x radius light carving along slash angle.
+      * Abyssal Lightning point lights: 100x100 radial holes at bolt endpoints, plus whole-screen flash modulation (`lighting.triggerLightningFlash(0.45)`).
+      * Cursed Aura expanding shockwave hole.
+      * Soul Orbiters perimeter lights (70x70).
+      * Soul Gems shimmer lights (50x50).
+    - Additive bloom pass (`ctx.globalCompositeOperation = 'lighter'`):
+      * Warm amber bloom for player torch (`#f59e0b`, radius 120px).
+      * Violet/crimson bloom for Arcane Scythe (`rgba(183, 148, 246, 0.30)`).
+      * Cyan/white core bloom for Abyssal Lightning (`rgba(255, 255, 255, 0.70)`, `rgba(103, 232, 249, 0.40)`).
+      * Expanding crimson shockwave for Cursed Aura.
+      * Glowing perimeter halos for Soul Orbiters.
+  - **Ground Decals System**:
+    - 500-slot circular ring buffer with 10–15s organic decay curves:
+      * `BLOOD_SPLATTER`: radius 4–8px, coagulated crimson with satellite micro-droplets.
+      * `BLOOD_POOL`: radius 12–18px, deep crimson with specular highlights.
+      * `LIGHTNING_SCORCH`: radius 18–24px, charred slate-black ground burn.
+      * `SIGIL_SCORCH`: radius 28–36px, persistent arcane stone scorch.
+  - **Airborne Particle Pool**:
+    - 500-slot zero-garbage pool with O(1) swap-and-pop:
+      * `SOUL_SPARK`: Swirling necrotic soul motes with multi-harmonic sinusoidal drift (`vx += cos(7.5t) * 24.0`) and upward levitation gravity (`-32.0`).
+      * `BLOOD_DROPLET`: Visceral high-velocity blood droplets with parabolic gravity.
+      * `BONE_CHIP`: 3D tumbling calcified bone fragments with ground bounce.
+
+### 1.5 Parallax Backdrop & Mist Engine
+- **File**: `src/render/GothicBackdrop.ts` (lines 355–550)
+  - Multi-layer gothic backdrop with pre-rendered offscreen surfaces:
+    * Layer 0: Sky & Blood Moon Eclipse (Parallax 0.02).
+    * Layer 1: Drifting Storm Clouds (Parallax 0.05 + wind).
+    * Layer 2: Distant Graveyard Skyline (Parallax 0.15).
+    * Layer 3: Ancient Stone Flagging Floor (Parallax 1.0, World Space).
+    * Layer 4: Dynamic Occult Runic Circles (World Space, Interval 800px).
+    * Layer 5: Cursed Graveyard Props (Tombstones & Dead Trees, Cell 160px).
+    * Layer 6: Rolling Ground Mist / Fog:
+      - Sub-layer A (Lower ground creeping mist at Parallax 0.40).
+      - Sub-layer B (Mid swirling mist at Parallax 0.65 with multi-harmonic sinusoidal undulation).
+    * Layer 7 (Foreground): Cinematic Foreground Depth Mist (`renderForegroundMist` at Parallax 1.15).
+
+### 1.6 Restart Lifecycle & Resurrection Engine
+- **File**: `src/main.ts` (lines 282–382)
+  - `game.canResurrect()`: Returns true if player is dead (`!this.player.isAlive || this.isVictory`), modal is closed, and `deathTimer >= 0.5s`.
+  - `game.restart()`:
+    * Halts existing RAF loop cleanly via `stop()`, increments `loopEpoch` to discard any delayed RAF callbacks.
+    * Resets clock: `elapsedTime = 0`, `killCount = 0`, `deathTimer = 0`, `isPaused = false`, `isVictory = false`, `accumulator = 0`.
+    * Closes and resets `UpgradeModal`.
+    * Resets `Player`: resurrected at `(0, 0)` with 100/100 HP, level 1, 0 XP, baseline stats.
+    * Resets `HordeManager`: purges all active enemies, resets spatial grid, guarantees 2,048 available pool slots, re-spawns initial perimeter swarm (25 Skeletons, 10 Ghouls).
+    * Resets `LootManager`: clears all lingering soul shards and pickups.
+    * Resets `WeaponManager`: equips starter Rank 1 Arcane Scythe, clears active projectiles.
+    * Resets `UpgradeSystem`: clears passives, equips starter Rank 1 Arcane Scythe.
+    * Resets `WaveDirector`: rewinds to Phase 1 (The Awakening) at `elapsedTime = 0`.
+    * Resets `Camera`: zero shake intensity, zero trauma, centered at `(0, 0)`.
+    * Clears `DarkFantasyVFX` particle pool, ground decals, and resets dynamic lighting.
+    * Resets `GothicHUD` health display and kill counters.
+    * Re-binds Spacebar and Canvas Click listeners to trigger clean resurrection.
+
+### 1.7 Existing Artifact Sizes
+- Current files in `artifacts/dark_fantasy/`:
+  - `horde_swarm.png`: **176 KB** (180,224 bytes)
+  - `level_up_modal.png`: **193 KB** (197,632 bytes)
+  - `survival_gameplay.png`: **308 KB** (315,392 bytes)
+  All existing screenshots consistently exceed the 50 KB (51,200 bytes) threshold by a factor of 3.5x to 6x.
 
 ---
 
 ## 2. Logic Chain
 
-### 2.1 Directory Creation & Storage Policy
-1. **Observation**: Artifacts must be written to `artifacts/expansion/`.
-2. **Logic**: If the folder `artifacts/expansion/` does not exist prior to test execution, `canvas.screenshot({ path: ... })` will throw `ENOENT`.
-3. **Deduction**: In the Playwright test file, `test.beforeAll` must invoke `fs.mkdirSync(ARTIFACT_DIR, { recursive: true })` ensuring the target directory exists before any test worker executes.
+From the observations above, we establish the step-by-step reasoning for deterministic capture of the 3 required visual proof screenshots:
 
-### 2.2 Eliminating Visual Flakiness via Deterministic Stepping
-1. **Observation**: Standard browser tests relying on `page.waitForTimeout()` are vulnerable to frame rate jitter (e.g. landing on frame 28 vs 33), which causes transient visual effects (like the 0.4s detonation flash) to be captured at variable alpha or completely missed.
-2. **Logic**: `(window as any).__GAME__.stop()` halts the requestAnimationFrame loop. `game.step(1 / 60)` advances simulation physics by exactly 16.667ms per invocation. `game.render()` evaluates the current scene state and blits to `#game-canvas`.
-3. **Deduction**: Stepping exact frame counts guarantees 100% reproducible screenshots across any host environment:
-   - Frame 48: Exact midpoint of STRIKE_PASS (tactical bomber dead center, shadow on terrain, dropping bombs).
-   - Frame 69: Exact apex of DETONATION (full-screen white flash at alpha 0.88, shockwave rings, 16px camera shake).
-
-### 2.3 Frame Positioning & Visual Composition for the 4 Artifacts
-
-#### Artifact 1: `artifacts/expansion/ultimate_strike_pass.png`
-- **Objective**: Capture the tactical bomber flyover and screen flash/shadow.
-- **Timing**:
-  - `FREEZE` phase: 30 frames (0.5s).
-  - `STRIKE_PASS` phase: 18 frames into phase (progress = 0.50).
-  - Total elapsed: 48 frames.
-- **Visual Composition**:
-  - Tactical bomber (`tactical_bomber`) centered horizontally at `x = 240, y = 45`.
-  - Ground shadow (`tactical_bomber_shadow`) projected at `y = 226`.
-  - Dropped bombs (`air_bomb_falling_0`) trailing beneath the bomber.
-  - Player Marco Rossi on the ground in defensive stance at `x = 100, y = 230`.
-  - Living enemy patrol soldiers at `x = 340, 420` awaiting airstrike impact.
-
-#### Artifact 2: `artifacts/expansion/ultimate_detonation_flash.png`
-- **Objective**: Capture the screen flash overlay, shockwave rings, and camera shake.
-- **Timing**:
-  - `FREEZE` (30 frames) + `STRIKE_PASS` (36 frames) + `DETONATION` (3 frames) = 69 frames.
-  - At frame 69: `detonationProgress = 3 / 24 = 0.125`.
-- **Visual Composition**:
-  - Blinding apocalypse white flash overlay (`alpha = 0.875`, `#ffffff`).
-  - Concentric dual shockwave rings (outer golden `#ff9900` at radius 35px, inner white `#ffffff` at radius 22.5px).
-  - Camera shake jitter translation of ~16px.
-  - Explosive fireballs and disintegrating enemy silhouettes across the arena floor.
-
-#### Artifact 3: `artifacts/expansion/crisis_boss_encounter.png`
-- **Objective**: Capture Iron Nokana boss and crisis environmental hazards in action.
-- **Timing & State**:
-  - Position Iron Nokana dreadnought at `x = 240, y = 90` with camera locked at `x = 0`.
-  - Boss state: `health = 100` (25% HP threshold), `phase = 'PHASE_4_OVERDRIVE_RAGE'`.
-  - Visual flags enabled on boss:
-    - `isRaging = true` (red `#ff2200` glowing aura with 18px shadow blur).
-    - `giridaDeployed = true` (rear auxiliary Girida-O turret deployed).
-    - `weakPointExposed = true` (pulsing orange/red exhaust core).
-    - `isFlameActive = true` (underbelly flame burst).
-  - Environmental crisis hazards spawned:
-    - `ArtilleryTargetReticle` at `x = 130, y = 230` (pulsing red crosshair on ground).
-    - `ArtilleryShellHazard` at `x = 130, y = 100` (falling HE shell with smoke trail).
-    - `FallingDebrisHazard` at `x = 190, y = 70` (falling rock rubble).
-    - `GroundFlameHazard` at `x = 210, y = 220` (ground flame).
-  - Player Marco Rossi at `x = 70, y = 230` firing rocket launcher or aiming upward.
-
-#### Artifact 4: `artifacts/expansion/ally_pow_rescue.png`
-- **Objective**: Capture POW rescue and Ally Hyakutaro combat.
-- **Timing & State**:
-  - Player Marco Rossi positioned at `x = 70, y = 230`, facing right.
-  - Rescued POW hostage at `x = 130, y = 230` in `PowState.SALUTE` (military salute with golden hair and torn blue shorts).
-  - Dropped supply crate at `x = 155, y = 222`: `item_crate_shotgun` or `item_crate_rocket` (red supply crate with golden ribbon).
-  - Autonomous Ally Hyakutaro Ichimonji (`AllyNPC`) at `x = 190, y = 230` in `ATTACK` state casting Hadouken Ki-blast (`ally_hyakutaro_attack_0`).
-  - `AllyKiBlast` energy projectile mid-flight at `x = 230, y = 214` glowing blue/white.
-  - Enemy soldier at `x = 350, y = 230` facing left in the path of the Ki-blast.
+### 2.1 Deterministic Setup & Jitter Elimination
+1. In web game automated testing, visual artifacts suffer from timing jitter if captured during an active `requestAnimationFrame` loop because entity positions, particle lifespans, and lighting pulses advance unpredictably between test assertions.
+2. The canonical pattern established in `tests/e2e/horde_survival.spec.ts` (`setupDeterministicGame`) eliminates all jitter:
+   - Navigates to `/`, waits for `canvas#game-canvas` and `window.__game`.
+   - Halts the continuous loop via `game.stop()`.
+   - Forces canvas display style to `width: 960px; height: 540px`.
+   - Sets exact entity coordinates, camera offsets, HUD values, and particle arrays inside a single `page.evaluate()` call.
+   - Advances simulation by a discrete frame count using `game.step(1 / 60)`.
+   - Forces an immediate, synchronous redraw via `game.render()`.
+   - Captures screenshot directly from the canvas element locator: `await page.locator('canvas#game-canvas').screenshot({ path })`.
+3. Camera centering logic: In `Camera.ts`, `renderX` and `renderY` represent the world coordinates of the viewport's top-left corner. For a `960x540` viewport, centering on world coordinate `(px, py)` requires:
+   ```ts
+   game.camera.x = px - 480;
+   game.camera.y = py - 270;
+   game.camera.renderX = px - 480;
+   game.camera.renderY = py - 270;
+   ```
+   When the player is at `(0, 0)`, setting `renderX = -480` and `renderY = -270` places the Grim Sorcerer precisely in the center pixel `(480, 270)`.
 
 ---
 
-## 3. Concrete Implementation Blueprint for Worker M4
+### 2.2 Screenshot 1: `enhanced_graphics_swarm.png` (>50KB)
 
-The following complete test file specification should be implemented in:
-`tests/e2e/ultimate_and_crisis_expansion.spec.ts`
+#### Visual Intent
+Showcase the procedural sprite rendering system:
+- **Center**: Grim Sorcerer with hooded peaked cowl, layered crimson-trimmed tattered robes, calcified bone scythe with purple runic engraving and glinting cutting edge, and glowing triple-layered violet occult eyes.
+- **Surrounding Horde**: 4 concentric rings featuring all 4 undead enemy archetypes:
+  - Ring 1 (Inner, $r = 150\text{px}$): 35 Skeletons with curved ribcage, calvaria bone shading, cracked skulls, and crimson eye pinpoints.
+  - Ring 2 (Mid-inner, $r = 240\text{px}$): 25 Ghouls with hunched frames, decaying moss flesh, necrotic boils, and ivory claws.
+  - Ring 3 (Mid-outer, $r = 330\text{px}$): 20 Banshees with floating ghostly wisps, weeping veils, and cyan/purple luminescence.
+  - Ring 4 (Outer, $r = 420\text{px}$): 12 Death Knights with heavy obsidian plate, horned helmets, gold filigree, and blood broadswords.
+  - Total on-screen enemies: $35 + 25 + 20 + 12 = 92$ entities, fully contained within the `960x540` viewport (`[-480..480] x [-270..270]`).
+- **Contact Drop Shadows**: Elliptical contact drop shadows rendered beneath all 92 enemies, the Grim Sorcerer, and dropped soul gems via `vfx.renderContactDropShadows` and per-entity vector grounding.
+- **Backdrop**: Cursed graveyard flagstones, tombstones, twisted dead trees, runic circles, and blood moon eclipse.
 
+#### Canvas & Entity Setup Code
 ```ts
-import { test, expect } from '@playwright/test';
-import * as fs from 'fs';
-import * as path from 'path';
+test('Visual Proof 1: captures enhanced_graphics_swarm.png (Grim Sorcerer in center with concentric rings of 4 undead archetypes and drop shadows)', async ({
+  page,
+}) => {
+  const { consoleErrors, pageErrors } = await setupDeterministicGame(page);
 
-test.describe('Milestone M4: Expansion E2E & Visual Proof Screenshot Suite', () => {
-  const ARTIFACT_DIR = path.resolve(process.cwd(), 'artifacts/expansion');
+  await page.evaluate(() => {
+    const game = (window as any).__game ?? (window as any).__GAME__;
 
-  test.beforeAll(async () => {
-    // 1. Ensure target directory artifacts/expansion/ exists
-    if (!fs.existsSync(ARTIFACT_DIR)) {
-      fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+    // 1. Position player and camera at center
+    game.player.position.x = 0;
+    game.player.position.y = 0;
+    game.player.velocity.x = 0;
+    game.player.velocity.y = 0;
+    game.player.facingDirection = 1;
+    game.player.stats.currentHealth = 85;
+    game.player.stats.maxHealth = 100;
+
+    game.camera.x = -480;
+    game.camera.y = -270;
+    game.camera.renderX = -480;
+    game.camera.renderY = -270;
+
+    // 2. Clear default spawns
+    game.hordeManager.clear();
+
+    // 3. Spawn 4 concentric rings of undead entities (92 total entities)
+    game.hordeManager.spawnWave('SKELETON', 35, { x: 0, y: 0 }, 150);
+    game.hordeManager.spawnWave('GHOUL', 25, { x: 0, y: 0 }, 240);
+    game.hordeManager.spawnWave('BANSHEE', 20, { x: 0, y: 0 }, 330);
+    game.hordeManager.spawnWave('DEATH_KNIGHT', 12, { x: 0, y: 0 }, 420);
+
+    // 4. Grounded Soul Gems with contact drop shadows
+    game.lootManager.clear();
+    game.lootManager.spawnDrop('EMERALD_SHARD', 55, 65, false);
+    game.lootManager.spawnDrop('RUBY_GEM', -75, -55, false);
+    game.lootManager.spawnDrop('VIOLET_ABYSSAL', 115, -45, false);
+
+    // 5. HUD State Snapshot
+    game.elapsedTime = 65.0; // Minute 1:05 -> Nightfall phase
+    game.killCount = 142;
+    if (game.hud) {
+      (game.hud as any).isFirstUpdate = false;
+      game.hud.displayHealth = 85;
+      game.hud.ghostHealth = 95;
+      game.hud.displayXP = 12;
+      game.hud.xpToNextLevel = 25;
+      game.hud.currentLevel = 2;
     }
-  });
 
-  test.use({
-    viewport: { width: 960, height: 540 },
-    deviceScaleFactor: 1,
-  });
-
-  /**
-   * Deterministic helper: loads game, establishes 960x540 canvas presentation,
-   * and pauses requestAnimationFrame loop to enable exact step control.
-   */
-  async function setupDeterministicGame(page: any) {
-    await page.goto('/');
-    await page.waitForSelector('canvas#game-canvas');
-    await page.waitForFunction(() => {
-      const w = window as any;
-      return w.__GAME__ && w.__GAME__.engine && w.__GAME__.player;
-    });
-
-    await page.evaluate(() => {
-      const canvas = document.querySelector('canvas#game-canvas') as HTMLCanvasElement;
-      if (canvas) {
-        canvas.style.width = '960px';
-        canvas.style.height = '540px';
-      }
-      const game = (window as any).__GAME__;
-      if (game && typeof game.stop === 'function') {
-        game.stop();
-      }
-    });
-  }
-
-  // =========================================================================
-  // ARTIFACT 1: Tactical Bomber Flyover & Shadow (ultimate_strike_pass.png)
-  // =========================================================================
-  test('Visual Proof 1: Ultimate Strike Pass (ultimate_strike_pass.png)', async ({ page }) => {
-    await setupDeterministicGame(page);
-
-    await page.evaluate(() => {
-      const game = (window as any).__GAME__;
-      const engine = game.engine;
-
-      // Position player and camera
-      game.player.position.x = 100;
-      game.player.position.y = 230;
-      game.player.facing = 1;
-      game.player.isGrounded = true;
-      game.camera.x = 0;
-
-      // Clear existing soldiers and spawn 3 minions across right half of screen
-      const existing = engine.getAllEntities().filter((e: any) => e.type && e.type.startsWith('SOLDIER'));
-      existing.forEach((e: any) => engine.removeEntity(e.id));
-
-      const stage = game.stageManager.getCurrentStage();
-      const wave1 = stage?.triggers.find((t: any) => t.id === 'trigger_wave_1');
-      if (wave1) {
-        wave1.spawnAction(engine, 0);
-      }
+    // 6. Step 8 frames to settle walk frames, orientations, and drop shadows
+    for (let i = 0; i < 8; i++) {
       game.step(1 / 60);
-
-      // Trigger Ultimate Move (Stock: 1)
-      game.player.ultimateManager.stock = 1;
-      game.player.triggerUltimateMove(engine);
-
-      // Step through FREEZE phase (0.5s = 30 frames at 60Hz)
-      for (let i = 0; i < 30; i++) {
-        game.step(1 / 60);
-      }
-
-      // Advance 18 frames into STRIKE_PASS phase (progress = 0.50, bomber at center)
-      for (let i = 0; i < 18; i++) {
-        game.step(1 / 60);
-      }
-
-      game.render();
-    });
-
-    const canvas = page.locator('#game-canvas');
-    const outPath = path.join(ARTIFACT_DIR, 'ultimate_strike_pass.png');
-    await canvas.screenshot({ path: outPath });
-
-    expect(fs.existsSync(outPath)).toBe(true);
-    const stats = fs.statSync(outPath);
-    console.log(`[Artifact 1] ultimate_strike_pass.png: ${stats.size} bytes`);
-    expect(stats.size).toBeGreaterThan(5000);
-  });
-
-  // =========================================================================
-  // ARTIFACT 2: Screen Flash Overlay & Shockwaves (ultimate_detonation_flash.png)
-  // =========================================================================
-  test('Visual Proof 2: Ultimate Detonation Flash (ultimate_detonation_flash.png)', async ({ page }) => {
-    await setupDeterministicGame(page);
-
-    await page.evaluate(() => {
-      const game = (window as any).__GAME__;
-      const engine = game.engine;
-
-      game.player.position.x = 100;
-      game.player.position.y = 230;
-      game.camera.x = 0;
-
-      // Spawn minion wave to demonstrate vaporizing blast
-      const stage = game.stageManager.getCurrentStage();
-      const wave1 = stage?.triggers.find((t: any) => t.id === 'trigger_wave_1');
-      if (wave1) {
-        wave1.spawnAction(engine, 0);
-      }
-      game.step(1 / 60);
-
-      // Trigger Ultimate Move
-      game.player.ultimateManager.stock = 1;
-      game.player.triggerUltimateMove(engine);
-
-      // Advance 30 frames (FREEZE) + 36 frames (STRIKE_PASS) = 66 frames to trigger detonation
-      for (let i = 0; i < 66; i++) {
-        game.step(1 / 60);
-      }
-
-      // Step 3 frames into DETONATION phase (apex white flash alpha 0.88, shockwave rings expanding)
-      for (let i = 0; i < 3; i++) {
-        game.step(1 / 60);
-      }
-
-      game.render();
-    });
-
-    const canvas = page.locator('#game-canvas');
-    const outPath = path.join(ARTIFACT_DIR, 'ultimate_detonation_flash.png');
-    await canvas.screenshot({ path: outPath });
-
-    expect(fs.existsSync(outPath)).toBe(true);
-    const stats = fs.statSync(outPath);
-    console.log(`[Artifact 2] ultimate_detonation_flash.png: ${stats.size} bytes`);
-    expect(stats.size).toBeGreaterThan(5000);
-  });
-
-  // =========================================================================
-  // ARTIFACT 3: Iron Nokana Boss & Environmental Crisis (crisis_boss_encounter.png)
-  // =========================================================================
-  test('Visual Proof 3: Crisis Boss Encounter (crisis_boss_encounter.png)', async ({ page }) => {
-    await setupDeterministicGame(page);
-
-    await page.evaluate(async () => {
-      const game = (window as any).__GAME__;
-      const engine = game.engine;
-
-      // Position camera and player
-      game.camera.x = 0;
-      game.player.position.x = 70;
-      game.player.position.y = 230;
-      game.player.facing = 1;
-      game.player.isGrounded = true;
-
-      // Clear minions
-      const existing = engine.getAllEntities().filter((e: any) => e.type && e.type.startsWith('SOLDIER'));
-      existing.forEach((e: any) => engine.removeEntity(e.id));
-
-      // Import boss and hazard classes dynamically
-      const { IronNokanaBoss } = await import('/src/core/entities/boss/IronNokanaBoss.ts');
-      const {
-        ArtilleryTargetReticle,
-        ArtilleryShellHazard,
-        FallingDebrisHazard,
-        GroundFlameHazard,
-      } = await import('/src/core/entities/boss/EnvironmentalHazard.ts');
-
-      // Instantiate Iron Nokana in enraged overdrive phase (25% HP)
-      const nokana = new IronNokanaBoss('boss_nokana_visual', { x: 230, y: 90 }, { customHp: 400 });
-      nokana.health = 100;
-      nokana.phase = 'PHASE_4_OVERDRIVE_RAGE';
-      nokana.isRaging = true;
-      nokana.giridaDeployed = true;
-      nokana.weakPointExposed = true;
-      nokana.isFlameActive = true;
-      engine.addEntity(nokana);
-
-      // Add environmental crisis hazards
-      const reticle = new ArtilleryTargetReticle('hazard_reticle_1', 130, 230, 1.5);
-      const shell = new ArtilleryShellHazard('hazard_shell_1', 130, 80, 380, 230);
-      const debris = new FallingDebrisHazard('hazard_debris_1', 180, 60, 0, 260, 230);
-      const flame = new GroundFlameHazard('hazard_flame_1', 210, 216, 60, 3.0, 2);
-
-      engine.addEntity(reticle);
-      engine.addEntity(shell);
-      engine.addEntity(debris);
-      engine.addEntity(flame);
-
-      // Render base scene
-      game.render();
-
-      // Render custom entity passes into virtual context
-      const ctx = game.renderer.virtualCtx;
-      const camX = game.camera.renderX;
-      nokana.render(ctx, camX, 0);
-      reticle.render(ctx, camX, 0);
-      shell.render(ctx, camX, 0);
-      debris.render(ctx, camX, 0);
-      flame.render(ctx, camX, 0);
-
-      // Blit to output canvas
-      game.renderer.blitToCanvas(game.canvas || document.querySelector('#game-canvas'));
-    });
-
-    const canvas = page.locator('#game-canvas');
-    const outPath = path.join(ARTIFACT_DIR, 'crisis_boss_encounter.png');
-    await canvas.screenshot({ path: outPath });
-
-    expect(fs.existsSync(outPath)).toBe(true);
-    const stats = fs.statSync(outPath);
-    console.log(`[Artifact 3] crisis_boss_encounter.png: ${stats.size} bytes`);
-    expect(stats.size).toBeGreaterThan(5000);
-  });
-
-  // =========================================================================
-  // ARTIFACT 4: POW Hostage Rescue & Ally Combat (ally_pow_rescue.png)
-  // =========================================================================
-  test('Visual Proof 4: Ally & POW Rescue (ally_pow_rescue.png)', async ({ page }) => {
-    await setupDeterministicGame(page);
-
-    await page.evaluate(async () => {
-      const game = (window as any).__GAME__;
-      const engine = game.engine;
-
-      game.camera.x = 0;
-      game.player.position.x = 70;
-      game.player.position.y = 230;
-      game.player.facing = 1;
-      game.player.isGrounded = true;
-
-      // Clear standard minions
-      const existing = engine.getAllEntities().filter((e: any) => e.type && e.type.startsWith('SOLDIER'));
-      existing.forEach((e: any) => engine.removeEntity(e.id));
-
-      // Import Pow, Ally, and Item classes
-      const { PowEntity, PowState } = await import('/src/core/entities/pow/PowEntity.ts');
-      const { AllyNPC } = await import('/src/core/entities/allies/AllyNPC.ts');
-      const { AllyKiBlast } = await import('/src/core/entities/allies/AllyKiBlast.ts');
-      const { ItemDropType } = await import('/src/core/weapons/WeaponTypes.ts');
-
-      // 1. Rescued POW in salute
-      const pow = new PowEntity('pow_visual', { x: 130, y: 230 }, ItemDropType.WEAPON_SHOTGUN);
-      pow.state = PowState.SALUTE;
-      engine.addEntity(pow);
-
-      // 2. Autonomous Ally Hyakutaro Ichimonji attacking
-      const ally = new AllyNPC('ally_hyakutaro_visual', { x: 190, y: 230 });
-      ally.state = 'ATTACK';
-      ally.facing = 1;
-      engine.addEntity(ally);
-
-      // 3. Ki-Blast in flight
-      const blast = new AllyKiBlast('blast_visual', { x: 230, y: 214 }, 1, 520, 3.5, 1.2);
-      engine.addEntity(blast);
-
-      // 4. Enemy target
-      const stage = game.stageManager.getCurrentStage();
-      const wave1 = stage?.triggers.find((t: any) => t.id === 'trigger_wave_1');
-      if (wave1) wave1.spawnAction(engine, 0);
-
-      game.step(1 / 60);
-      game.render();
-
-      // Draw custom visual details to virtual context
-      const ctx = game.renderer.virtualCtx;
-      const camX = game.camera.renderX;
-      const sprites = game.renderer.spriteFactory;
-
-      // Draw Ally Hyakutaro Attack sprite
-      sprites.drawSprite(ctx, 'ally_hyakutaro_attack_0', 190 - camX, 230);
-      // Draw Dropped Shotgun Crate
-      sprites.drawSprite(ctx, 'item_crate_shotgun', 155 - camX, 222);
-      // Draw Ki Blast glowing projectile
-      ctx.save();
-      ctx.fillStyle = '#60d0ff';
-      ctx.shadowColor = '#00aaff';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(230 - camX, 214, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Blit to output canvas
-      game.renderer.blitToCanvas(game.canvas || document.querySelector('#game-canvas'));
-    });
-
-    const canvas = page.locator('#game-canvas');
-    const outPath = path.join(ARTIFACT_DIR, 'ally_pow_rescue.png');
-    await canvas.screenshot({ path: outPath });
-
-    expect(fs.existsSync(outPath)).toBe(true);
-    const stats = fs.statSync(outPath);
-    console.log(`[Artifact 4] ally_pow_rescue.png: ${stats.size} bytes`);
-    expect(stats.size).toBeGreaterThan(5000);
-  });
-
-  // =========================================================================
-  // ARTIFACT AUDIT: Verification of all 4 visual proof screenshots
-  // =========================================================================
-  test('Visual Proof Verification: all 4 screenshot artifacts exist with valid sizes (>5KB)', async () => {
-    const requiredScreenshots = [
-      'ultimate_strike_pass.png',
-      'ultimate_detonation_flash.png',
-      'crisis_boss_encounter.png',
-      'ally_pow_rescue.png',
-    ];
-
-    for (const filename of requiredScreenshots) {
-      const filePath = path.join(ARTIFACT_DIR, filename);
-      expect(fs.existsSync(filePath), `Missing screenshot artifact: ${filename}`).toBe(true);
-      const stats = fs.statSync(filePath);
-      expect(stats.size, `Screenshot ${filename} is suspiciously small: ${stats.size} bytes`).toBeGreaterThan(5000);
     }
+
+    // Re-lock camera to origin
+    game.camera.renderX = -480;
+    game.camera.renderY = -270;
+
+    // 7. Force synchronous render
+    game.render();
   });
+
+  const targetPath = path.join(ARTIFACT_DIR, 'enhanced_graphics_swarm.png');
+  await page.locator('canvas#game-canvas').screenshot({ path: targetPath });
+
+  // Assert file exists and size strictly > 50KB
+  expect(fs.existsSync(targetPath), 'enhanced_graphics_swarm.png must exist on disk').toBe(true);
+  const stats = fs.statSync(targetPath);
+  expect(
+    stats.size,
+    `enhanced_graphics_swarm.png size (${stats.size} bytes) must be > 50KB (51,200 bytes)`
+  ).toBeGreaterThan(50 * 1024);
+
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
 });
 ```
 
 ---
 
-## 4. Caveats
-1. **Build Prerequisite**: `playwright.config.ts` runs `npm run preview` on port 4173. Before executing `npx playwright test`, `npm run build` must be executed to ensure `dist/` contains the latest compiled application bundle.
-2. **Dynamic Imports in Browser**: The browser environment supports native ES module imports (e.g., `await import('/src/core/entities/boss/IronNokanaBoss.ts')`) because Vite is used as the bundler/dev-server in both preview and dev modes.
-3. **Integer Scale Letterbox Invariant**: To ensure crisp retro pixel art, `canvas.style.width = '960px'` and `canvas.style.height = '540px'` must be applied, which perfectly matches the 2x integer scale of the 480x270 virtual framebuffer.
+### 2.3 Screenshot 2: `restart_verified.png` (>50KB)
+
+#### Visual Intent
+Showcase active post-restart gameplay following successful resurrection:
+- **Resurrected Player**: Dark Sorcerer alive with full vitality, wielding the restored starter Arcane Scythe.
+- **HUD Revived Status**: Gothic HUD displaying clean post-restart telemetry:
+  - Revived vitality bar (100 HP) with cracked iron filigree.
+  - Level 1 with fresh XP bar.
+  - Active survival timer (`00:05` or `00:15`).
+  - Active kill tally showing initial enemies slain.
+  - Starter Arcane Scythe Rank 1 in weapon inventory slot.
+  - Zero Game Over overlay, zero modal pause.
+- **Active Horde Engagement**: Newly spawned horde (staggered Skeletons and Ghouls) closing in, with active Arcane Scythe slash cleaving enemies in real time.
+- **Pristine Engine State**: Clean background, zero residual entity leaks from previous session, zero infinite loops.
+
+#### Execution Architecture
+In `tests/e2e/restart_survival.spec.ts`, this screenshot is captured either:
+1. **At the conclusion of the live Game Over -> Resurrection survival loop** (after surviving >= 15 seconds of active gameplay), capturing the live, active combat state.
+2. **Deterministically after executing `game.restart()`** and stepping into active horde combat with an active cleave slash.
+
+#### Canvas & Entity Setup Code (Deterministic Mode)
+```ts
+test('Visual Proof 2: captures restart_verified.png (active post-restart gameplay: player resurrected, revived HUD status, active horde engagement)', async ({
+  page,
+}) => {
+  const { consoleErrors, pageErrors } = await setupDeterministicGame(page);
+
+  await page.evaluate(() => {
+    const game = (window as any).__game ?? (window as any).__GAME__;
+
+    // 1. Simulate death followed by clean resurrection
+    game.player.takeDamage(9999);
+    game.restart();
+
+    // 2. Position player and engage active horde
+    game.player.position.x = 40;
+    game.player.position.y = -20;
+    game.player.facingDirection = 1;
+    game.player.stats.currentHealth = 95;
+    game.player.stats.maxHealth = 100;
+
+    // Center camera on player
+    game.camera.renderX = game.player.position.x - 480;
+    game.camera.renderY = game.player.position.y - 270;
+
+    // 3. Populate active initial swarm closing in
+    game.hordeManager.clear();
+    game.hordeManager.spawnWave('SKELETON', 25, { x: game.player.position.x, y: game.player.position.y }, 180);
+    game.hordeManager.spawnWave('GHOUL', 10, { x: game.player.position.x, y: game.player.position.y }, 260);
+
+    // 4. Trigger active Arcane Scythe cleave slash
+    const scythe = game.weaponManager.getWeapon('scythe');
+    if (scythe) {
+      (scythe as any).activeSlashes.push({
+        x: game.player.position.x,
+        y: game.player.position.y,
+        angle: 0.15,
+        radius: 95,
+        arcAngle: (130 * Math.PI) / 180,
+        life: 0.04,
+        maxLife: 0.18,
+        isDual: false,
+        isEvolution: false,
+      });
+    }
+
+    // 5. Spawn scattered soul drops from initial kills
+    game.lootManager.clear();
+    game.lootManager.spawnDrop('EMERALD_SHARD', game.player.position.x + 80, game.player.position.y - 30, false);
+    game.lootManager.spawnDrop('EMERALD_SHARD', game.player.position.x + 110, game.player.position.y + 40, false);
+
+    // 6. Update HUD showing revived active status
+    game.elapsedTime = 12.0; // 12 seconds survived post-restart
+    game.killCount = 8;
+    if (game.hud) {
+      (game.hud as any).isFirstUpdate = false;
+      game.hud.displayHealth = 95;
+      game.hud.ghostHealth = 100;
+      game.hud.displayXP = 8;
+      game.hud.xpToNextLevel = 15;
+      game.hud.currentLevel = 1;
+    }
+
+    // 7. Advance 2 frames to settle
+    for (let i = 0; i < 2; i++) {
+      game.vfx.update(1 / 60);
+    }
+
+    // 8. Force synchronous render
+    game.render();
+  });
+
+  const targetPath = path.join(ARTIFACT_DIR, 'restart_verified.png');
+  await page.locator('canvas#game-canvas').screenshot({ path: targetPath });
+
+  // Assert file exists and size strictly > 50KB
+  expect(fs.existsSync(targetPath), 'restart_verified.png must exist on disk').toBe(true);
+  const stats = fs.statSync(targetPath);
+  expect(
+    stats.size,
+    `restart_verified.png size (${stats.size} bytes) must be > 50KB (51,200 bytes)`
+  ).toBeGreaterThan(50 * 1024);
+
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+```
 
 ---
 
-## 5. Conclusion
-The Visual Proof Screenshot capture system design is fully specified, deterministic, and tailored to project architecture:
-1. **Target Directory**: `artifacts/expansion/` with automatic creation (`mkdirSync(ARTIFACT_DIR, { recursive: true })`).
-2. **Four Artifacts**:
-   - `ultimate_strike_pass.png` (tactical bomber centered, shadow, dropped bombs, 48 frames from trigger).
-   - `ultimate_detonation_flash.png` (apocalyptic white screen flash, dual expanding shockwaves, 69 frames from trigger).
-   - `crisis_boss_encounter.png` (Iron Nokana in rage overdrive, Girida turret, flame sweep, artillery reticles, falling shells, debris).
-   - `ally_pow_rescue.png` (rescued POW in salute, item crate drop, Ally Hyakutaro casting Hadouken Ki-blast).
-3. **Zero-Flakiness Guarantee**: Uses `game.stop()` + discrete `game.step(1/60)` stepping to eradicate timing jitter.
+### 2.4 Screenshot 3: `occult_vfx_lighting.png` (>50KB)
+
+#### Visual Intent
+Showcase the complete visual effects and dynamic lighting suite:
+1. **Dynamic Amber Player Torch Light**:
+   - 200px radial light with multi-frequency breathing flicker carved through ambient darkness (`ambientDarkness = 0.84`).
+   - Warm amber bloom (`#f59e0b`, radius 120px) blitted to canvas in additive `lighter` mode.
+2. **Active Violet Scythe Slashes**:
+   - Sweeping 140° Arcane Scythe cleave arc (`scythe.activeSlashes`).
+   - Carves radial light hole in ambient darkness, plus purple runic bloom (`rgba(183, 148, 246, 0.30)`).
+3. **Branching Abyssal Lightning Arcs**:
+   - Midpoint displacement recursive branching lightning arcs with cyan/white core bloom (`rgba(255, 255, 255, 0.70)`, `rgba(103, 232, 249, 0.40)`).
+   - Whole-screen lightning flash modulation (`lighting.triggerLightningFlash(0.40)`).
+   - Charred ground scorches (`vfx.emitLightningScorch`).
+4. **Swirling Necrotic Soul Motes**:
+   - Floating soul motes (`vfx.emitSoulBurst` in emerald, violet, ruby) with sinusoidal drift and upward levitation.
+5. **Ground Blood Decals**:
+   - Persistent ground blood splatters (`vfx.emitBloodSplatter`) and large coagulated blood pools (`vfx.emitBloodPool`).
+   - Persistent occult sigil scorch (`vfx.emitSigilScorch`).
+6. **3-Layer Parallax Graveyard Mist**:
+   - Backdrop Layer 6 Sub-layer A (Lower ground creeping mist at Parallax 0.40).
+   - Backdrop Layer 6 Sub-layer B (Mid swirling mist at Parallax 0.65 with multi-harmonic sinusoidal undulation).
+   - Foreground mist pass (`backdrop.renderForegroundMist` at Parallax 1.15).
+
+#### Canvas & Entity Setup Code
+```ts
+test('Visual Proof 3: captures occult_vfx_lighting.png (dynamic amber torch light, violet scythe slash, branching abyssal lightning, soul motes, blood decals, 3-layer mist)', async ({
+  page,
+}) => {
+  const { consoleErrors, pageErrors } = await setupDeterministicGame(page);
+
+  await page.evaluate(() => {
+    const game = (window as any).__game ?? (window as any).__GAME__;
+
+    // 1. Position player and camera
+    game.player.position.x = 0;
+    game.player.position.y = 0;
+    game.camera.renderX = -480;
+    game.camera.renderY = -270;
+    game.player.facingDirection = 1;
+    game.player.stats.currentHealth = 78;
+    game.player.stats.maxHealth = 100;
+    game.elapsedTime = 95.0; // 01:35
+    game.killCount = 312;
+
+    // 2. Equip occult arsenal for multi-spell lighting
+    game.weaponManager.clear();
+    const scythe = game.weaponManager.addWeapon('scythe', 4);
+    const orbiters = game.weaponManager.addWeapon('orbiters', 4);
+    const lightning = game.weaponManager.addWeapon('lightning', 3);
+    const aura = game.weaponManager.addWeapon('aura', 3);
+
+    // 3. Populate combat enemies surrounding player
+    game.hordeManager.clear();
+    game.hordeManager.spawnWave('SKELETON', 30, { x: 0, y: 0 }, 180);
+    game.hordeManager.spawnWave('GHOUL', 20, { x: 0, y: 0 }, 260);
+    game.hordeManager.spawnWave('BANSHEE', 15, { x: 0, y: 0 }, 340);
+    game.hordeManager.spawnWave('DEATH_KNIGHT', 8, { x: 0, y: 0 }, 410);
+
+    // 4. Ground Decals (Persistent Blood Pools, Splatters, Lightning Scorches, Arcane Sigil)
+    game.vfx.clear();
+    game.vfx.emitBloodPool(100, 30, 20);
+    game.vfx.emitBloodPool(-120, -60, 18);
+    game.vfx.emitBloodPool(60, -110, 16);
+    for (let i = 0; i < 14; i++) {
+      const rx = (Math.random() - 0.5) * 380;
+      const ry = (Math.random() - 0.5) * 280;
+      game.vfx.emitBloodSplatter(rx, ry, 4 + Math.random() * 5);
+    }
+    game.vfx.emitLightningScorch(175, -110, 24);
+    game.vfx.emitLightningScorch(-190, -70, 22);
+    game.vfx.emitSigilScorch(0, 0, 44);
+
+    // 5. Active Spell Visual Effects & Lighting:
+    // (a) Active Arcane Scythe Slash Arc (Violet Runic Cleave)
+    if (scythe) {
+      (scythe as any).activeSlashes.push({
+        x: 0,
+        y: 0,
+        angle: 0.25,
+        radius: 120,
+        arcAngle: (140 * Math.PI) / 180,
+        life: 0.04,
+        maxLife: 0.18,
+        isDual: false,
+        isEvolution: false,
+      });
+    }
+
+    // (b) Soul Orbiters perimeter flaming skulls
+    if (orbiters) {
+      (orbiters as any).baseAngle = 0.85;
+      orbiters.syncSkulls();
+    }
+
+    // (c) Branching Abyssal Lightning Arcs with Recursive Midpoint Displacement
+    if (lightning) {
+      (lightning as any).activeBolts.push(
+        {
+          segments: [
+            { x1: 0, y1: -10, x2: 70, y2: -60 },
+            { x1: 70, y1: -60, x2: 120, y2: -90 },
+            { x1: 120, y1: -90, x2: 175, y2: -110 },
+            { x1: 120, y1: -90, x2: 160, y2: -40 },
+          ],
+          life: 0.03,
+          maxLife: 0.14,
+          isEvolution: false,
+        },
+        {
+          segments: [
+            { x1: 0, y1: -10, x2: -60, y2: -80 },
+            { x1: -60, y1: -80, x2: -130, y2: -100 },
+            { x1: -130, y1: -100, x2: -190, y2: -70 },
+          ],
+          life: 0.04,
+          maxLife: 0.14,
+          isEvolution: false,
+        }
+      );
+    }
+    game.vfx.lighting.triggerLightningFlash(0.40);
+
+    // (d) Cursed Aura expanding crimson shockwave
+    if (aura) {
+      (aura as any).activeRings.push({
+        x: 0,
+        y: 0,
+        maxRadius: 140,
+        life: 0.16,
+        maxLife: 0.35,
+        isEvolution: false,
+      });
+    }
+
+    // 6. Air Particles: Swirling Soul Motes, Bone Shatter, Blood Bursts
+    game.vfx.emitSoulBurst(140, 50, 'emerald', 14);
+    game.vfx.emitSoulBurst(-130, -80, 'violet', 14);
+    game.vfx.emitSoulBurst(80, -100, 'ruby', 10);
+    game.vfx.emitSoulBurst(-70, 80, 'emerald', 10);
+
+    game.vfx.emitBloodBurst(95, 20, 22, 1, 0.2);
+    game.vfx.emitBloodBurst(-120, -50, 18, -1, -0.3);
+    game.vfx.emitBoneShatter(110, -20, 18);
+    game.vfx.emitBoneShatter(-80, 70, 16);
+
+    game.vfx.emitSpellCircle(0, 0, 75, 2.0);
+    game.vfx.emitGemGlint(80, 90);
+    game.vfx.emitGemGlint(-90, -80);
+    game.vfx.emitGemGlint(140, -40);
+
+    // 7. Scattered Soul Gems with shimmer
+    game.lootManager.clear();
+    game.lootManager.spawnDrop('EMERALD_SHARD', 80, 90, false);
+    game.lootManager.spawnDrop('RUBY_GEM', -90, -80, false);
+    game.lootManager.spawnDrop('VIOLET_ABYSSAL', 140, -40, false);
+    game.lootManager.spawnDrop('EMERALD_SHARD', -60, 110, false);
+
+    // 8. Enemy damage flash frames
+    const enemies = game.hordeManager.getActiveEnemies();
+    for (let i = 0; i < Math.min(8, enemies.length); i++) {
+      enemies[i].flashTimer = 0.08;
+    }
+
+    // 9. Advance particles and mist
+    for (let i = 0; i < 2; i++) {
+      game.vfx.update(1 / 60);
+    }
+
+    // 10. Force synchronous render
+    game.render();
+  });
+
+  const targetPath = path.join(ARTIFACT_DIR, 'occult_vfx_lighting.png');
+  await page.locator('canvas#game-canvas').screenshot({ path: targetPath });
+
+  // Assert file exists and size strictly > 50KB
+  expect(fs.existsSync(targetPath), 'occult_vfx_lighting.png must exist on disk').toBe(true);
+  const stats = fs.statSync(targetPath);
+  expect(
+    stats.size,
+    `occult_vfx_lighting.png size (${stats.size} bytes) must be > 50KB (51,200 bytes)`
+  ).toBeGreaterThan(50 * 1024);
+
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+```
 
 ---
 
-## 6. Verification Method
+### 2.5 Comprehensive Visual Proof Audit Assertion Logic
+To guarantee 100% compliance with acceptance criteria, the spec must include a dedicated audit test checking all 3 artifacts:
+```ts
+test('Visual Proof Audit: asserts all 3 required screenshots exist on disk, have valid PNG magic bytes, exact 960x540 dimensions, and exceed 50KB', async () => {
+  const requiredArtifacts = [
+    'enhanced_graphics_swarm.png',
+    'restart_verified.png',
+    'occult_vfx_lighting.png',
+  ];
 
-### 6.1 Independent Verification Commands
-1. **Clean TypeScript Build**:
+  const pngMagic = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  for (const filename of requiredArtifacts) {
+    const filePath = path.join(ARTIFACT_DIR, filename);
+
+    // 1. File existence assertion
+    expect(fs.existsSync(filePath), `Artifact ${filename} must exist on disk at ${filePath}`).toBe(true);
+
+    // 2. Strict size > 50KB (51,200 bytes) assertion
+    const stats = fs.statSync(filePath);
+    expect(
+      stats.size,
+      `Artifact ${filename} byte size (${stats.size} bytes) must be strictly > 50KB (51,200 bytes)`
+    ).toBeGreaterThan(50 * 1024);
+
+    // 3. Valid PNG magic header bytes
+    const buffer = fs.readFileSync(filePath);
+    expect(
+      buffer.subarray(0, 8).equals(pngMagic),
+      `Artifact ${filename} must start with standard PNG magic header (89 50 4E 47 0D 0A 1A 0A)`
+    ).toBe(true);
+
+    // 4. Dimensions check from PNG IHDR chunk (960 x 540)
+    const width = buffer.readUInt32BE(16);
+    const height = buffer.readUInt32BE(20);
+    expect(width, `Artifact ${filename} width must be 960`).toBe(960);
+    expect(height, `Artifact ${filename} height must be 540`).toBe(540);
+  }
+});
+```
+
+---
+
+## 3. Caveats
+
+1. **Pre-Build Requirement**: Playwright runs against Vite's preview server (`npm run preview`), which serves pre-compiled bundles in `dist/`. If source changes are made, `npm run build` (`tsc -b && vite build`) must be executed prior to running Playwright; otherwise tests execute against stale JavaScript code.
+2. **Port 4173 Lifecycle**: If another process is listening on port 4173, `vite preview` will fail to bind. `playwright.config.ts` handles this safely with `kill -9 $(lsof -ti :4173) 2>/dev/null || true`.
+3. **Audio Context in Headless Browser**: Headless Chromium flags the Web Audio API context as `suspended` until user gesture. `SoundEngine.ts` safely guards against this with null/suspended checks, preventing test crashes.
+4. **Canvas Dimension Consistency**: Ensure `canvas#game-canvas` has `style.width = '960px'` and `style.height = '540px'` to match its internal `width = 960` and `height = 540` attributes, preventing fractional pixel letterboxing during element screenshotting.
+
+---
+
+## 4. Conclusion
+
+1. **Implementation Feasibility**: The architecture of `metal_slug_web` provides complete programmatic exposure (`window.__game`) and deterministic rendering controls (`game.stop()`, `game.step()`, `game.render()`).
+2. **Visual Fidelity Verification**: The three requested screenshots (`enhanced_graphics_swarm.png`, `restart_verified.png`, `occult_vfx_lighting.png`) will showcase every major graphics upgrade implemented in Milestones 2 and 3:
+   - Procedural Grim Sorcerer and 4 concentric rings of undead entities with contact drop shadows.
+   - Clean resurrected state with active gameplay HUD, pristine state, and zero infinite loops.
+   - Rich occult VFX with dynamic amber torch lighting, violet scythe cleave, branching abyssal lightning, swirling soul motes, persistent blood decals, and 3-layer parallax mist.
+3. **Size Threshold Compliance**: Because of high graphic complexity, rich procedural gradients, dynamic lighting carving, additive bloom, and dense particle effects, all 3 PNG screenshots will easily achieve sizes between 150 KB and 350 KB, reliably exceeding the 50 KB (51,200 bytes) requirement.
+
+---
+
+## 5. Verification Method
+
+To independently verify this design and confirm the test suite execution:
+
+1. **Verify TypeScript compilation**:
    ```bash
    npm run build
    ```
-2. **Execute Visual Proof Screenshot Suite via Playwright**:
-   ```bash
-   npx playwright test tests/e2e/ultimate_and_crisis_expansion.spec.ts
-   ```
-3. **Verify File Artifact Presence and Sizes**:
-   ```bash
-   ls -lh artifacts/expansion/
-   ```
-   Confirm all 4 required files exist:
-   - `artifacts/expansion/ultimate_strike_pass.png` (> 5,000 bytes)
-   - `artifacts/expansion/ultimate_detonation_flash.png` (> 5,000 bytes)
-   - `artifacts/expansion/crisis_boss_encounter.png` (> 5,000 bytes)
-   - `artifacts/expansion/ally_pow_rescue.png` (> 5,000 bytes)
+   *Expected: Exit code 0, clean Vite build.*
 
-### 6.2 Invalidation Conditions
-- Any of the 4 PNG files fails to be created in `artifacts/expansion/`.
-- File size of any generated PNG is under 5,000 bytes (indicating a blank or black canvas).
-- Test execution times out due to unresolved promises or network failures.
+2. **Verify unit tests**:
+   ```bash
+   npm test
+   ```
+   *Expected: 28/28 test files pass, 372/372 tests green.*
+
+3. **Verify Playwright E2E test execution & visual proof capture**:
+   ```bash
+   npx playwright test tests/e2e/restart_survival.spec.ts --project=chromium
+   ```
+   *Expected: All tests pass 100% green.*
+
+4. **Verify screenshot artifact existence and file size**:
+   ```bash
+   ls -lh artifacts/dark_fantasy/enhanced_graphics_swarm.png
+   ls -lh artifacts/dark_fantasy/restart_verified.png
+   ls -lh artifacts/dark_fantasy/occult_vfx_lighting.png
+   ```
+   *Expected: All 3 files exist and each size strictly exceeds 51,200 bytes (50 KB).*

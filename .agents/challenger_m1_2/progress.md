@@ -1,17 +1,18 @@
-# Progress
+# Progress Log — challenger_m1_2
 
-Last visited: 2026-09-10T01:12:00Z
-Status: Completed adversarial verification and report preparation
+Last visited: 2026-09-11T00:47:00+09:00
 
-## Steps
-- [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Reviewed mandatory context files: ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m1_viewport/handoff.md
-- [x] Inspected source code and test files related to camera, arenas, and spawner
-- [x] Wrote dedicated adversarial test suite: `tests/unit/adversarial_m1_camera_arenas_spawner.test.ts` (17 tests)
-- [x] Mathematically verified forward deadzone visible reaction space >= 528px (actual: 538px)
-- [x] Empirically and mathematically verified mid-boss and end-boss arena widths >= 1100px (both 1100px)
-- [x] Empirically and mathematically verified spawner offset guarantees off-screen spawning (> cameraX + 960) and legacy invariant (>= cameraX + 480) across 1,000 randomized camera positions
-- [x] Ran `npm test` (37 files, 500 tests passed, 100% green) and `npx tsc --noEmit` / `npm run build`
-- [x] Ran Playwright E2E tests, verified 28/29 passed with known caveat on legacy 1200 assertion
-- [x] Documented challenge findings in handoff.md with explicit APPROVE verdict
-- [ ] Notify parent agent
+- [x] Initialized workspace and briefing
+- [x] Read mandatory files: ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m1_1/handoff.md
+- [x] Inspected implementation code for HordeManager, SpatialHashGrid, LootManager, WeaponManager, ProjectilePool
+- [x] Wrote and executed empirical stress test / adversarial verification harness (`tests/unit/ChallengerM1_2RestartAdversarial.test.ts`)
+- [x] Verified all 4 core invariants:
+  - HordeManager: 35 active, 2,013 pool available, 35 spawned, 0 killed
+  - SpatialHashGrid: 0 ghost entities, 0 phantom collision hits
+  - LootManager: 1,500 pooled items, 0 active gems
+  - WeaponManager: 0 active projectiles, only Rank 1 Arcane Scythe equipped
+- [x] Discovered and documented edge-case infinite loop vulnerability in `ProjectilePool.clear()` when entities are spawned without `active=true`
+- [x] Verified full unit test suite (21 test files, 246 tests, 100% green)
+- [x] Verified TypeScript typecheck (`npx tsc --noEmit` -> 0 errors)
+- [ ] Write handoff.md with comprehensive 5-component report and APPROVE verdict
+- [ ] Send verdict to orchestrator

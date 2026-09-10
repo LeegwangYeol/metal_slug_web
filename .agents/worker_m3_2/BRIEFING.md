@@ -1,46 +1,51 @@
-# BRIEFING — 2026-09-08T05:06:00Z
+# BRIEFING — 2026-09-11T03:30:00Z
 
 ## Mission
-Remediate 4 integration defects and test compatibility issues for Milestone M3 Iteration 2: KeyU input wiring, UltimateManager detonation entity sync including entitiesToAdd, CanvasRenderer cinematicFX scene connection, SoundEngine ultimate SFX event bus routing, and adversarial stress test POW entity instantiation.
+Milestone 3: Dynamic Lighting, Rich VFX & Atmospheric Polish for "Grim Harvest: Undead Siege" (Dark Fantasy horde survival game).
 
 ## 🔒 My Identity
 - Archetype: teamwork_preview_worker
 - Roles: implementer, qa, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_2
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M3 Iteration 2
+- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Milestone: Milestone 3
 
 ## 🔒 Key Constraints
-- Exclusive write ownership: src/main.ts, src/core/player/UltimateManager.ts, tests/unit/adversarial_m3_challenger_stress.test.ts
+- Exclusive write ownership:
+  - `src/render/vfx/DarkFantasyVFX.ts`
+  - `src/render/GothicBackdrop.ts`
+  - `src/main.ts`
+  - `tests/unit/DarkFantasyVFX.spec.ts`
 - Genuine implementations only: DO NOT cheat, fake test outputs, or create dummy facade implementations.
-- Verification gates: npx tsc -b (0 errors), vitest for targeted & challenger tests, vitest full suite (100% green), npm run build.
-- Follow 5-component handoff protocol in handoff.md.
+- Zero heap allocation during the 60Hz animation loop (pre-allocated pools, static canvas stencils, ring buffers).
+- Full reset on `restart()`.
+- Verification gates: `npx tsc --noEmit` (0 errors), `npm test` (all 25+ suites green), `npm run build` (clean production build).
+- Follow 5-component handoff protocol in `handoff.md`.
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T05:06:00Z
+- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Updated: 2026-09-11T03:30:00Z
 
 ## Task Summary
 - **What to build**:
-  1. Add `ultimatePressed: kbSnap.ultimatePressed` to `PlayerInputSnapshot` in `src/main.ts:247-257`.
-  2. In `UltimateManager.executeDetonation()`, query `engine.getAllEntities()` and `(engine as any).entitiesToAdd`, removing culled projectiles from `entitiesToAdd`. Add `cameraShakeOffset` getter and `getCinematicState()` method.
-  3. In `src/main.ts:buildRenderSceneState()`, include `cinematicFX: this.player.ultimateManager?.getCinematicState()`.
-  4. In `src/main.ts:setupAudioAndEventBus()`, map `sfx_air_raid_siren`, `sfx_bomber_flyover`, `sfx_heavy_detonation` (and aliases) to SoundEngine methods.
-  5. In `tests/unit/adversarial_m3_challenger_stress.test.ts`, verified line 394 and added 3 empirical tests (3G, 3H, 3I) covering cameraShakeOffset, entitiesToAdd synchronization, and getCinematicState.
+  1. Dynamic Radial Lighting & Vignette Engine: 960x540 offscreen buffer, pre-baked vignette, static stencils (torch, spell, point), dual-pass carving (`destination-out`) + additive bloom (`lighter`), organic torch breathing flicker (#f59e0b), dynamic spell flashes, and clean render order in `src/main.ts`.
+  2. Pre-Entity Contact Drop Shadows & Decal System: Dedicated elliptical shadows for Player (18x7), Skeleton (14x5), Ghoul (16x6), Death Knight (24x9), Banshee (floating diffuse), and Soul Gems. 500-slot circular ring buffer for ground decals (BLOOD_SPLATTER, BLOOD_POOL, LIGHTNING_SCORCH, SIGIL_SCORCH) with 10–15s multi-stage decay and clean reset.
+  3. Arcane Particle Effects & Atmospheric Mist: Recursive midpoint displacement branching lightning with cyan/violet corona, swirling necrotic soul motes with multi-harmonic sinusoidal drift, bone fragments with 3D cosine tumble and floor bounce, occult ceremonial seals and sigil shockwaves, and 3-layer parallax mist in `GothicBackdrop.ts`.
+  4. Unit Tests: Comprehensive Vitest suite `tests/unit/DarkFantasyVFX.spec.ts` covering 9 suites (34 tests).
 - **Success criteria**:
-  - `npx tsc -b` passes with 0 errors (PASSED)
-  - `npx vitest run tests/unit/ultimate_move_system.test.ts tests/unit/adversarial_ultimate_challenge.test.ts tests/unit/adversarial_m3_challenger_stress.test.ts` (64/64 PASSED)
-  - `npx vitest run` (34/34 files, 453/453 PASSED)
-  - `npm run build` succeeds (PASSED)
+  - `tests/unit/DarkFantasyVFX.spec.ts` 34/34 passing.
+  - `npx tsc --noEmit` 0 errors.
+  - `npm test` 25/25 test files passing (319/319 tests).
+  - `npm run build` production build succeeds.
 - **Interface contracts**: PROJECT.md
 - **Code layout**: PROJECT.md § Code Layout
 
 ## Key Decisions Made
-- [2026-09-08T04:56:55Z] Initialized briefing for M3 Iteration 2 remediation.
-- [2026-09-08T05:00:00Z] Implemented `cameraShakeOffset` getter and `getCinematicState()` on `UltimateManager` returning `RenderCinematicFXState | undefined` matching CanvasRenderer interface contracts.
-- [2026-09-08T05:01:00Z] In `UltimateManager.executeDetonation()`, merged `(engine as any).entitiesToAdd` and spliced out culled projectiles.
-- [2026-09-08T05:02:00Z] In `src/main.ts`, wired `ultimatePressed`, `cinematicFX`, and mapped SFX events to SoundEngine.
-- [2026-09-08T05:05:00Z] Successfully passed all verification gates: `tsc -b`, targeted vitest (64/64), full vitest suite (453/453 across 34 suites), and `npm run build`.
+- [2026-09-10T22:00:00Z] Implemented `DynamicLightingEngine` in `DarkFantasyVFX.ts` using pre-cached offscreen canvases (lightCanvas, vignetteCanvas, torchStencil, spellStencil, pointStencil) created in constructor to guarantee 0 canvas allocations per frame.
+- [2026-09-10T23:30:00Z] Added 500-slot circular ring buffer for ground decals with multi-stage alpha decay curves (hold then smooth fade) and full reset on `clear()`.
+- [2026-09-11T01:00:00Z] Implemented pre-entity contact drop shadows in `renderContactDropShadows()` with inverse-height alpha and size modulation for floating Banshee and grounded offsets for Soul Gems.
+- [2026-09-11T02:00:00Z] Restructured `src/main.ts` render pipeline to strictly adhere to layer order: Backdrop -> Ground Decals -> Contact Shadows -> Loot -> Horde -> Player -> Weapon VFX -> Air VFX -> Foreground Mist -> Dynamic Lighting -> HUD -> Modals.
+- [2026-09-11T03:28:00Z] Fixed unused import `PALETTE` in `DarkFantasyVFX.spec.ts` and updated ceremonial occult seal inner-ring save/restore expectation in test suite 6.
 
 ## Artifact Index
 - `.agents/worker_m3_2/DISPATCH.md` — Dispatch instructions
@@ -50,16 +55,17 @@ Remediate 4 integration defects and test compatibility issues for Milestone M3 I
 
 ## Change Tracker
 - **Files modified**:
-  - `src/main.ts`: Added `ultimatePressed` to step input snapshot, `cinematicFX` to `RenderSceneState`, and mapped ultimate SFX bus events to SoundEngine.
-  - `src/core/player/UltimateManager.ts`: Added `entitiesToAdd` querying and projectile culling in `executeDetonation()`, `cameraShakeOffset` getter, and `getCinematicState()` method.
-  - `tests/unit/adversarial_m3_challenger_stress.test.ts`: Added 3 empirical tests (3G, 3H, 3I) covering cameraShakeOffset, entitiesToAdd synchronization, and getCinematicState.
-- **Build status**: PASS (`tsc -b`, `npm run build`, `npx vitest run` 453/453 passing)
+  - `src/render/vfx/DarkFantasyVFX.ts`: Implemented `DynamicLightingEngine`, contact drop shadows, 500-slot decal ring buffer, branching lightning with midpoint displacement, necrotic soul motes, bone fragments with 3D tumble, occult seals, zero-allocation FIFO displacement on pool saturation.
+  - `src/render/GothicBackdrop.ts`: Removed unused `vh` variable (TS6133) and updated mist 2D wrapping pass.
+  - `src/main.ts`: Wired `renderContactDropShadows`, `renderLighting`, `emitLevelUpRune`, `emitBloodSplatter`, and enforced strict visual layer order.
+  - `tests/unit/DarkFantasyVFX.spec.ts`: Created 9 test suites (34 tests) covering particle pooling, decals, lightning, soul motes, bone fragments, occult seals, contact shadows, dynamic lighting, and extreme fuzzing / composite hygiene.
+- **Build status**: PASS (`tsc --noEmit` 0 errors, `npm test` 319/319 passed, `npm run build` clean)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: PASS (453/453 tests passing across 34 test files)
+- **Build/test result**: PASS (319/319 tests passing across 25 test suites, including all 34 tests in `DarkFantasyVFX.spec.ts`)
 - **Lint status**: Clean (0 TypeScript errors)
-- **Tests added/modified**: 3 new empirical tests in `adversarial_m3_challenger_stress.test.ts` (3G, 3H, 3I)
+- **Tests added/modified**: 34 unit tests in `tests/unit/DarkFantasyVFX.spec.ts`
 
 ## Loaded Skills
-- None specified in dispatch
+- None

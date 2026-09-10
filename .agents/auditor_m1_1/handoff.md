@@ -1,105 +1,193 @@
-# Forensic Audit Report: Milestone M1 (16:9 Viewport, Parallax Loops, Procedural Sprites, HUD & Arenas)
+# Forensic Audit Report & Milestone 1 Handoff
 
-**Work Product**: Milestone 1 Implementation (`src/render/CanvasRenderer.ts`, `src/render/Camera.ts`, `src/render/ParallaxBackground.ts`, `src/render/sprites/ProceduralSpriteFactory.ts`, `src/ui/HUDOverlay.ts`, `src/main.ts`, `index.html`, `tests/`)  
-**Profile**: General Project (Integrity Mode: `development` / verified against `benchmark` standards)  
+**Agent**: `auditor_m1_1` (Role: Forensic Integrity Auditor)  
+**Target Milestone**: Milestone 1 (Restart State Engine & Lifecycle Architecture)  
+**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1_1`  
+**Date**: 2026-09-11T00:43:50+09:00  
+
+---
+
+## Forensic Audit Report
+
+**Work Product**: Milestone 1 Implementation (`src/core/entities/Player.ts`, `src/core/HordeManager.ts`, `src/core/SpatialHashGrid.ts`, `src/core/systems/LootManager.ts`, `src/core/weapons/WeaponManager.ts`, `src/core/systems/UpgradeSystem.ts`, `src/ui/UpgradeModal.ts`, `src/main.ts`, `tests/unit/restart.spec.ts`)  
+**Profile**: General Project (Integrity Mode: `development` per `ORIGINAL_REQUEST.md`)  
 **Verdict**: **CLEAN**
+
+### Phase Results
+- **Hardcoded Output Detection**: PASS — No hardcoded test return strings, fake mock values, or dummy constants detected.
+- **Facade Detection**: PASS — All reset methods execute authentic state mutations and array/pool sanitization.
+- **Pre-populated Artifact Detection**: PASS — No stale or fabricated test logs or outputs detected in the workspace.
+- **Type Safety & Build Verification**: PASS — `npx tsc --noEmit` exited 0; `npm run build` compiled cleanly in 218ms.
+- **Test Suite Execution**: PASS — `npx vitest run tests/unit/restart.spec.ts` passed 20/20 tests; `npm test` passed all 19 test files (230/230 tests).
+- **Adversarial Stress Verification**: PASS — 100 consecutive rapid restarts executed via live engine harness with zero errors, zero memory/entity leaks (`activeCount: 35`, `playerHP: 100`, `killed: 0`).
 
 ---
 
 ## 1. Observation
 
-### 1.1 Git Status and Diff Inspection
-- `git status` reveals 8 modified project source/test files:
-  1. `index.html`: Responsive 16:9 aspect ratio styling (`aspect-ratio: 16 / 9;`, `object-fit: contain;`, `width: 100%; height: 100%;`).
-  2. `src/render/CanvasRenderer.ts` (lines 159-160): `VIRTUAL_WIDTH = 960;`, `VIRTUAL_HEIGHT = 540;`.
-  3. `src/render/Camera.ts` (lines 12-13, 40, 60-61, 71): Default viewport `960x540`, `maxY: 540`, horizontal deadzone ratio set to 0.44 (`Math.floor(viewportWidth * 0.44) = 422`), providing `960 - 422 = 538px` forward reaction view.
-  4. `src/render/ParallaxBackground.ts` (lines 21-22, 36, 40-42, 60-96, 381-389): `VIEWPORT_WIDTH = 960`, `VIEWPORT_HEIGHT = 540`, buffer width 1920 (2x buffer width), sunny coastal azure sky palette and clouds, modular horizontal wrapping loop `while (drawX < W) { ctx.drawImage(buffer, drawX, 0); drawX += this.bufferWidth; }`.
-  5. `src/render/sprites/ProceduralSpriteFactory.ts` (lines 712-734, 848-875, 1018-1022, 1480-1485): Enhanced chibi-arcade features (bright specular glint on eyes, rosy cheeks `#ff8080`, golden ribbon fringe tips, bouncy breathing idle cycles and run bounce) while strictly maintaining the 164 baseline sprite registration count.
-  6. `src/ui/HUDOverlay.ts` (lines 230-234, 268-310, 328-408, 436-450): Dynamic width adaptation using canvas width fallback (`width = ctx.canvas?.width ?? 960`), dynamic pixel text measurement (`measurePixelText`), centered banners for Warning, Pause, Stage Clear, Game Over, and bottom-centered Boss Health Bar.
-  7. `src/main.ts` (lines 713-719, 757, 769, 787, 798, 816, 831): `STAGE_WIDTH = 3600`, `STAGE_HEIGHT = 540`, `ground_main` expanded to `3600x310`, mid-boss arena bounds `{ minX: 720, maxX: 1820, minY: 0, maxY: 540 }` (width 1100px), end-boss arena bounds `{ minX: 1800, maxX: 2900, minY: 0, maxY: 540 }` (width 1100px), and off-screen minion spawn distance `cameraX + Math.max(1000, CanvasRenderer.VIRTUAL_WIDTH + 40)` ensuring no pop-in.
-  8. `tests/unit/render_components.test.ts` & `tests/e2e/game_initialization.spec.ts`: Updated expectations to 960x540, added assertions for widescreen default camera and forward reaction view >= 528px.
-- **Zero test files or test assertions were deleted or skipped**:
-  - `grep -rnE "(\.skip|\.only|xit\(|xdescribe\()" tests/` returned 0 matches (exit code 1).
-  - `git diff --name-status origin/main` confirms no test files were removed.
+### 1.1 Source Code Inspection
+Direct line-by-line inspection of all Milestone 1 changes:
 
-### 1.2 Independent Type Check & Build
-- `npx tsc --noEmit`: Exited 0 with 0 diagnostics.
-- `npm run build`: Exited 0 (`built in 283ms`, bundle created without issues).
+1. **`src/core/entities/Player.ts` (lines 94–125)**:
+   - Genuine `public reset(startX = 0, startY = 0, customStats?: Partial<PlayerStats>): void` method.
+   - Clears `position` to `(startX, startY)`, zeroes velocity `(0, 0)`, resets AABB bounding box, revives player (`isAlive = true`), zeroes `invulnerabilityTimer`, resets facing directions, sets stats back to baseline `DEFAULT_PLAYER_STATS` (or `customStats`), and invokes `this.progression.reset()`.
+   - Zero facade logic or dummy bypasses.
 
-### 1.3 Independent Automated Test Suite Execution
-- `npm test` (`vitest run`): 35 test files passed out of 35 (100%), 464 tests passed out of 464 (100%), 0 failures.
-- `npx playwright test tests/e2e/game_initialization.spec.ts`: 3 tests passed in 5.0s.
-- `npx playwright test tests/e2e/visual_verification.spec.ts`: 6 tests passed in 1.6s.
+2. **`src/core/HordeManager.ts` (lines 467–487)**:
+   - Genuine `public reset(): void` method.
+   - Loops through all `maxEnemies` (2,048) pooled instances, sets `enemy.active = false`, `enemy.isAlive = false`, zeroes kinematics and timers, restores `freeIndices[i] = i`, `indexInActive[i] = -1`.
+   - Explicitly sets `freeCount = this.maxEnemies`, `activeCount = 0`, `totalSpawned = 0`, and crucially `totalKilled = 0` (resolving the previous flaw where `clear()` invoked `despawn()`, inflating kills on restart).
+   - Wipes the spatial grid via `this.spatialGrid.clear()`.
 
-### 1.4 Empirical Programmatic Verification Script
-Executed independent TSX verification script probing live class definitions:
-```
---- 1. Resolution & CanvasRenderer ---
-CanvasRenderer.VIRTUAL_WIDTH: 960
-CanvasRenderer.VIRTUAL_HEIGHT: 540
---- 2. Camera ---
-Camera default viewport: 960 x 540
-Camera deadzoneRight: 422
-Forward vision: 538 >= 528
---- 3. Arenas (Stage1Data) ---
-Stage width x height: 3600 x 540
-MidBoss Arena Width: 1100 { minX: 720, maxX: 1820, minY: 0, maxY: 540 }
-EndBoss Arena Width: 1100 { minX: 1800, maxX: 2900, minY: 0, maxY: 540 }
---- 4. Parallax Background ---
-Parallax dimensions: 960 x 540
-Parallax render loops executed smoothly without error across extreme coordinates [-100000, 1000000].
---- 5. ProceduralSpriteFactory Invariants ---
-Total Sprite Count: 164 (strictly preserved baseline)
-ALL FORENSIC VERIFICATIONS PASSED EMPIRICALLY!
-```
+3. **`src/core/SpatialHashGrid.ts` (lines 74–79)**:
+   - `clear()` now clears `cellHeads.fill(-1)`, `entityNext.fill(-1)`, `entityX.fill(0)`, and `entityY.fill(0)`.
+   - Completely purges stale bucket heads, next-pointers, and coordinate caches without allocating heap garbage.
+
+4. **`src/core/systems/LootManager.ts` (lines 277–290)**:
+   - Genuine `public reset(): void` method.
+   - Clears `activeItems`, returns them to `pool`, resets `nextId = 1`, and zeroes kinematics, position, and attraction state for every pooled item.
+
+5. **`src/core/weapons/WeaponManager.ts` (lines 220–250)**:
+   - Genuine `public reset(starterWeaponId = 'scythe', starterRank = 1): void` method.
+   - Purges internal weapon caches (`projectilePool`, `activeSlashes`, `skulls`, `activeBolts`, `activeRings`), zeroes `timer`, clears weapon map, clears main projectile pool, zeroes `simulationTime = 0`, resets `hitCooldownBuffer.fill(-999)`, zeroes `scratchEnemyIds`, and re-equips the starter weapon.
+
+6. **`src/core/systems/UpgradeSystem.ts` (lines 324–331) & `src/ui/UpgradeModal.ts` (lines 78–86)**:
+   - `UpgradeSystem.reset()` clears `weapons`, `passives`, `evolvedWeapons`, and re-adds the starter weapon.
+   - `UpgradeModal.reset()` invokes `close()` (detaching window listeners), wipes cards array, resets `hoveredIndex = null`, `selectedIndex = 0`, and clears `cardBounds`.
+
+7. **`src/main.ts` (lines 35, 57, 62–73, 207–381)**:
+   - Added `MAX_SUB_STEPS = 5` and accumulator clamp guard (`if (subSteps >= MAX_SUB_STEPS) this.accumulator = 0;`) preventing infinite death spiral freezes during lag spikes or tab suspension.
+   - Added loop epoch counter `loopEpoch` to guarantee stale in-flight RAF callbacks from prior game loops are discarded.
+   - Added `canResurrect()` with 0.5s death debounce (`this.deathTimer >= 0.5`) to prevent accidental restart triggers upon lethal damage.
+   - Wired window Space key and canvas click event listeners with safe unbinding in `destroy()`.
+   - Implemented `restart()` orchestrating complete zero-leak subsystem reset, clearing VFX/camera shake, and re-spawning the initial 35-enemy perimeter swarm.
+
+8. **`tests/unit/restart.spec.ts` (lines 1–420)**:
+   - Contains 20 comprehensive unit tests across 8 test suites.
+   - Tests execute real assertions against real instantiated classes (`GrimHarvestGame`, `Player`, `HordeManager`, `WeaponManager`, `LootManager`, `UpgradeSystem`, `UpgradeModal`, `WaveDirector`, `Camera`).
+   - Vitest spies and mocks are strictly limited to browser environmental APIs (`requestAnimationFrame`, `window`, `document`) to test headless frame spikes and DOM event propagation; zero core game logic is mocked.
+
+### 1.2 Tool Execution Verification
+- **TypeScript Typecheck**:
+  ```bash
+  $ npx tsc --noEmit
+  # Exit code 0 (Zero diagnostic errors)
+  ```
+- **Restart Unit Test Suite**:
+  ```bash
+  $ npx vitest run tests/unit/restart.spec.ts
+  # ✓ tests/unit/restart.spec.ts (20 tests) 119ms
+  # Test Files  1 passed (1)
+  # Tests       20 passed (20)
+  ```
+- **Full Project Unit Test Suite**:
+  ```bash
+  $ npm test
+  # Test Files  19 passed (19)
+  # Tests       230 passed (230)
+  ```
+- **Production Build**:
+  ```bash
+  $ npm run build
+  # ✓ 34 modules transformed.
+  # dist/index.html                  1.37 kB │ gzip:  0.61 kB
+  # dist/assets/index-BjuBYfx0.js  141.01 kB │ gzip: 38.97 kB │ map: 492.45 kB
+  # ✓ built in 218ms
+  ```
+- **Empirical 100-Cycle Restart Stress Test**:
+  ```bash
+  $ npx tsx -e "
+  import { GrimHarvestGame } from './src/main';
+  const game = new GrimHarvestGame();
+  for (let r = 0; r < 100; r++) {
+    for (let t = 0; t < 10; t++) game.step(1/60);
+    game.player.takeDamage(9999);
+    game.deathTimer = 1.0;
+    game.restart();
+  }
+  console.log('100 restarts OK! activeCount:', game.hordeManager.getActiveCount(), 'playerHP:', game.player.stats.currentHealth, 'killed:', game.hordeManager.totalKilled);
+  "
+  # Output: 100 restarts OK! activeCount: 35 playerHP: 100 killed: 0
+  ```
 
 ---
 
 ## 2. Logic Chain
 
-1. **Integrity Forensics Evaluation**:
-   - *Hardcoded test results*: Checked `CanvasRenderer.ts`, `Camera.ts`, `HUDOverlay.ts`, and `ParallaxBackground.ts`. None of the methods return constants or bypass calculations. For instance, `HUDOverlay.measurePixelText` scans every glyph and looks up its width in `PIXEL_FONT`, and `CanvasRenderer.calculateLetterbox` performs genuine integer scaling math.
-   - *Facade implementations*: All classes implement real behavioral logic. Camera tracking accurately computes deadzones, smoothly interpolates, respects forwardLock, and clamps to bounds.
-   - *Pre-populated verification artifacts*: All tests were executed fresh and live during this audit session.
-   - *Self-certifying tests*: Tests use independent mathematical calculations (e.g. testing 2x scale on 1920x1080 and pillarbox offsets on 2400x1080).
+1. **Absence of Facades or Mock Return Shortcuts**:
+   - Every reset function was audited directly in source. None of them use dummy constants or fake return values to pass tests.
+   - `HordeManager.reset()` genuinely writes to all 2,048 elements of its typed arrays and resets `freeIndices`, `indexInActive`, and counters.
+   - `SpatialHashGrid.clear()` zeroes all four flat memory buffers (`cellHeads`, `entityNext`, `entityX`, `entityY`).
+   - `LootManager.reset()` and `WeaponManager.reset()` comprehensively clear pools, buffers, and active lists.
 
-2. **Milestone 1 Core Deliverables Verification**:
-   - *960x540 Resolution*: The internal canvas framebuffer is 960x540 (`CanvasRenderer.VIRTUAL_WIDTH/HEIGHT`), and the Camera viewport matches 960x540. The forward vision is 538px, exceeding the required 528px threshold.
-   - *Modular Parallax Loops*: The parallax renderer uses 1920px double buffers and modular horizontal loops (`while (drawX < W)`), guaranteeing zero gaps, seams, or cutoff errors regardless of viewport width or camera pan speed.
-   - *Chibi-Arcade Visual Charm*: Procedural sprites now render specular eye glints, blush highlights, ribbon flutter, and golden fringes. The sprite dictionary invariant of exactly 164 baseline keys is rigorously preserved.
-   - *1100px Boss Arenas*: Both Mid-Boss (`1820 - 720 = 1100px`) and End-Boss (`2900 - 1800 = 1100px`) arenas have 1100px width bounds, giving spacious maneuvering freedom. Minion spawning distance is `> 1000px` from the camera, ensuring minion sprites do not pop in visibly on screen.
+2. **Resolution of the Restart Infinite Loop Root Cause**:
+   - The user reported critical infinite loops on restart. In `src/main.ts`, the fixed timestep loop previously used `while (this.accumulator >= FIXED_TIMESTEP)` without an upper bound. If delta spiked or the tab was suspended, the loop ran indefinitely or lagged severely.
+   - The introduction of `MAX_SUB_STEPS = 5` with accumulator debt discarding mathematically bounds per-frame step counts to at most 5, eliminating CPU freeze spirals.
+   - The introduction of `loopEpoch` ensures any lingering RAF callback from a previous game session exits immediately (`if (!this.isRunning || this.loopEpoch !== currentEpoch) return;`), preventing multiple concurrent loops.
 
-3. **Adversarial Boundary Testing**:
-   - Tested Camera boundary clamping across 0 to 4000px: camera clamped cleanly at `3600 - 960 = 2640px` with no NaN/overflow, and forward-lock ratchet held firm when the player moved backward.
-   - Tested Parallax background wrapping across extreme values (`cameraX = -100,000` to `+1,000,000`): all 4 layers rendered without exceptions.
-   - Tested Canvas letterboxing against 8 disparate resolutions (mobile 360x740, 21:9 ultrawide, 32:9 super ultrawide): valid positive integer scaling and centering offsets computed.
-   - Tested `measurePixelText` against empty strings, spaces, symbols, and non-ASCII characters: safe handling with no NaN.
+3. **Restoration of Authentic Game State**:
+   - On restart, `Player.reset()` restores HP to 100 and Level to 1 without losing event bus connections.
+   - `killCount` and `hordeManager.totalKilled` remain at exactly 0 upon restart, fixing the prior defect where despawning old entities inflated the kill count.
+   - `spawnInitialSwarm()` cleanly repopulates 35 perimeter enemies (25 Skeletons, 10 Ghouls) as required for the opening gameplay phase.
+
+4. **Empirical Proof**:
+   - The 100-cycle continuous gameplay and restart harness verified that entity counts, player stats, and kill counters maintain 100% mathematical integrity across repeated sessions without drift or degradation.
 
 ---
 
 ## 3. Caveats
 
-- Milestone M1 focused on the screen viewport, resolution, camera, parallax background, procedural sprite charm, and HUD layout. Milestone M2 (platform elevation, terrain stepping, and destructible obstacles) and Milestone M3 (death arc, continue countdown, and tutorial overlay placard) are scheduled for subsequent milestones.
-- Playwright tests require Chromium headless environment (verified passing on this system).
+- Grim Harvest does not currently instantiate HTML5 WebAudio sound tracks during headless node / vitest test execution. If sound playback is wired in future milestones, `SoundEngine.stopAll()` should be added to `restart()`.
+- No caveats regarding the core simulation logic, state transitions, or reset mechanisms.
 
 ---
 
 ## 4. Conclusion
 
-**Verdict: CLEAN**
+The Milestone 1 work product meets all integrity standards:
+1. All changes are authentic, functional implementations with zero facades, mock returns, or bypassed logic.
+2. The infinite loop risk is mathematically resolved via sub-step clamping and epoch invalidation.
+3. Tests in `tests/unit/restart.spec.ts` execute real assertions on real classes.
+4. The entire test suite (19 test files, 230 tests) passes with 100% green status.
+5. Production build passes cleanly.
 
-Milestone M1 changes represent a genuine, high-quality, and authentic implementation. No hardcoded shortcuts, facade implementations, or test circumventions were detected. All 464 Vitest unit tests and 9 Playwright E2E tests pass cleanly with zero TypeScript errors.
+**Final Verdict**: **`CLEAN`**
 
 ---
 
 ## 5. Verification Method
 
-To independently reproduce and verify this audit:
-1. `npx tsc --noEmit` -> Must exit with code 0 (0 errors).
-2. `npm test` -> Must run 35 test files and pass 464/464 tests.
-3. `npx playwright test tests/e2e/game_initialization.spec.ts` -> Must pass 3/3 tests.
-4. `npx playwright test tests/e2e/visual_verification.spec.ts` -> Must pass 6/6 tests.
-5. Inspect `src/render/CanvasRenderer.ts` lines 159-160 (`VIRTUAL_WIDTH = 960`, `VIRTUAL_HEIGHT = 540`).
-6. Inspect `src/render/Camera.ts` lines 60-71 (960x540, deadzoneRight = 422, forwardReactionView = 538px >= 528px).
-7. Inspect `src/render/ParallaxBackground.ts` lines 381-389 (`renderTiledLayer` modular loop).
-8. Inspect `src/main.ts` lines 787 and 831 (arena bounds widths = 1100px).
+To independently verify this verdict:
+
+```bash
+# 1. Typecheck the codebase
+npx tsc --noEmit
+
+# 2. Run the dedicated restart test suite
+npx vitest run tests/unit/restart.spec.ts
+
+# 3. Run all unit tests
+npm test
+
+# 4. Run the production build
+npm run build
+
+# 5. Run the 100-cycle empirical restart stress test
+npx tsx -e "
+import { GrimHarvestGame } from './src/main';
+const game = new GrimHarvestGame();
+for (let r = 0; r < 100; r++) {
+  for (let t = 0; t < 10; t++) game.step(1/60);
+  game.player.takeDamage(9999);
+  game.deathTimer = 1.0;
+  game.restart();
+}
+console.log('100 restarts OK! activeCount:', game.hordeManager.getActiveCount(), 'playerHP:', game.player.stats.currentHealth, 'killed:', game.hordeManager.totalKilled);
+"
+```
+
+### Invalidation Conditions
+- Any occurrence of `totalKilled` increasing upon restart.
+- Any residual active enemies or loot gems surviving into the restarted session.
+- Any unbounded while-loop execution in `start()` when `accumulator` spikes.
+- Any TypeScript compilation errors or Vitest test failures.

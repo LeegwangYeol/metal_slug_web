@@ -1,64 +1,49 @@
-## 2026-09-08T02:26:38Z
-You are a Worker subagent (teamwork_preview_worker) for Milestone M2 (Autonomous Ally NPCs & Diverse Items/Weapons).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+## 2026-09-10T15:51:43Z
+
+You are worker_m2_1 (role: Implementation & Testing Worker).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1
 
 MANDATORY INTEGRITY WARNING:
-DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
+DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Explorer 1 Report: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md
-- Explorer 2 Report: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2/handoff.md
-- Explorer 3 Report: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_3/handoff.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_3/handoff.md
 
-FILE OWNERSHIP:
-You have exclusive write ownership of:
-- src/core/entities/allies/AllyNPC.ts
-- src/core/weapons/RocketLauncherWeapon.ts
-- src/core/entities/items/ItemPickup.ts
-- src/core/entities/pow/PowEntity.ts
-- src/core/entities/pow/PrisonerEntity.ts
-- tests/unit/allies_system.test.ts
-- tests/unit/diverse_weapons_items.test.ts
-- tests/unit/pow_system.test.ts
+Your exclusive write ownership:
+- src/render/sprites/DarkFantasySprites.ts
+- tests/unit/DarkFantasySprites.spec.ts
 
-TASK & IMPLEMENTATION STEPS:
-Carefully follow the detailed, line-by-line recommendations from the 3 explorer reports:
-1. In `src/core/entities/allies/AllyNPC.ts`:
-   - In `findBestTarget`: Include pending entities from `(engine as any).entitiesToAdd` so un-ticked entities in unit tests are visible to ally vision.
-   - In `update` / `integrateKinematics`: Apply jump impulse cleanly without leaking airborne gravity on the impulse initiation tick.
-2. In `src/core/weapons/RocketLauncherWeapon.ts`:
-   - In `steerTowardsNearestEnemy`: Include pending entities from `(engine as any).entitiesToAdd`.
-   - In `detonate`: Calculate distance to `entity.position ?? BoundingBox.getCenter(entity.bounds)` to fix the 15px foot-offset.
-3. In `src/core/entities/items/ItemPickup.ts`:
-   - Set constructor `initialVelocity: Vector2D = vec2(0, 0)`.
-4. In `src/core/entities/pow/PowEntity.ts`:
-   - Add optional `spawnsAlly?: boolean` constructor parameter and event trigger on rescue.
-   - Re-export `export { PowEntity as PrisonerEntity };`
-5. Create `src/core/entities/pow/PrisonerEntity.ts`:
-   - Export `PrisonerEntity` from `./PowEntity`.
-6. In `tests/unit/allies_system.test.ts`:
-   - Update line 69 spawn position to `vec2(100, 200)` so that follow locomotion is tested cleanly.
-7. In `tests/unit/diverse_weapons_items.test.ts`:
-   - Remove unused imports `WeaponType` and `ItemPickupEntity` to eliminate TypeScript errors.
-   - In line 339, update fall frame loop to 60 frames.
-8. In `tests/unit/pow_system.test.ts`:
-   - Adjust lines 78-81 thresholds to match the 153-weight expanded loot table.
+Implementation Requirements for Milestone 2:
+1. `src/render/sprites/DarkFantasySprites.ts`:
+   - Elevate procedural sprite rendering from crude shapes to high-fidelity dark fantasy art across all entities:
+     - **Player (Grim Sorcerer)**: Layered tattered cowl & hood, flowing robes with dark crimson borders, ethereal bone scythe with purple runic inscriptions and blade glint, triple-layered occult eyes with glow, 4-frame walk bobbing.
+     - **Skeleton**: Weathered ivory bone gradients, anatomic ribcage & segmented spine, deep orbital voids with crimson ember pinpoints, skull fracture filigree, rusted iron broadsword with battle notches.
+     - **Ghoul**: Hunched feral quadruped posture, gangrenous necrotic flesh gradients, pulsating necrotic boils with wet specular highlights, spinal osteophyte bone spurs, dripping toxic bile fangs, elongated bone talons.
+     - **Banshee**: Translucent spectral apparition, floating wisps, weeping veil, luminous cyan/purple additive blending (`globalCompositeOperation = 'lighter'`), wailing mouth.
+     - **Death Knight**: Heavy obsidian plate armor with metallic bevels, horned greathelm with glowing crimson visor slit, gold/blood filigree etchings, two-handed runic executioner greatsword.
+   - Maintain full compatibility with offscreen canvas atlas caching (120 cached entries: 4 frames x 2 facings x 3 damage flash states).
+   - Ensure safe headless fallback in test environments (e.g., safe gradient checks if canvas methods are mocked).
+   - Zero NaN coordinates, zero unbounded memory allocations.
 
-VERIFICATION COMMANDS:
-Run these commands and include full output in your report:
-1. `npx tsc --noEmit` (must succeed with 0 errors)
-2. `npx vitest run tests/unit/allies_system.test.ts` (all 10 pass)
-3. `npx vitest run tests/unit/diverse_weapons_items.test.ts` (all 12 pass)
-4. `npx vitest run tests/unit/pow_system.test.ts` (all 3 pass)
-5. `npx vitest run tests/unit/` (all 28 test suites, 339+ tests pass)
+2. `tests/unit/DarkFantasySprites.spec.ts`:
+   - Comprehensive Vitest unit test suite validating:
+     - All entity types (Player, Skeleton, Ghoul, Banshee, Death Knight) render cleanly across all 4 walk frames and 2 facing directions without throwing errors or generating NaNs.
+     - Damage flash states (normal, red, white) render properly.
+     - Offscreen atlas caching produces valid image buffers.
+     - Rendering performance remains locked at 60Hz.
 
-REPORTING:
-Write your complete handoff report to:
-`/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md`
-following the Handoff Protocol (Observation, Logic Chain, Caveats, Conclusion, Verification Method).
-Then call send_message to notify parent.
+Verification:
+- Run `npx vitest run tests/unit/DarkFantasySprites.spec.ts`
+- Run `npm test` to verify zero regressions across all test suites
+- Run `npx tsc --noEmit` to verify 100% type safety
+- Run `npm run build`
+
+Document all changes, commands run, and test outputs in `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md`.
+Update `progress.md` with your status.
+When finished, send a message to orchestrator with your results.

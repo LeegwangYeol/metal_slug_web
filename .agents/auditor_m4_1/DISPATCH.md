@@ -1,25 +1,24 @@
-## 2026-09-10T02:09:47Z
+## 2026-09-10T18:59:38Z
+You are auditor_m4_1 (role: Forensic Integrity Auditor).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m4_1
 
-You are auditor_m4_1.
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m4_1
-Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/tests/e2e/restart_survival.spec.ts
+- /Users/user/teamwork_projects/metal_slug_web/src/main.ts
 
-MANDATORY READING:
-1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_e2e_artifacts/handoff.md
+Mission:
+Perform a strict forensic integrity audit on Milestone 4:
+1. Examine code in `tests/e2e/restart_survival.spec.ts` and `src/main.ts`:
+   - Authenticity: Ensure the Playwright test executes genuine browser navigation, genuine user input simulations (`page.keyboard.press`, `locator.click`), and genuine assertions on the live game instance without mocking out core engine classes or bypassing mechanics.
+   - Verify that the 15-second survival test actually runs the simulation for 15+ real game seconds rather than spoofing `elapsedTime`.
+   - Verify that screenshot capture renders real game objects through `CanvasRenderer` / `DarkFantasySprites` / `DarkFantasyVFX` rather than loading pre-rendered external image files.
+2. Run `npx playwright test tests/e2e/restart_survival.spec.ts`, `npm test`, `npx tsc --noEmit`, and `npm run build`.
 
-TASK:
-Perform a forensic integrity audit on Milestone 4 deliverables:
-- Verify authenticity of screenshot artifacts:
-  - Check file modification timestamps on `artifacts/ui_overhaul/screen_terrain.png`, `artifacts/ui_overhaul/respawn_tutorial.png`, and `artifacts/ui_overhaul/continue_countdown.png`.
-  - Confirm they were dynamically captured by Playwright during test execution, NOT copied from old static assets.
-  - Verify that the game running in Playwright is the genuine game with real procedural rendering, physics, and HUD.
-- Audit git diff for `tests/e2e/ui_overhaul_artifacts.spec.ts` ensuring NO mocked canvas drawing or artificial bypasses.
-- Run independent verification:
-  - `npx tsc --noEmit`
-  - `npm run build`
-  - `npm test` (`npx vitest run`)
-  - `npx playwright test`
-- Deliver an explicit verdict in handoff.md: CLEAN or INTEGRITY VIOLATION. Notify parent when done.
+Write your forensic report in `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m4_1/handoff.md`.
+Explicitly state your verdict: `CLEAN` or `INTEGRITY VIOLATION`.
+When complete, send a message to orchestrator with your verdict.
