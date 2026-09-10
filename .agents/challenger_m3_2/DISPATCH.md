@@ -1,21 +1,22 @@
-## 2026-09-08T04:42:09Z
-You are a Challenger subagent (teamwork_preview_challenger) for Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX).
+## 2026-09-10T01:53:09Z
+You are challenger_m3_2.
 Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m3_2
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Worker M3 Handoff: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_1/handoff.md
+MANDATORY READING:
+1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_ui_respawn/handoff.md
 
-CHALLENGE FOCUS:
-Adversarially stress-test sprite invariants, controls, and whole-project regressions:
-1. Verify `ProceduralSpriteFactory.getAllKeys()` across 1,000 invocations and all categories to prove zero keys leaked into baseline (exactly 164 keys).
-2. Verify all keyboard control bindings to confirm KeyU triggers ultimate without colliding with KeyX jump, KeyC shoot, or Arrow keys.
-3. Run the complete unit test suite (`npx vitest run`) and confirm 100% green pass rate.
-4. Provide explicit verdict: APPROVE or REQUEST_CHANGES.
-5. Write your report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m3_2/handoff.md`
-   and call send_message to parent.
+TASK:
+Adversarially challenge Milestone 3 UI tutorial overlay, keyboard input latches, HUD rendering performance, and full regression invariants:
+- Test tutorial toggle edge-latching: Ensure holding down KeyH does not cause rapid oscillation/flickering between open and closed. Test tutorial alpha fade math (no NaN or negative opacity).
+- Verify HUD text measurement and glyph lookup for newly added glyphs (`/`, `[`, `]`, `*`, `★`): Ensure rendering unknown glyphs fails gracefully without throwing unhandled exceptions.
+- Regression verification: Run all existing unit and E2E test suites:
+  - `npx vitest run` (assert 578/578 passing)
+  - `npx playwright test tests/e2e/gameplay_controls.spec.ts`
+  - `npx playwright test tests/e2e/boss_encounters.spec.ts`
+  - `npx playwright test tests/e2e/ultimate_and_crisis_expansion.spec.ts`
+- Deliver an explicit verdict in your handoff.md: APPROVE or REQUEST_CHANGES, with detailed test output and empirical evidence.
+- When finished, send a message to parent (ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654).

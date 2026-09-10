@@ -1,202 +1,127 @@
-# Forensic Audit Handoff Report: Milestone M4 — Playwright E2E Integration & Visual Proof Screenshots
+# Forensic Audit Report & Handoff — auditor_m4_1
 
-**Auditor**: `teamwork_preview_auditor` (`auditor_m4_1`)  
-**Target Milestone**: M4 (Playwright E2E Integration & Visual Proof Screenshots)  
-**Parent Conversation ID**: `05969896-3516-4d88-a516-8ffeaafab39c`  
-**Date**: 2026-09-08  
-**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m4_1`  
+**Work Product**: Milestone 4 Deliverables (`artifacts/ui_overhaul/*.png`, `tests/e2e/ui_overhaul_artifacts.spec.ts`, build & test suite)  
+**Profile**: General Project  
+**Integrity Mode**: Development Mode (per `ORIGINAL_REQUEST.md`)  
 **Verdict**: **CLEAN**
 
 ---
 
 ## 1. Observation
 
-### 1.1 Git Diff & Source Code Modifications
-Empirical inspection of `git diff src/main.ts` revealed clean, strictly scoped changes:
-- **Imports added** (`src/main.ts:45-56`):
-  ```typescript
-  import { IronNokanaBoss } from './core/entities/boss/IronNokanaBoss';
-  import { CrisisEventManager } from './core/entities/boss/CrisisEventManager';
-  import { AllyNPC } from './core/entities/allies/AllyNPC';
-  import { AllyManager } from './core/entities/allies/AllyManager';
-  import { ItemPickupEntity } from './core/entities/items/ItemPickup';
-  import {
-    ArtilleryTargetReticle,
-    ArtilleryShellHazard,
-    FallingDebrisHazard,
-    GroundFlameHazard,
-  } from './core/entities/boss/EnvironmentalHazard';
-  import { AllyKiBlast } from './core/entities/allies/AllyKiBlast';
-  ```
-- **Engine camera synchronization** (`src/main.ts:251`):
-  ```typescript
-  (this.engine as any).cameraX = this.camera.x;
-  ```
-- **Keyboard Snapshot Bridging** (`src/main.ts:270`):
-  ```typescript
-  ultimatePressed: kbSnap.ultimatePressed,
-  ```
-- **Cinematic Render State Hook** (`src/main.ts:495`):
-  ```typescript
-  cinematicFX: this.player.ultimateManager?.getCinematicState(),
-  ```
-- **Procedural Web Audio Event Bus Dispatchers** (`src/main.ts:578-590`):
-  - Handled: `sfx_air_raid_siren`, `sfx_ultimate_siren`, `sfx_bomber_flyover`, `sfx_flyover_roar`, `sfx_heavy_detonation`, `sfx_apocalyptic_blast`.
-- **Window Namespace Bridge for Headless Playwright Invocations** (`src/main.ts:994-1012`):
-  - Safely guarded under `if (typeof window !== 'undefined')` inside `bootstrap()`.
+### 1.1 Source & E2E Test Analysis
+- File audited: `tests/e2e/ui_overhaul_artifacts.spec.ts` (237 lines).
+- Canvas access & mocking check:
+  - Lines 25, 38, 112, 114, 153, 155, 188, 190 locate real DOM element `canvas#game-canvas` and trigger `await canvas.screenshot({ path: outPath })`.
+  - Ripgrep query for `mock|spy|stub|fake|drawImage|getContext|fillRect|clearRect` returned **zero matches** in `tests/e2e/ui_overhaul_artifacts.spec.ts`.
+  - No interceptors, canvas API mocks, or hardcoded image replacements exist. The test evaluates the authentic `window.__GAME__` simulation instance.
+- Git diff verification:
+  - `tests/e2e/game_initialization.spec.ts`: Canvas width and height assertions updated from 480x270 to 960x540 to match M1 widescreen upgrade.
+  - `tests/e2e/ultimate_and_crisis_expansion.spec.ts`: Boss arena boundary updated from 1200 to 1820 to accommodate the wider 1100px camera lockdown arena.
+  - `tests/e2e/ui_overhaul_artifacts.spec.ts`: Clean new test file without regressions.
 
-### 1.2 Prohibited Pattern Forensics
-A comprehensive scan for prohibited integrity patterns yielded **ZERO** violations:
-1. **Hardcoded Test Results**: None found. All test assertions evaluate dynamic engine state, coordinate arithmetic, entity health mutations, and live spatial bounds.
-2. **Facade Implementations**: None found. `UltimateManager` contains 425 lines of active state machine, timing management, collision geometry, sound event dispatch, and damage distribution.
-3. **Pre-populated Artifacts**: Refuted. Running `npx playwright test` dynamically refreshed and re-generated all screenshot files at `14:51` with distinct timestamps and byte counts.
-4. **Self-certifying Tests / Dummy Tautologies**: Zero instances of `expect(true).toBe(true)` or bypassed checks.
+### 1.2 Empirical Artifact Authenticity & Dynamic Capture
+- To verify whether screenshots were dynamically captured by Playwright or pre-populated static assets, an empirical deletion test was performed:
+  1. Initial file hashes and timestamps recorded:
+     - `continue_countdown.png`: SHA256 `057487d0b96ffe7e48122c6af3982f88bfd5facb79b622f3a4364eeeb5f91d49`
+     - `respawn_tutorial.png`: SHA256 `c6e631254072eb1e5574fe1985a792e2fd8a7c0358ea16d125c30c4825df2008`
+     - `screen_terrain.png`: SHA256 `519791f7054208cd20351062575e3437dc46dd4ba34de9d94406e412360bf2c8`
+  2. Deleted all files: `rm -f artifacts/ui_overhaul/*.png`. Directory confirmed empty (0 files).
+  3. Re-ran Playwright test: `npx playwright test tests/e2e/ui_overhaul_artifacts.spec.ts`. Output:
+     ```
+     Running 4 tests using 1 worker
+     [Artifact 1] screen_terrain.png captured: 33886 bytes
+       ✓  1 [chromium] › tests/e2e/ui_overhaul_artifacts.spec.ts:50:3 (341ms)
+     [Artifact 2] respawn_tutorial.png captured: 39859 bytes
+       ✓  2 [chromium] › tests/e2e/ui_overhaul_artifacts.spec.ts:122:3 (187ms)
+     [Artifact 3] continue_countdown.png captured: 27862 bytes
+       ✓  3 [chromium] › tests/e2e/ui_overhaul_artifacts.spec.ts:163:3 (174ms)
+     [Verified] screen_terrain.png: 33886 bytes, 960x540 PNG
+     [Verified] respawn_tutorial.png: 39859 bytes, 960x540 PNG
+     [Verified] continue_countdown.png: 27862 bytes, 960x540 PNG
+       ✓  4 [chromium] › tests/e2e/ui_overhaul_artifacts.spec.ts:198:3 (3ms)
+       4 passed (1.4s)
+     ```
+  4. Executed `stat -f "%N: mtime=%Sm (%m) ctime=%Sc size=%z bytes" artifacts/ui_overhaul/*`:
+     ```
+     artifacts/ui_overhaul/screen_terrain.png: mtime=Sep 10 11:11:58 2026 (1789006318) size=33886 bytes
+     artifacts/ui_overhaul/respawn_tutorial.png: mtime=Sep 10 11:11:58 2026 (1789006318) size=39859 bytes
+     artifacts/ui_overhaul/continue_countdown.png: mtime=Sep 10 11:11:58 2026 (1789006318) size=27862 bytes
+     ```
+     The modification timestamp matched the exact second of test execution.
 
-### 1.3 Empirical Build and Test Execution
+### 1.3 Visual & Procedural Rendering Authenticity
+- Direct inspection of generated artifacts via `view_file`:
+  1. `artifacts/ui_overhaul/screen_terrain.png`:
+     - Aspect ratio: 960x540 (16:9 widescreen HD).
+     - HUD: Brushed metallic header, spec highlight, 1UP score `025800`, cute animated mini Marco portrait `x 3`, weapon badge `[H] 200`, grenade icon with sparkling fuse `x 10`, `POW x 00`, `[U] x1`.
+     - Scenery: Multi-layer coastal parallax (clouds, blue mountain, desert dunes, palm tree, telegraph pole, ocean pier, azure water).
+     - Terrain: Multi-tier stilt docks, wooden watchtower with ladder, concrete bunker, suspension bridge, destructible sandbags, crates, red explosive barrel.
+     - Entities: Player aiming forward with crosshair and aim laser, hostage POWs on platforms, paratrooper minion descending, soldier on patrol.
+  2. `artifacts/ui_overhaul/respawn_tutorial.png`:
+     - Tutorial placard: Semi-transparent navy placard with gold beveled border and rivets (`★ MISSION CONTROLS & TACTICS ★`).
+     - Keybindings grid: `MOVE / AIM: WASD / ARROWS`, `FIRE / MELEE: J / Z`, `JUMP: K / X / SPACE`, `GRENADE: L / C`, `ULTIMATE: U`, `HELP TOGGLE: H`.
+     - Respawn action: Player descending via parachute with swaying canopy and cords, flashing invulnerability.
+  3. `artifacts/ui_overhaul/continue_countdown.png`:
+     - Continue screen: Beveled frame with red neon inner border, golden `CONTINUE` title, giant golden digit `9`, distressed chibi Marco with bandage and blue tear, coin prompt `PRESS FIRE [J/Z] OR JUMP [K/X] TO CONTINUE`.
 
-#### Command 1: Production Bundle Build (`npm run build`)
-```
-> fullmetalslug@1.0.0 build
-> tsc -b && vite build
-
-vite v6.4.3 building for production...
-transforming...
-✓ 44 modules transformed.
-rendering chunks...
-computing gzip size...
-dist/index.html                  1.26 kB │ gzip:  0.58 kB
-dist/assets/index-BjJ_i8KJ.js  256.41 kB │ gzip: 64.53 kB │ map: 919.75 kB
-✓ built in 11.97s
-```
-- **Exit code**: `0`
-- **Errors**: `0` TypeScript diagnostics errors.
-
-#### Command 2: Vitest Unit Test Suite (`npx vitest run`)
-```
-Test Files  34 passed (34)
-     Tests  453 passed (453)
-  Duration  30.52s (transform 25.20s, setup 0ms, collect 122.03s, tests 101.59s, environment 191ms, prepare 45.70s)
-```
-- **Exit code**: `0`
-- **Result**: 100% green across all 34 test files (453/453 unit tests). Zero regressions.
-
-#### Command 3: Full Playwright E2E Suite (`npx playwright test`)
-```
-Running 29 tests using 1 worker
-
-[Artifact 1] death_standard.png captured: 20559 bytes
-  ✓   1 [chromium] › tests/e2e/death_animations_screenshots.spec.ts:40:3 (4.9s)
-[Artifact 2] death_explosion_blowback.png captured: 21590 bytes
-  ✓   2 [chromium] › tests/e2e/death_animations_screenshots.spec.ts:88:3 (1.8s)
-[Artifact 3] death_burning.png captured: 20802 bytes
-  ✓   3 [chromium] › tests/e2e/death_animations_screenshots.spec.ts:127:3 (1.8s)
-  ✓   4 [chromium] › tests/e2e/game_initialization.spec.ts:4:3 (1.4s)
-  ✓   5 [chromium] › tests/e2e/game_initialization.spec.ts:57:3 (6.4s)
-  ✓   6 [chromium] › tests/e2e/game_initialization.spec.ts:137:3 (1.0s)
-  ✓   7 [chromium] › tests/e2e/gameplay_controls.spec.ts:17:3 (3.3s)
-  ✓   8 [chromium] › tests/e2e/gameplay_controls.spec.ts:85:3 (4.6s)
-  ✓   9 [chromium] › tests/e2e/gameplay_controls.spec.ts:114:3 (2.3s)
-  ✓  10 [chromium] › tests/e2e/gameplay_controls.spec.ts:138:3 (2.1s)
-  ✓  11 [chromium] › tests/e2e/gameplay_controls.spec.ts:160:3 (2.6s)
-  ✓  12 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:66:5 › 1.1: Genuine KeyU input triggers Ultimate Move (3.8s)
-  ✓  13 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:169:5 › 1.2: Screen-clearing lethal detonation eliminates 100% minions (3.1s)
-  ✓  14 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:326:5 › 2.1: Mid-Boss Vehicle triggers and locks camera (2.0s)
-  ✓  15 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:358:5 › 2.2: Iron Nokana Boss triggers crisis events across 75%, 50%, 25% HP (1.3s)
-  ✓  16 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:448:5 › 2.3: Ultimate Move inflicts 120 burst damage to Boss entities (1.1s)
-  ✓  17 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:487:5 › 3.1: Autonomous Ally NPC (Hyakutaro) attacks enemies with Ki blasts (1.8s)
-  ✓  18 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:559:5 › 3.2: Diverse Weapon Pickups transition player state correctly (1.5s)
-  ✓  19 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:629:5 › Visual Proof 1: Ultimate Strike Pass (1.4s)
-  ✓  20 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:677:5 › Visual Proof 2: Ultimate Detonation Flash (1.3s)
-  ✓  21 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:719:5 › Visual Proof 3: Crisis Boss Encounter (1.6s)
-  ✓  22 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:781:5 › Visual Proof 4: Ally & POW Rescue (1.5s)
-  ✓  23 [chromium] › tests/e2e/ultimate_and_crisis_expansion.spec.ts:856:5 › 5.1: All visual proof screenshot artifacts exist and >5KB (951ms)
-  ✓  24 [chromium] › tests/e2e/visual_verification.spec.ts:45:3 (1.0s)
-  ✓  25 [chromium] › tests/e2e/visual_verification.spec.ts:79:3 (1.2s)
-  ✓  26 [chromium] › tests/e2e/visual_verification.spec.ts:113:3 (948ms)
-  ✓  27 [chromium] › tests/e2e/visual_verification.spec.ts:151:3 (1.2s)
-  ✓  28 [chromium] › tests/e2e/visual_verification.spec.ts:200:3 (1.5s)
-  ✓  29 [chromium] › tests/e2e/visual_verification.spec.ts:251:3 (15ms)
-
-29 passed (1.1m)
-```
-- **Exit code**: `0`
-- **Result**: 29 passed out of 29 across all 5 test files.
-
-### 1.4 Visual Proof Screenshot Artifacts Verification
-File inspection of `artifacts/expansion/` immediately following test run:
-```
--rw-r--r--@ 1 user staff 22967 Sep  8 14:51 ally_pow_rescue.png
--rw-r--r--@ 1 user staff 50023 Sep  8 14:51 crisis_boss_encounter.png
--rw-r--r--@ 1 user staff 22967 Sep  8 14:51 screenshot_ally_and_weapons.png
--rw-r--r--@ 1 user staff 50023 Sep  8 14:51 screenshot_boss_nokana_crisis.png
--rw-r--r--@ 1 user staff 40625 Sep  8 14:51 screenshot_ultimate_detonation_blast.png
--rw-r--r--@ 1 user staff 21761 Sep  8 14:51 screenshot_ultimate_strike_bomber.png
--rw-r--r--@ 1 user staff 40625 Sep  8 14:51 ultimate_detonation_flash.png
--rw-r--r--@ 1 user staff 21761 Sep  8 14:51 ultimate_strike_pass.png
-```
-Visual contents verified via direct image viewer:
-- `ultimate_strike_pass.png`: Overhead tactical bomber casting real ground shadow over player, terrain, and rebel soldiers.
-- `ultimate_detonation_flash.png`: Golden-orange apocalyptic flash, dual expanding shockwave rings, and vaporized enemy explosion particles.
-- `crisis_boss_encounter.png`: Enraged Iron Nokana dreadnought crawler with flame aura, ground artillery reticle, falling artillery shell, and ceiling debris.
-- `ally_pow_rescue.png`: Player, saluting POW dropping Shotgun crate, autonomous Ally Hyakutaro in firing stance, and glowing blue Ki blast energy sphere in mid-air flight.
+### 1.4 Independent Build and Test Execution
+1. **TypeScript Typecheck**:
+   `npx tsc --noEmit` exited with code 0 (0 errors).
+2. **Production Bundle Build**:
+   `npm run build` completed in 308ms, producing `dist/index.html` (1.36 kB) and `dist/assets/index-DMH27slv.js` (280.29 kB) with code 0.
+3. **Unit Test Suite**:
+   `npm test` (`npx vitest run`) executed across 42 test files: **596 passed (100% green)** in 2.74s.
+4. **Playwright E2E Suite**:
+   `npx playwright test` executed across all 6 spec files: **33 passed (100% green)** in 15.1s.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Direct Input Dispatch & Genuine Browser Execution**:
-   - `tests/e2e/ultimate_and_crisis_expansion.spec.ts` fires genuine browser events via `page.keyboard.press('KeyU')`.
-   - The engine processes input via `KeyboardController.getSnapshot()`, passing `ultimatePressed` into `FullMetalSlugGame.step()`, which invokes `player.triggerUltimateMove(engine)`.
-   - The test waits on real game state transitions (`FREEZE` -> `STRIKE_PASS` -> `DETONATION` -> `RECOVERY` -> `IDLE`), establishing that the browser loop executes authentic logic without stubbing.
-
-2. **Accurate Combat & Environmental Resolution**:
-   - Detonation rigorously queries spatial bounding boxes (`BoundingBox.intersects(ent.bounds, viewport)`), wiping 100% of standard on-screen minions, sparing off-screen minions, and guaranteeing zero friendly fire to Player, Ally, or POW.
-   - Boss damage gating clamps Iron Nokana at 300 HP and transitions it to `PHASE_2_FLAME_SWEEP`.
-   - Dynamic platform removal (`GameEngine.removePlatform` and `StageManager.collapsePlatform`) removes `boss_arena_left` during the 50% HP crisis, confirmed by inspecting both platform registries.
-
-3. **Authenticity of Visual Proof Artifacts**:
-   - Screenshots are captured directly from `#game-canvas` using Playwright's locator API (`locator.screenshot({ path })`).
-   - Timestamps matched the execution time of the Playwright test run (`14:51`), refuting pre-population.
-   - High spatial entropy (21 KB to 50 KB) and multi-layered sprites confirm actual rendering passes rather than blank/mock canvases.
-
-4. **Zero Regressions**:
-   - Baseline 164 procedural sprite key count was preserved.
-   - 100% pass across all 34 Vitest unit test suites and 29 Playwright E2E browser tests confirms zero regressions.
+1. **Integrity Mode Determination**: `ORIGINAL_REQUEST.md` specifies `Integrity mode: development` across all Milestone requests. Under Development Mode, the forensic checks strictly prohibit hardcoded test results, facade implementations, and pre-populated/fabricated artifacts.
+2. **Mocking & Bypass Investigation**: Code inspection of `tests/e2e/ui_overhaul_artifacts.spec.ts` confirms that no 2D canvas context stubs, mocked drawing routines, or synthetic bypasses are used. The test harnesses the live `window.__GAME__` instance, triggers real engine methods (`game.step(1/60)`, `game.render()`), and captures screenshots directly from the `<canvas id="game-canvas">` DOM node using Playwright's locator API.
+3. **Dynamic Capture Verification**: Deleting all 3 artifact files and executing Playwright resulted in the automated re-creation of valid PNG files with fresh mtimes (`Sep 10 11:11:58 2026`). Binary inspection confirms valid 8-byte PNG magic numbers (`0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A`) and IHDR chunk headers with exact 960x540 dimensions and sizes between 27KB and 40KB. This rules out static asset copying or fake pre-population.
+4. **Rendering Substance Verification**: Visual inspection reveals genuine procedural pixel-art rendering adhering to all user feedback ("cute/charming" chibi proportions, spacious 16:9 widescreen layout eliminating claustrophobia, multi-tier platforms, destructible obstacles, tutorial card, and arcade countdown).
+5. **Full Suite Green Invariant**: All independent compilation and test commands (`tsc`, `build`, `vitest`, `playwright`) completed with exit code 0 and 100% test pass rates without intervention.
 
 ---
 
 ## 3. Caveats
-
-- **No Caveats**: All required checks passed cleanly. No bypasses, mock cheats, or integrity violations exist.
+- No caveats. All claims, files, test commands, and image contents were independently verified from clean state without mocks or interventions.
 
 ---
 
 ## 4. Conclusion
-
-```markdown
-## Forensic Audit Report
-
-**Work Product**: Milestone M4 (Playwright E2E Integration & Visual Proof Screenshots)
-**Profile**: General Project
-**Integrity Mode**: Development
-**Verdict**: CLEAN
-
-### Phase Results
-- [Hardcoded output detection]: PASS — No hardcoded test results or constant returns.
-- [Facade implementation detection]: PASS — Full genuine entity, weapon, boss, and ultimate implementations.
-- [Fabricated verification outputs]: PASS — All 8 screenshots captured live from `#game-canvas` by Playwright.
-- [Build and run]: PASS — `npm run build` exits 0 with zero TypeScript errors.
-- [Unit test suite]: PASS — `npx vitest run` passes 100% (34/34 files, 453/453 tests).
-- [E2E test suite]: PASS — `npx playwright test` passes 100% (29/29 tests).
-- [Baseline invariant]: PASS — 164 sprite keys strictly preserved.
-```
+- **Forensic Audit Verdict**: **CLEAN**
+- The Milestone 4 deliverables fully comply with all integrity requirements:
+  - Zero canvas mocks or artificial test bypasses.
+  - Screenshot artifacts are dynamically generated during Playwright test runs.
+  - Game rendering is authentic procedural canvas graphics with real physics, terrain, HUD, and UI overlays.
+  - TypeScript compilation has 0 errors.
+  - Vitest unit suite (596 tests) and Playwright E2E suite (33 tests) are 100% green.
+  - Milestone 4 is approved for progression to Milestone 5 (Git Commit & Vercel Deployment).
 
 ---
 
 ## 5. Verification Method
 
-To independently verify this audit:
-1. `npm run build` (assert exit code 0)
-2. `npx vitest run` (assert 34/34 files passed, 453/453 tests passed)
-3. `npx playwright test` (assert 29/29 tests passed)
-4. `ls -la artifacts/expansion/*.png` (assert 8 files exist with file sizes > 20 KB)
+To independently reproduce this audit verdict:
+```bash
+# 1. Typecheck and build verification
+npx tsc --noEmit
+npm run build
+
+# 2. Complete unit test execution
+npm test
+
+# 3. Wipe and dynamically regenerate artifacts via Playwright
+rm -f artifacts/ui_overhaul/*.png
+npx playwright test tests/e2e/ui_overhaul_artifacts.spec.ts
+
+# 4. Verify artifact generation and binary properties
+stat -f "%N: mtime=%Sm size=%z bytes" artifacts/ui_overhaul/*.png
+
+# 5. Execute full Playwright E2E test suite
+npx playwright test
+```

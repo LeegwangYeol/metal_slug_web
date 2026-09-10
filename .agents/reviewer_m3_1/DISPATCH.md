@@ -1,25 +1,26 @@
-## 2026-09-08T04:42:06Z
+## 2026-09-10T01:53:08Z
 
-You are a Reviewer subagent (teamwork_preview_reviewer) for Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX).
+You are reviewer_m3_1.
 Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Worker M3 Handoff: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_1/handoff.md
+MANDATORY READING:
+1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_ui_respawn/handoff.md
 
-REVIEW FOCUS:
-Review the code changes made in `src/core/player/UltimateManager.ts`, `src/core/player/PlayerController.ts`, `src/input/KeyboardController.ts`, and `tests/unit/ultimate_move_system.test.ts`:
-1. Check that the 4-phase cinematic pipeline functions properly (Freeze 0.5s -> Strike Pass 0.6s -> Detonation 0.4s -> Recovery 0.3s).
-2. Check on-screen minion elimination (clears 100% of standard enemies in active camera viewport) and 120 burst damage to bosses.
-3. Check that KeyU is mapped cleanly and KeyX is untouched (jump).
-4. Run verification commands:
-   `npx tsc -b`
-   `npx vitest run tests/unit/ultimate_move_system.test.ts`
-5. Provide an explicit verdict: APPROVE or REQUEST_CHANGES.
-6. Write your report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1/handoff.md`
-   and call send_message to parent.
+TASK:
+Perform an objective and rigorous code review of Milestone 3 death, respawn, and continue countdown mechanics:
+- Review `src/core/player/PlayerController.ts`, `src/core/player/PlayerKinematics.ts`, `src/core/player/PlayerTypes.ts`, `src/render/CanvasRenderer.ts`:
+  - Death knockback arc: Verify initial impulse (`vy = -260, vx = facing * -80`), gravity integration, ground sprawl friction, `DEATH_DURATION = 1.2s`, and cycling through `player_death_0..3` frames.
+  - Tactical Parachute Respawn: Verify entry at `Y = 20`, descent speed (`vy = 60 px/s`), sinusoidal canopy sway, steering (`vx = ±40`), mid-air weapon firing, ground/platform touchdown detection, and 2.5s flashing invulnerability.
+  - Continue Countdown: Verify transition to `CONTINUE_COUNTDOWN` when `lives <= 0`, 10.0s timer, continue triggers on Fire/Jump resetting lives to 3 and spawning parachute, and timer expiry cleanly transitioning to `DEAD` and Game Over.
+- Run builds and tests:
+  - `npx tsc --noEmit` -> Must be clean (0 errors).
+  - `npm run build` -> Must succeed cleanly.
+  - `npx vitest run tests/unit/death_respawn_ui.test.ts` -> Verify all 19 unit tests pass.
+  - `npm test` (`npx vitest run`) -> Verify entire test suite (578 tests) passes 100% green.
+- Deliver an explicit verdict in your handoff.md: APPROVE or REQUEST_CHANGES, with full evidence chain and command outputs.
+- When finished, send a message to parent (ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654).
+DO NOT MODIFY PRODUCTION CODE FILES. You are a reviewer.

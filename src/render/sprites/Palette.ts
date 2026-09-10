@@ -39,166 +39,167 @@ export function rgbaToString(r: number, g: number, b: number, a: number = 1): st
 }
 
 /**
- * Authentic 16-color Neo Geo arcade palettes for Metal Slug assets.
+ * Vibrant, Joyful Pastel 16-Color Indexed Palettes & Color Utilities.
+ * Whimsical fairytale and candy-themed color ramps for procedural pixel-art rasterization.
  */
 export const PALETTES = {
-  // Marco Rossi / Player Soldier Palette
+  // Chibi Hero / Sweet Adventurer Palette
   PLAYER: [
-    'transparent', // 0: Transparent background
-    '#201818',     // 1: Dark outline
-    '#FCE071',     // 2: Blonde hair highlight
-    '#C49828',     // 3: Blonde hair shadow
-    '#D82800',     // 4: Headband red
-    '#881400',     // 5: Headband dark shadow
-    '#FFCC99',     // 6: Skin highlight
-    '#E09860',     // 7: Skin midtone
-    '#905030',     // 8: Skin shadow
-    '#F8F8F8',     // 9: Shirt white
-    '#B0B8C0',     // 10: Shirt shade
-    '#738A44',     // 11: Olive vest
-    '#445824',     // 12: Olive vest shadow
-    '#A88850',     // 13: Khaki pants
-    '#685028',     // 14: Khaki pants shadow
-    '#302018',     // 15: Boot leather / gun metal
+    'transparent', // 0: Transparent
+    '#3D2631',     // 1: Warm mocha berry outline (softer than harsh black)
+    '#FFEAA7',     // 2: Buttercup blonde / pastel golden fleece
+    '#FDCB6E',     // 3: Warm honey shadow
+    '#FF6B81',     // 4: Coral pink heart ribbon / headband
+    '#EE5253',     // 5: Rose ribbon shadow
+    '#FFF0E6',     // 6: Porcelain warm skin tone
+    '#FFB8B8',     // 7: Rosy cheek blush / peach midtone
+    '#D98880',     // 8: Warm berry shadow
+    '#FFFFFF',     // 9: Pure marshmallow cream shirt
+    '#E2D5F8',     // 10: Lavender cloud shade
+    '#55E6C1',     // 11: Pastel mint turquoise adventurer tunic
+    '#1B9CFC',     // 12: Sky blue tunic shadow
+    '#D980FA',     // 13: Lavender cream shorts
+    '#9980FA',     // 14: Berry plum shorts shadow
+    '#574B90',     // 15: Shiny chocolate button shoes
   ],
 
-  // Rebel Infantry Palette (General Morden's Regular Army)
+  // Bouncy Fluffy Foes / Pastel Marchers Palette
   REBEL: [
     'transparent', // 0: Transparent
-    '#181818',     // 1: Outline
-    '#606870',     // 2: Helmet grey
-    '#384048',     // 3: Helmet shadow
-    '#E0A070',     // 4: Skin tone
-    '#985830',     // 5: Skin shadow
-    '#587838',     // 6: Uniform green
-    '#385020',     // 7: Uniform green shadow
-    '#203010',     // 8: Uniform dark crease
-    '#808890',     // 9: Metal buckle / rifle barrel
-    '#485058',     // 10: Rifle receiver
-    '#603818',     // 11: Rifle wooden stock
-    '#C82818',     // 12: Rebel armband red
-    '#D8C890',     // 13: Ammo belt brass
-    '#302820',     // 14: Combat boots
-    '#E8F0F8',     // 15: Eye white / teeth
+    '#2C2D5B',     // 1: Soft midnight plum outline
+    '#74B9FF',     // 2: Sky blue fluffy cap / macaron shell
+    '#0984E3',     // 3: Cap shadow
+    '#FFF5EB',     // 4: Creamy dough body
+    '#FDCB6E',     // 5: Warm dough shadow
+    '#A8E6CF',     // 6: Pastel mint jelly uniform
+    '#55E6C1',     // 7: Mint shadow
+    '#25CCF7',     // 8: Crease accent
+    '#D6A2E8',     // 9: Pastel lilac trim
+    '#82589F',     // 10: Lilac shadow
+    '#FD7272',     // 11: Heart emblem pink
+    '#FF9FF3',     // 12: Cotton candy pink cheeks
+    '#F8EFBA',     // 13: Butter cookie buckle
+    '#6D214F',     // 14: Petite gumdrop shoes
+    '#FFFFFF',     // 15: Big sparkling eye catchlights
   ],
 
-  // Hostage POW (Prisoner of War) Palette
+  // Adorable Forest Pals / Trapped Bunny Palette
   POW: [
     'transparent', // 0: Transparent
-    '#201818',     // 1: Outline
-    '#F8E060',     // 2: Long beard/hair bright
-    '#C8A820',     // 3: Beard shadow
-    '#F0B070',     // 4: Skin tone
-    '#B06838',     // 5: Skin sunburn
-    '#3868B8',     // 6: Blue ragged shorts
-    '#183878',     // 7: Shorts shadow
-    '#D0A870',     // 8: Rope binding
-    '#906838',     // 9: Rope shadow
-    '#FFFFFF',     // 10: Sparkle / teeth
-    '#805020',     // 11: Dirty bandage
-    '#E84020',     // 12: Gift box red
-    '#F8C830',     // 13: Gift box ribbon gold
-    '#40A030',     // 14: Saluting arm sleeve
-    '#202020',     // 15: Deep crease
+    '#3B2219',     // 1: Warm chocolate outline
+    '#FFFDF0',     // 2: Fluffy white bunny fur
+    '#E8DFD8',     // 3: Soft fur shadow
+    '#FFE0E6',     // 4: Sweet pink inner ears & paw pads
+    '#FF9AA2',     // 5: Rosy blushing cheeks
+    '#B5EAD7',     // 6: Pastel mint shorts / bow tie
+    '#70A1FF',     // 7: Sky blue satin ribbon binding
+    '#FFB7B2',     // 8: Strawberry gift crate
+    '#FFDAC1',     // 9: Peach ribbon trim
+    '#FFFFFF',     // 10: Sparkling anime eye twinkle
+    '#FF69B4',     // 11: Pink heart nose
+    '#FF4757',     // 12: Strawberry fruit gift
+    '#FED330',     // 13: Golden star sparkle
+    '#2ED573',     // 14: Cheerful green leaf sprig
+    '#2F3542',     // 15: Soft eye pupil
   ],
 
-  // Fire, Flame Shot & Explosions Palette
+  // Magic Stardust, Sweet Cotton Candy & Sugar Sparks
   FIRE: [
     'transparent', // 0: Transparent
-    '#FFFFFF',     // 1: Pure white core
-    '#FFF060',     // 2: Intense yellow
-    '#FFA010',     // 3: Bright orange
-    '#E84800',     // 4: Fiery red
-    '#981800',     // 5: Dark crimson
-    '#581808',     // 6: Charred ember
-    '#787878',     // 7: Light smoke
-    '#484848',     // 8: Medium smoke
-    '#181818',     // 9: Heavy dark smoke
-    '#FF7700',     // 10: Flame stream accent
-    '#FF3300',     // 11: Flame edge
-    '#FFE080',     // 12: Spark yellow
-    '#303030',     // 13: Charcoal ash
-    '#903000',     // 14: Secondary ember
-    '#000000',     // 15: Black soot
+    '#FFFFFF',     // 1: Blinding white starburst core
+    '#FFF3B0',     // 2: Pastel lemon sugar glow
+    '#FFD3B6',     // 3: Peach confection midtone
+    '#FFAAA6',     // 4: Strawberry pink flare
+    '#FF8B94',     // 5: Cotton candy magenta
+    '#D4A5A5',     // 6: Dreamy lavender ember
+    '#F0E6F6',     // 7: Soft pastel cloud puff
+    '#D7C8E8',     // 8: Lavender mist
+    '#B8A7D9',     // 9: Twilight lilac dust
+    '#A8E6CF',     // 10: Rainbow sparkle cyan
+    '#FF85A2',     // 11: Bubblegum pop pink
+    '#FFE494',     // 12: Shimmering gold stardust
+    '#C7ECEE',     // 13: Soft candy sugar crystal
+    '#E056FD',     // 14: Radiant magic violet
+    '#686DE0',     // 15: Twilight starlight
   ],
 
-  // Iron Technical / Rebel Vehicle Palette
+  // Whimsical Confectionery Wagon (Mid-Boss)
   VEHICLE: [
     'transparent', // 0: Transparent
-    '#161914',     // 1: Heavy armor outline
-    '#4E5B31',     // 2: Olive chassis base
-    '#6C7E44',     // 3: Chassis highlight
-    '#2D361B',     // 4: Chassis deep shade
-    '#1F1F1F',     // 5: Rubber tread dark
-    '#424242',     // 6: Tread metal link
-    '#6E727A',     // 7: Wheel rim / steel plate
-    '#9AA0AB',     // 8: Rivet bright metal
-    '#55633A',     // 9: Turret armor
-    '#111111',     // 10: Autocannon bore / barrel shadow
-    '#3D2614',     // 11: Rust / oil grease
-    '#C42010',     // 12: Rebel insignias / alert lamp
-    '#E67E22',     // 13: Exhaust backfire flame
-    '#D4AC0D',     // 14: Warning stripes
-    '#0A0A0A',     // 15: Deepest crevice
+    '#2C1A1D',     // 1: Dark chocolate outline
+    '#FFCAD4',     // 2: Strawberry macaron chassis
+    '#FFE5EC',     // 3: Sweet cream highlight
+    '#F4ACB7',     // 4: Strawberry shadow
+    '#4A3728',     // 5: Chocolate wafer tread dark
+    '#7D5A38',     // 6: Chocolate cookie tread link
+    '#9D8189',     // 7: Frosted wheel rim
+    '#FFF0F5',     // 8: Sugar icing bead
+    '#D8E2DC',     // 9: Mint cream turret
+    '#FF6B6B',     // 10: Cherry red cannon nozzle
+    '#FFE66D',     // 11: Butter cookie trim
+    '#48DBFB',     // 12: Bubblegum siren lamp
+    '#FF9FF3',     // 13: Sparkling puff exhaust
+    '#54A0FF',     // 14: Pastel cyan candy stripes
+    '#1E1215',     // 15: Deep chocolate crevice
   ],
 
-  // Stage 1 End-Boss: Tetsuyuki War Fortress Palette
+  // Grand Sugar Citadel (Stage 1 End-Boss)
   FORTRESS: [
     'transparent', // 0: Transparent
-    '#151820',     // 1: Steel outline
-    '#5A6577',     // 2: Camouflage steel hull
-    '#7E8B9E',     // 3: Armor highlight
-    '#343B47',     // 4: Armor shadow
-    '#1D222A',     // 5: Recessed seam
-    '#F5B82A',     // 6: Warning hazard yellow
-    '#2B2B28',     // 7: Hazard dark stripe
-    '#40E0D0',     // 8: Reactor core cyan glow
-    '#E0FFFF',     // 9: Reactor core white-hot peak
-    '#FF2222',     // 10: Heavy laser thermal red
-    '#FFFFFF',     // 11: Laser white core
-    '#54321A',     // 12: Battle damage rust
-    '#8B0000',     // 13: Emergency overheating vent
-    '#B87333',     // 14: Exposed hydraulic copper pipes
-    '#0B0E14',     // 15: Deep void
+    '#251A2E',     // 1: Sugar plum outline
+    '#DDA0DD',     // 2: Pastel plum citadel hull
+    '#F8E8F8',     // 3: Vanilla frosting highlight
+    '#BA68C8',     // 4: Plum battlements shadow
+    '#6A1B9A',     // 5: Recessed seam
+    '#FFD54F',     // 6: Honey waffle trim
+    '#FF8A80',     // 7: Strawberry swirl stripes
+    '#4DD0E1',     // 8: Glowing heart crystal cyan
+    '#E0F7FA',     // 9: Heart crystal diamond peak
+    '#FF4081',     // 10: Magic rainbow laser aura
+    '#FFFFFF',     // 11: Pure white starbeam core
+    '#CE93D8',     // 12: Lilac cake layer
+    '#FF1744',     // 13: Overheating sweet strawberry syrup
+    '#FFB74D',     // 14: Sugar candy cane piping
+    '#1A0028',     // 15: Deep royal violet shadow
   ],
 
-  // Retro Arcade HUD Palette
+  // Sweet Storybook HUD
   HUD: [
     'transparent', // 0: Transparent
-    '#101010',     // 1: Border & drop shadow
-    '#FFD700',     // 2: Badge gold border
-    '#8B6508',     // 3: Badge dark gold shade
-    '#3A7BD5',     // 4: HMG blue badge fill
-    '#E53935',     // 5: Flame Shot red badge fill
-    '#FFFFFF',     // 6: Font white text
-    '#F1C40F',     // 7: Score digit primary gold
-    '#B7950B',     // 8: Score digit bevel shade
-    '#4CAF50',     // 9: Grenade olive green badge fill
-    '#2E7D32',     // 10: Grenade dark green shade
-    '#E74C3C',     // 11: Boss HP red
-    '#C0392B',     // 12: Boss HP dark red
-    '#2ECC71',     // 13: Player health green
-    '#F39C12',     // 14: Ammo warning orange
-    '#000000',     // 15: HUD frame solid black
+    '#3D2631',     // 1: Soft berry outline
+    '#FFD700',     // 2: Shiny gold star border
+    '#F39C12',     // 3: Warm honey shadow
+    '#48DBFB',     // 4: Bubblegum cyan HMG badge
+    '#FF6B81',     // 5: Strawberry pink Flame badge
+    '#FFFFFF',     // 6: Crisp milk white text
+    '#FFEAA7',     // 7: Bubbly honey-gold score digit
+    '#FDCB6E',     // 8: Honey digit shadow
+    '#2ED573',     // 9: Sweet mint green badge
+    '#10AC84',     // 10: Mint shadow
+    '#FF4757',     // 11: Sweet boss HP strawberry red
+    '#C0392B',     // 12: Berry syrup shade
+    '#2ED573',     // 13: Hero heart green
+    '#FFA502',     // 14: Orange bonbon warning
+    '#2F3542',     // 15: Frame soft charcoal
   ],
 
-  // Desert Beach & War Ruins Terrain Palette
+  // Enchanted Fairytale Meadow & Sweets Terrain
   TERRAIN: [
     'transparent', // 0: Transparent
-    '#1A1612',     // 1: Ground outline
-    '#C29B62',     // 2: Desert beach sand light
-    '#99733E',     // 3: Sand shadow
-    '#584028',     // 4: Wet mud / trench earth
-    '#383838',     // 5: Cracked concrete / asphalt
-    '#687078',     // 6: Steel scaffold beam
-    '#42484F',     // 7: Steel beam shadow
-    '#7D5836',     // 8: Wooden dock planks
-    '#4E331A',     // 9: Wood grain dark
-    '#304020',     // 10: Palm leaf dark green
-    '#556B2F',     // 11: Palm leaf olive
-    '#8B8070',     // 12: Sandbag fabric
-    '#5A5244',     // 13: Sandbag shadow
-    '#2B4C6F',     // 14: Shoreline seawater reflection
-    '#0E141C',     // 15: Ocean depth
+    '#2D1F1D',     // 1: Warm earth outline
+    '#FFF1E6',     // 2: Frosted cream ground surface
+    '#FDE2E4',     // 3: Strawberry shortcake sand
+    '#E2ECE9',     // 4: Pastel mint sponge strata
+    '#DFCCF1',     // 5: Lavender biscuit rock base
+    '#FFCAD4',     // 6: Candy cane stilt pink
+    '#FFFFFF',     // 7: Candy cane stilt white stripe
+    '#DDA15E',     // 8: Crisp waffle deck planks
+    '#BC6C25',     // 9: Waffle grid shadow
+    '#7BDCB5',     // 10: Velvet mint grass crest
+    '#55E6C1',     // 11: Lush meadow flower stalk
+    '#F8EDEB',     // 12: Marshmallow cushion white
+    '#FCD5CE',     // 13: Marshmallow pink puff
+    '#48CAE4',     // 14: Sparkling azure soda sea
+    '#0096C7',     // 15: Deep crystal ocean
   ],
 } as const;

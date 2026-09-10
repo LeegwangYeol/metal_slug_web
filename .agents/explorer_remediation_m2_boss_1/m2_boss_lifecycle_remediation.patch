@@ -1,0 +1,56 @@
+diff --git a/src/core/cute/CuteArenaCoordinator.ts b/src/core/cute/CuteArenaCoordinator.ts
+--- a/src/core/cute/CuteArenaCoordinator.ts
++++ b/src/core/cute/CuteArenaCoordinator.ts
+@@ -326,6 +326,13 @@ export class CuteArenaCoordinator {
+         const dx = e.x - b.x;
+         const dy = e.y - b.y;
+         if (dx * dx + dy * dy <= (b.radius + 12) * (b.radius + 12)) {
++          if (e.type === 'GUMMY_COLOSSUS') {
++            // Boss resists direct bubble encasement: take damage and pop projectile instead
++            this.enemyManager.damageEnemy(e.id, 1, this.bubbleManager);
++            this.bubbleManager.popBubble(b.id);
++            break;
++          }
++
+           // Trap enemy inside bubble!
+           b.trapEnemy({
+             id: e.id,
+diff --git a/src/core/cute/CuteEnemyManager.ts b/src/core/cute/CuteEnemyManager.ts
+--- a/src/core/cute/CuteEnemyManager.ts
++++ b/src/core/cute/CuteEnemyManager.ts
+@@ -213,11 +213,11 @@ export class CuteEnemyManager {
+         enemy.isAlive = false;
+         this.splitColossusIntoMiniCubs(enemy.x, enemy.y);
+       } else {
+-        enemy.isAlive = false;
+         if (bubbleManager && !enemy.isBubbled) {
+           // Trap or burst into bubble on defeat
+           this.trapEnemyInBubble(enemy.id, bubbleManager);
+         }
++        enemy.isAlive = false;
+       }
+ 
+       if (this.onEnemyDefeated) {
+@@ -225,7 +225,7 @@ export class CuteEnemyManager {
+       }
+ 
+       // Check if all cubs and boss are defeated
+-      if (this.isBossActive && !this.enemies.some((e) => e.type === 'GUMMY_COLOSSUS' || e.type === 'GUMMY_CUB')) {
++      if (this.isBossActive && !this.enemies.some((e) => e.isAlive && (e.type === 'GUMMY_COLOSSUS' || e.type === 'GUMMY_CUB'))) {
+         this.isBossActive = false;
+         this.bossDefeated = true;
+         if (this.onBossDefeated) {
+@@ -279,6 +279,13 @@ export class CuteEnemyManager {
+           // Bubble popped! Enemy is defeated
+           e.isAlive = false;
+           this.enemies.splice(i, 1);
++          if (this.isBossActive && !this.enemies.some((enemy) => enemy.isAlive && (enemy.type === 'GUMMY_COLOSSUS' || enemy.type === 'GUMMY_CUB'))) {
++            this.isBossActive = false;
++            this.bossDefeated = true;
++            if (this.onBossDefeated) {
++              this.onBossDefeated();
++            }
++          }
+           continue;
+         }
+       }

@@ -1,67 +1,70 @@
-# BRIEFING — 2026-09-08T04:52:45Z
+# BRIEFING — 2026-09-10T01:54:55Z
 
 ## Mission
-Review Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX) focusing on invariant preservation, presentation, headless audio safety, and adversarial robustness.
+Objective review of Milestone 3 UI, HUD, and Tutorial overlay in metal_slug_web (HUDOverlay, KeyboardController, main.ts, tests, aesthetic directives).
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_reviewer
+- Archetype: reviewer
 - Roles: reviewer, critic
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_2
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M3 (Ultimate Move System & Procedural Sprites / Cinematic FX)
-- Instance: Reviewer M3
+- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Milestone: Milestone 3
+- Instance: 2 of 2 (reviewer_m3_2)
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Actively check for integrity violations: hardcoded test results, facade implementations, bypassed tasks, fabricated logs
-- Strictly verify ProceduralSpriteFactory: default `getAllKeys()` returns exactly 164 keys
-- Verify CanvasRenderer cinematic FX passes (screen flash, bomber, shockwaves, camera shake) are non-breaking
-- Verify SoundEngine Web Audio procedural synthesis methods are safe in headless environments
-- If any integrity violation is detected, verdict MUST be REQUEST_CHANGES with Critical finding tagged as INTEGRITY VIOLATION
+- Review production code only in /Users/user/teamwork_projects/metal_slug_web
+- Check integrity violations (no dummy facades, no hardcoded cheating, no bypassed logic)
+- Verify aesthetic directive compliance ("cute, charming, appealing" / "아기자기한 느낌")
+- Provide explicit verdict (APPROVE or REQUEST_CHANGES) in handoff.md
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T04:42:06Z
+- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Updated: 2026-09-10T01:53:08Z
 
 ## Review Scope
 - **Files to review**:
-  - src/render/sprites/ProceduralSpriteFactory.ts
-  - src/render/CanvasRenderer.ts
-  - src/audio/SoundEngine.ts
-  - src/core/player/UltimateManager.ts
-  - tests/unit/adversarial_sprites_crosshairs.test.ts
-  - tests/unit/adversarial_controls_jump.test.ts
-  - .agents/worker_m3_1/handoff.md
-- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md
-- **Review criteria**: Correctness, integrity, regression avoidance, headless audio safety, sprite key count invariance (164), build & test pass
+  - `src/ui/HUDOverlay.ts`
+  - `src/input/KeyboardController.ts`
+  - `src/main.ts`
+  - `src/core/player/PlayerController.ts`
+  - `tests/unit/death_respawn_ui.test.ts`
+- **Interface contracts**:
+  - `PROJECT.md`
+  - `COLLABORATION.md`
+  - `ORIGINAL_REQUEST.md`
+- **Review criteria**:
+  - Correctness and adherence to specs (Tutorial placard with auto-dismiss + manual toggle H, Continue screen 9..0 + distressed chibi Marco, metallic arcade top framing + cute mini Marco lives counter + sizzling grenade spark + Ultimate stock pulsating glow)
+  - Aesthetic directive ("cute, charming, appealing" / "아기자기한 느낌")
+  - Integrity & genuine implementation
+  - Full build & test passes (`tsc`, `npm run build`, `vitest`, `playwright`)
 
 ## Review Checklist
 - **Items reviewed**:
-  - `ProceduralSpriteFactory.ts`: default `getAllKeys()` confirmed strictly 164 keys (breakdown verified: player 67, rebel 21, pow 9, ironTechnical 7, tetsuyuki 8, projectile 13, casings 4, explosions 18, hud 17)
-  - `CanvasRenderer.ts`: cinematic FX passes verified non-breaking with safe context save/restore and null fallbacks
-  - `SoundEngine.ts`: headless Web Audio API safety verified with canPlaySFX guards
-  - `UltimateManager.ts`: 4-phase cinematic pipeline, stock logic, viewport culling, zero friendly fire verified
-  - `KeyboardController.ts`: KeyU mapping and KeyX jump preservation verified
-  - Build & tests: `npm run build` and specified vitest suites verified green
+  - `src/ui/HUDOverlay.ts`: tutorial placard, continue screen, metallic header, mini Marco, fuse spark, ultimate gauge
+  - `src/input/KeyboardController.ts`: KeyH/h/? mapping, edge-triggering, snapshot propagation
+  - `src/main.ts`: 5s auto-dismiss timer, 1s linear fade, toggleTutorial with pin-open UX, render state compilation
+  - `tests/unit/death_respawn_ui.test.ts`: 19 unit tests passing cleanly
 - **Verdict**: APPROVE
-- **Unverified claims**: None
+- **Unverified claims**: None. All claims verified via compilation, unit tests, and Playwright E2E suites.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Sprite count baseline drift across 1,000 invocations: PASS (0 drift, exactly 164 keys)
-  - KeyX jump collision with KeyU ultimate: PASS (KeyX strictly executes jump, KeyU executes ultimate)
-  - Web Audio synthesis execution in headless environment: PASS (gracefully no-ops without throwing)
-  - Detonation friendly fire on player, allies, and tied POWs: PASS (100% immune)
-  - Spatial culling of off-screen minions outside [cameraX, 0, 480, 270]: PASS (100% preserved)
-  - Iron Nokana 120 HP burst damage and phase gating: PASS (clamped to 300 HP and transitions to Phase 2)
-- **Vulnerabilities found**: None in implementation
-- **Untested angles**: Full Playwright E2E browser rendering (scheduled for M4)
+  - Canvas resolution scaling fallback: verified default bounds handling (960x540).
+  - Simultaneous Fire & Jump continue trigger: verified single idempotent reset.
+  - Damage during continue countdown: verified damage immunity during continue.
+  - Manual help toggle pinning: verified 999999 pin prevents premature auto-dismissal.
+  - Pixel font missing character fallback: verified fallback to space character.
+- **Vulnerabilities found**: None. Robust edge-case handling throughout.
+- **Untested angles**: Virtual touch controls on mobile do not have a dedicated help toggle button (though tap-to-continue works). Acceptable per project scope.
 
 ## Key Decisions Made
-- Confirmed that Worker M3 satisfies all acceptance criteria for M3.
+- Confirmed zero integrity violations: math-based procedural rendering, real physics and input latches, 100% test integrity.
+- Verified aesthetic directives: cute blushing Marco, fluttering ribbon, comic distressed Marco with dizzy stars, sizzling spark.
 - Issued APPROVE verdict.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_2/handoff.md — Final review report
-- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_2/progress.md — Heartbeat progress
-- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_2/BRIEFING.md — Situational awareness
+- `.agents/reviewer_m3_2/DISPATCH.md` — Inbound task dispatch
+- `.agents/reviewer_m3_2/BRIEFING.md` — Situational awareness
+- `.agents/reviewer_m3_2/progress.md` — Liveness and task completion tracking
+- `.agents/reviewer_m3_2/handoff.md` — 5-component handoff review report

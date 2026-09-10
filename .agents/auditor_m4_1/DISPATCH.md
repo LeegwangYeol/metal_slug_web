@@ -1,26 +1,25 @@
-## 2026-09-08T05:47:00Z
+## 2026-09-10T02:09:47Z
 
-You are a Forensic Auditor subagent (teamwork_preview_auditor) for Milestone M4 (Playwright E2E Integration & Visual Proof Screenshots).
+You are auditor_m4_1.
 Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m4_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Worker M4 Handoff: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_1/handoff.md
+MANDATORY READING:
+1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4_e2e_artifacts/handoff.md
 
-AUDIT FOCUS:
-Perform thorough forensic integrity checks on all Milestone M4 code and artifacts:
-1. Run `git diff` and examine modifications in `src/main.ts`, `tests/e2e/ultimate_and_crisis_expansion.spec.ts`, and screenshot files.
-2. Verify ZERO hardcoded cheats, mock bypasses, fake screenshot generation scripts, or circumvented assertions.
-3. Verify that the Playwright tests genuinely execute against the headless browser canvas, and that screenshots in `artifacts/expansion/` are captured directly by Playwright from `#game-canvas`.
-4. Run verification commands:
-   - `npm run build`
-   - `npx vitest run`
-   - `npx playwright test`
-5. Output a binary audit verdict: CLEAN or INTEGRITY VIOLATION.
-6. Write your report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m4_1/handoff.md`
-   and call `send_message` to parent.
+TASK:
+Perform a forensic integrity audit on Milestone 4 deliverables:
+- Verify authenticity of screenshot artifacts:
+  - Check file modification timestamps on `artifacts/ui_overhaul/screen_terrain.png`, `artifacts/ui_overhaul/respawn_tutorial.png`, and `artifacts/ui_overhaul/continue_countdown.png`.
+  - Confirm they were dynamically captured by Playwright during test execution, NOT copied from old static assets.
+  - Verify that the game running in Playwright is the genuine game with real procedural rendering, physics, and HUD.
+- Audit git diff for `tests/e2e/ui_overhaul_artifacts.spec.ts` ensuring NO mocked canvas drawing or artificial bypasses.
+- Run independent verification:
+  - `npx tsc --noEmit`
+  - `npm run build`
+  - `npm test` (`npx vitest run`)
+  - `npx playwright test`
+- Deliver an explicit verdict in handoff.md: CLEAN or INTEGRITY VIOLATION. Notify parent when done.

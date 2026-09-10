@@ -1,59 +1,71 @@
-# BRIEFING — 2026-09-08T04:51:30Z
+# BRIEFING — 2026-09-10T01:55:00Z
 
 ## Mission
-Review and adversarial stress-test Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX).
+Perform an objective and adversarial code review of Milestone 3 death knockback arc, tactical parachute respawn, and continue countdown mechanics.
 
 ## 🔒 My Identity
 - Archetype: reviewer_critic
 - Roles: reviewer, critic
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M3
+- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Milestone: Milestone 3
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Check for integrity violations (hardcoded test results, facade implementations, shortcut bypasses, fabricated verification outputs)
-- Issue clear verdict: APPROVE or REQUEST_CHANGES
+- Check for integrity violations (hardcoded test results, facade implementations, bypassed work, fabricated verification)
+- Evidence-based findings with concrete file:line locations
+- Deliver explicit verdict APPROVE or REQUEST_CHANGES in handoff.md
+- Communicate to parent dc4b76ec-2c8d-41af-8152-fb6d5ed83654 via send_message
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T04:51:30Z
+- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Updated: 2026-09-10T01:53:08Z
 
 ## Review Scope
-- **Files to review**: src/core/player/UltimateManager.ts, src/core/player/PlayerController.ts, src/input/KeyboardController.ts, tests/unit/ultimate_move_system.test.ts, src/render/sprites/ProceduralSpriteFactory.ts, src/render/CanvasRenderer.ts, src/audio/SoundEngine.ts, src/main.ts
-- **Interface contracts**: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md, COLLABORATION.md, ORIGINAL_REQUEST.md
-- **Review criteria**: correctness, 4-phase cinematic pipeline timing, damage mechanics, key bindings, typecheck, test coverage, edge cases, integration completeness
+- **Files to review**:
+  - `src/core/player/PlayerController.ts`
+  - `src/core/player/PlayerKinematics.ts`
+  - `src/core/player/PlayerTypes.ts`
+  - `src/render/CanvasRenderer.ts`
+  - `src/ui/HUDOverlay.ts`
+  - `src/input/KeyboardController.ts`
+  - `src/main.ts`
+  - `tests/unit/death_respawn_ui.test.ts`
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md
+- **Review criteria**: Correctness, completeness, quality, adversarial robustness, zero integrity violations
 
 ## Review Checklist
 - **Items reviewed**:
-  - `src/core/player/UltimateManager.ts`: verified 4-phase state machine (0.5s -> 0.6s -> 0.4s -> 0.3s), 100% minion elimination, 120 boss damage, safe entities, projectile culling.
-  - `src/core/player/PlayerController.ts`: verified `ultimateManager` instance, `triggerUltimateMove()`, input handling on `input.ultimatePressed`, and update integration.
-  - `src/input/KeyboardController.ts`: verified `KeyU` / `'u'` mapped to `ultimate`, edge-triggered `ultimatePressed` in snapshot, `KeyX` untouched for `jump`.
-  - `src/render/sprites/ProceduralSpriteFactory.ts`: verified 164 baseline keys invariant (`getAllKeys()` returns 164), expansion sprites isolated in `expansionKeys`.
-  - `src/render/CanvasRenderer.ts`: verified `renderCinematicFXPass()` implementation.
-  - `src/audio/SoundEngine.ts`: verified `playUltimateSiren()`, `playFlyoverRoar()`, `playApocalypticBlast()` procedural audio methods with headless guards.
-  - `src/main.ts`: checked live game integration — identified 3 major gaps (`input.ultimatePressed` omitted, `cinematicFX` omitted in scene, audio events unmapped).
-  - `tests/unit/ultimate_move_system.test.ts`: verified all 28 unit tests pass.
-- **Verdict**: REQUEST_CHANGES
-- **Unverified claims**: all verified; defects identified in live game integration and entitiesToAdd query.
+  - `PlayerController.ts` death impulse, gravity, ground sprawl friction, parachute respawn, continue countdown, input gating
+  - `PlayerKinematics.ts` state enum (`DYING`, `RESPAWNING_PARACHUTE`, `CONTINUE_COUNTDOWN`), snapshot interface
+  - `PlayerTypes.ts` isolatedModules-compliant re-exports
+  - `CanvasRenderer.ts` parachute cords & canopy rendering, invulnerability flashing, `player_death_0..3` frame selection
+  - `HUDOverlay.ts` metallic framing, cute Marco portrait, continue countdown screen, tutorial placard, ultimate meter
+  - `KeyboardController.ts` KeyH mapping, helpJustPressed edge latch
+  - `main.ts` tutorial auto-dismiss and toggle, player animFrame calculation, HUD state compilation
+  - `tests/unit/death_respawn_ui.test.ts` 19 unit tests
+- **Verdict**: APPROVE
+- **Unverified claims**: None. All claims independently verified via test and build executions.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  1. Does `KeyU` trigger the move while keeping `KeyX` jump intact? -> Passed in isolation; but broken in `src/main.ts:257`.
-  2. Does `UltimateManager.executeDetonation` handle entities added in current frame before `engine.tick()`? -> Fails; ignores `engine.entitiesToAdd`.
-  3. Does `main.ts` pass `cinematicFX` to `CanvasRenderer`? -> Fails; completely omitted.
-  4. Does `ProceduralSpriteFactory.getAllKeys()` preserve 164 keys? -> Passed (164 baseline keys intact).
-  5. Can an ultimate move be double-triggered or triggered with 0 stock? -> Passed (correctly blocked).
-- **Vulnerabilities found**:
-  1. [Major] `src/main.ts:247-257` drops `ultimatePressed: kbSnap.ultimatePressed`. KeyU does nothing in live game.
-  2. [Major] `UltimateManager.ts:218` only queries `engine.getAllEntities()`, omitting `(engine as any).entitiesToAdd`.
-  3. [Major] `src/main.ts:469-482` omits `cinematicFX` in `buildRenderSceneState()`, so FX is never rendered in live game.
-  4. [Minor] `src/main.ts:526` does not map ultimate sound events to sound engine.
-- **Untested angles**: Playwright browser execution (deferred to M4).
+  - Input locking during DYING state -> Verified: player inputs are ignored during death arc.
+  - Parachute steering and mid-air firing -> Verified: lateral speed ±40, aim and fire active.
+  - Platform vs ground landing during parachute descent -> Verified: `PlatformPhysics.resolveGroundContact` snaps player to platform top or ground Y=230.
+  - Zero-life continue countdown transition -> Verified: upon death with 0 lives, transitions to 10s countdown.
+  - Continue re-entry -> Verified: Fire or Jump resets lives to 3 and triggers parachute drop.
+  - Continue timer expiry -> Verified: cleanly transitions to DEAD and Game Over state.
+  - Zero integrity violations -> Verified: no dummy mocks, facades, or test-specific shortcuts.
+- **Vulnerabilities found**: None. Mechanics are robust and correctly bound.
+- **Untested angles**: None.
 
 ## Key Decisions Made
-- Issued REQUEST_CHANGES to ensure `src/main.ts` integration gaps and `entitiesToAdd` synchronization are resolved before M4 E2E verification.
+- Confirmed full compliance with M3 requirements and user directives for charming retro aesthetics and smooth death/respawn loop.
+- Issued verdict: APPROVE.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1/handoff.md — Final review and challenge report
+- DISPATCH.md — incoming dispatch instructions
+- BRIEFING.md — situational awareness and tracking
+- progress.md — liveness heartbeat
+- handoff.md — final review report with verdict

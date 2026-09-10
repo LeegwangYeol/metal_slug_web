@@ -396,7 +396,7 @@ describe('ADVERSARIAL SUITE 3: Rapid Repeated Jump Presses & Bouncing On Ground 
 
 describe('ADVERSARIAL SUITE 4: Simultaneous Multimodal Combat Actions Stress', () => {
   it('4.1: Simultaneous Jump + Fire on exact same tick', () => {
-    const game = new FullMetalSlugGame();
+    const game = new FullMetalSlugGame(undefined, { gameMode: 'classic' });
     const initEntityCount = game.engine.getAllEntities().length;
 
     // Dispatch Jump + Fire simultaneously
@@ -420,7 +420,7 @@ describe('ADVERSARIAL SUITE 4: Simultaneous Multimodal Combat Actions Stress', (
   });
 
   it('4.2: Simultaneous Jump + Grenade on exact same tick', () => {
-    const game = new FullMetalSlugGame();
+    const game = new FullMetalSlugGame(undefined, { gameMode: 'classic' });
     const initGrenades = game.player.weaponManager.getGrenadeCount(); // 10
 
     // Dispatch Jump + Grenade simultaneously
@@ -442,7 +442,7 @@ describe('ADVERSARIAL SUITE 4: Simultaneous Multimodal Combat Actions Stress', (
   });
 
   it('4.3: Simultaneous Jump + Aim UP + Shoot', () => {
-    const game = new FullMetalSlugGame();
+    const game = new FullMetalSlugGame(undefined, { gameMode: 'classic' });
 
     game.keyboard['handleKeyDown']({ code: 'Space', key: ' ', preventDefault: () => {} } as any);
     game.keyboard['handleKeyDown']({ code: 'KeyW', key: 'w', preventDefault: () => {} } as any);
@@ -461,7 +461,7 @@ describe('ADVERSARIAL SUITE 4: Simultaneous Multimodal Combat Actions Stress', (
   });
 
   it('4.4: Simultaneous Jump + Aim UP-FORWARD Diagonal + Shoot', () => {
-    const game = new FullMetalSlugGame();
+    const game = new FullMetalSlugGame(undefined, { gameMode: 'classic' });
 
     game.keyboard['handleKeyDown']({ code: 'Space', key: ' ', preventDefault: () => {} } as any);
     game.keyboard['handleKeyDown']({ code: 'KeyW', key: 'w', preventDefault: () => {} } as any);
@@ -482,7 +482,7 @@ describe('ADVERSARIAL SUITE 4: Simultaneous Multimodal Combat Actions Stress', (
   });
 
   it('4.5: Mid-Air Downward Aiming & Shooting (Airborne Down + Shoot)', () => {
-    const game = new FullMetalSlugGame();
+    const game = new FullMetalSlugGame(undefined, { gameMode: 'classic' });
 
     // Step 1: Jump to become airborne
     game.keyboard['handleKeyDown']({ code: 'Space', key: ' ', preventDefault: () => {} } as any);
@@ -505,7 +505,7 @@ describe('ADVERSARIAL SUITE 4: Simultaneous Multimodal Combat Actions Stress', (
   });
 
   it('4.6: Mid-Air Downward Grenade Throw', () => {
-    const game = new FullMetalSlugGame();
+    const game = new FullMetalSlugGame(undefined, { gameMode: 'classic' });
 
     // Jump
     game.keyboard['handleKeyDown']({ code: 'Space', key: ' ', preventDefault: () => {} } as any);

@@ -504,7 +504,7 @@ export class ProceduralSpriteFactory {
     const AY = 40;
     const P = PALETTES.PLAYER;
 
-    // Helper: Draw authentic 16-color Marco Rossi
+    // Helper: Draw Chibi Hero / Sweet Adventurer (Anime catchlight eyes, rosy blush, toy blaster)
     const drawSoldier = (
       ctx: CanvasContext2DLike,
       opts: {
@@ -524,74 +524,109 @@ export class ProceduralSpriteFactory {
       const isCrouch = !!opts.crouch;
 
       // ----------------------------------------------------
-      // DEATH ANIMATIONS (Authentic Arcade Knockdown & Defeat)
+      // DEFEAT ANIMATIONS (Cute & Comical Cloud Defeat)
       // ----------------------------------------------------
       if (opts.death) {
         const d = opts.death;
         if (d === 1) {
-          // Flinch / Impact shock
-          drawContouredRect(ctx, 10, 14, 16, 24, P[1], P[13], P[6], P[14]);
-          // Flying head with grimace
-          drawContouredRect(ctx, 11, 8, 14, 10, P[1], P[7], P[6], P[8]);
-          // Red headband tearing loose
-          ctx.fillStyle = P[4]; ctx.fillRect(10, 10, 16, 3);
-          ctx.fillStyle = P[5]; ctx.fillRect(8, 11, 4, 3);
-          // Blonde hair ruffled
-          ctx.fillStyle = P[2]; ctx.fillRect(12, 5, 12, 5);
-          ctx.fillStyle = P[3]; ctx.fillRect(14, 4, 8, 3);
-          // Undershirt and torn vest
-          ctx.fillStyle = P[9]; ctx.fillRect(14, 18, 8, 8);
-          ctx.fillStyle = P[11]; ctx.fillRect(11, 18, 4, 10);
-          ctx.fillStyle = P[12]; ctx.fillRect(21, 18, 4, 10);
-          // Legs buckle
-          ctx.fillStyle = P[14]; ctx.fillRect(9, 28, 7, 8);
-          ctx.fillStyle = P[14]; ctx.fillRect(19, 28, 7, 8);
-          ctx.fillStyle = P[15]; ctx.fillRect(8, 35, 8, 5);
-          ctx.fillStyle = P[15]; ctx.fillRect(20, 35, 8, 5);
+          // 1: Comic flinch with spiral eyes and sweatdrop
+          drawContouredRect(ctx, 10, 14, 16, 22, P[1], P[13], P[11], P[14]);
+          // Round chibi head
+          drawContouredRect(ctx, 9, 6, 18, 14, P[1], P[6], P[7], P[8]);
+          // Buttercup blonde hair & ribbon
+          ctx.fillStyle = P[2]; ctx.fillRect(8, 3, 20, 6);
+          ctx.fillStyle = P[3]; ctx.fillRect(10, 2, 16, 3);
+          ctx.fillStyle = P[4]; ctx.fillRect(8, 8, 20, 3); // Heart ribbon
+          // Comic spiral eyes (@ @)
+          ctx.fillStyle = P[1];
+          ctx.fillRect(12, 10, 4, 1); ctx.fillRect(12, 12, 4, 1);
+          ctx.fillRect(12, 10, 1, 3); ctx.fillRect(15, 10, 1, 3);
+          ctx.fillRect(20, 10, 4, 1); ctx.fillRect(20, 12, 4, 1);
+          ctx.fillRect(20, 10, 1, 3); ctx.fillRect(23, 10, 1, 3);
+          // Rosy cheek blush
+          ctx.fillStyle = P[7];
+          ctx.fillRect(11, 14, 4, 2); ctx.fillRect(21, 14, 4, 2);
+          // Comic sweatdrop
+          ctx.fillStyle = '#48DBFB'; ctx.fillRect(26, 6, 3, 4);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(27, 7, 1, 2);
+          // Soft boots
+          ctx.fillStyle = P[15]; ctx.fillRect(8, 34, 8, 5); ctx.fillRect(20, 34, 8, 5);
         } else if (d === 2) {
-          // Airborne spiral tumble
+          // 2: Airborne spiral tumble with floating colorful star candies
           ctx.save();
           ctx.translate(18, 20);
           ctx.rotate(-0.35);
-          drawContouredRect(ctx, -14, -8, 28, 16, P[1], P[11], P[13], P[12]);
-          // Hair and detached headband flying behind
-          ctx.fillStyle = P[2]; ctx.fillRect(4, -12, 10, 8);
-          ctx.fillStyle = P[4]; ctx.fillRect(-16, -14, 10, 3); // Flying headband ribbon
-          ctx.fillStyle = P[5]; ctx.fillRect(-22, -13, 8, 2);
-          // Arms splayed
-          ctx.fillStyle = P[7]; ctx.fillRect(-12, -14, 5, 6);
-          ctx.fillStyle = P[7]; ctx.fillRect(8, -14, 5, 6);
-          // Boots trailing
-          ctx.fillStyle = P[15]; ctx.fillRect(-18, -4, 6, 8);
+          drawContouredRect(ctx, -14, -8, 28, 16, P[1], P[11], P[7], P[12]);
+          // Fluffy hair and ribbon flying
+          ctx.fillStyle = P[2]; ctx.fillRect(2, -14, 12, 8);
+          ctx.fillStyle = P[4]; ctx.fillRect(-16, -15, 10, 3);
+          ctx.fillStyle = P[5]; ctx.fillRect(-22, -14, 8, 2);
+          // Floating stars
+          ctx.fillStyle = '#FED330';
+          ctx.fillRect(-18, -20, 4, 4);
+          ctx.fillRect(18, -18, 4, 4);
+          ctx.fillStyle = '#FF9FF3';
+          ctx.fillRect(0, -22, 3, 3);
           ctx.restore();
         } else if (d === 3) {
-          // Falling downward impact
-          drawContouredRect(ctx, 6, 18, 24, 16, P[1], P[13], P[11], P[14]);
-          ctx.fillStyle = P[2]; ctx.fillRect(18, 16, 10, 6);
-          ctx.fillStyle = P[4]; ctx.fillRect(26, 12, 6, 4);
-          ctx.fillStyle = P[15]; ctx.fillRect(4, 26, 8, 6);
-          ctx.fillStyle = P[15]; ctx.fillRect(14, 28, 8, 6);
+          // 3: Landing softly on a fluffy marshmallow cloud cushion
+          // Fluffy cloud cushion
+          ctx.fillStyle = '#E2D5F8';
+          ctx.beginPath(); ctx.arc(18, 33, 15, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath();
+          ctx.arc(12, 32, 10, 0, Math.PI * 2);
+          ctx.arc(24, 32, 10, 0, Math.PI * 2);
+          ctx.arc(18, 28, 11, 0, Math.PI * 2);
+          ctx.fill();
+          // Chibi hero sitting
+          drawContouredRect(ctx, 10, 14, 16, 14, P[1], P[11], P[6], P[13]);
+          drawContouredRect(ctx, 11, 6, 14, 10, P[1], P[6], P[7], P[8]);
+          ctx.fillStyle = P[2]; ctx.fillRect(10, 4, 16, 4);
+          ctx.fillStyle = P[4]; ctx.fillRect(10, 7, 16, 2);
+          // Blushing cheeks
+          ctx.fillStyle = P[7]; ctx.fillRect(12, 12, 3, 2); ctx.fillRect(21, 12, 3, 2);
         } else {
-          // Lying flat on ground, defeated
-          // Torso & legs flat
-          drawContouredRect(ctx, 4, 32, 28, 8, P[1], P[13], P[11], P[14]);
-          // Blonde hair fallen
-          ctx.fillStyle = P[2]; ctx.fillRect(6, 30, 8, 5);
-          ctx.fillStyle = P[3]; ctx.fillRect(7, 29, 6, 3);
-          // Olive vest
-          ctx.fillStyle = P[11]; ctx.fillRect(14, 32, 10, 6);
-          ctx.fillStyle = P[9]; ctx.fillRect(16, 33, 5, 4);
-          // Combat boots fallen
-          ctx.fillStyle = P[15]; ctx.fillRect(26, 32, 7, 6);
-          // Dropped red headband on ground
-          ctx.fillStyle = P[4]; ctx.fillRect(0, 34, 6, 3);
-          ctx.fillStyle = P[5]; ctx.fillRect(1, 35, 4, 2);
+          // 4: Comical sheepish seated pose on a fluffy cloud with orbiting stars & angel wings
+          // Pillowy marshmallow cloud
+          ctx.fillStyle = '#E2D5F8';
+          ctx.beginPath(); ctx.arc(18, 35, 16, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath();
+          ctx.arc(9, 34, 9, 0, Math.PI * 2);
+          ctx.arc(27, 34, 9, 0, Math.PI * 2);
+          ctx.arc(18, 31, 12, 0, Math.PI * 2);
+          ctx.fill();
+          // Tiny cute angel wings
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(5, 20, 5, 4); ctx.fillRect(4, 18, 4, 3);
+          ctx.fillRect(26, 20, 5, 4); ctx.fillRect(28, 18, 4, 3);
+          // Chibi hero seated
+          drawContouredRect(ctx, 11, 16, 14, 12, P[1], P[13], P[9], P[14]);
+          // Head
+          drawContouredRect(ctx, 10, 7, 16, 12, P[1], P[6], P[7], P[8]);
+          // Fluffy hair & ribbon
+          ctx.fillStyle = P[2]; ctx.fillRect(9, 4, 18, 5);
+          ctx.fillStyle = P[4]; ctx.fillRect(9, 8, 18, 2);
+          // Happy closed curving eyes (^ ^)
+          ctx.fillStyle = P[1];
+          ctx.fillRect(13, 12, 3, 1); ctx.fillRect(12, 13, 1, 1); ctx.fillRect(16, 13, 1, 1);
+          ctx.fillRect(20, 12, 3, 1); ctx.fillRect(19, 13, 1, 1); ctx.fillRect(23, 13, 1, 1);
+          // Rosy blushing cheeks
+          ctx.fillStyle = P[7]; ctx.fillRect(12, 15, 3, 2); ctx.fillRect(21, 15, 3, 2);
+          // Little cute mouth
+          ctx.fillStyle = '#EE5253'; ctx.fillRect(17, 16, 2, 1);
+          // Orbiting cartoon stars overhead
+          ctx.fillStyle = '#FED330';
+          ctx.fillRect(9, 1, 3, 3);
+          ctx.fillRect(17, 0, 3, 3);
+          ctx.fillRect(25, 2, 3, 3);
         }
         return;
       }
 
       // ----------------------------------------------------
-      // 1. LEGS, TROUSERS, HOLSTER & COMBAT BOOTS
+      // 1. CHIBI LEGS & SHINY BUTTON SHOES
       // ----------------------------------------------------
       const legY = isCrouch ? 27 : 23 + bob;
       const legL = opts.legOffsetL ?? 0;
@@ -599,244 +634,216 @@ export class ProceduralSpriteFactory {
 
       if (isCrouch) {
         // Kneeling low crouch legs
-        drawContouredRect(ctx, 8 + legL, legY, 11, 7, P[1], P[13], P[13], P[14]);
-        drawContouredRect(ctx, 16 + legR, legY, 11, 7, P[1], P[13], P[13], P[14]);
-        // Boots flat on ground
-        drawContouredRect(ctx, 6 + legL, legY + 6, 10, 5, P[1], P[15], P[14], P[1]);
-        drawContouredRect(ctx, 18 + legR, legY + 6, 10, 5, P[1], P[15], P[14], P[1]);
+        drawContouredRect(ctx, 8 + legL, legY, 11, 7, P[1], P[13], P[10], P[14]);
+        drawContouredRect(ctx, 16 + legR, legY, 11, 7, P[1], P[13], P[10], P[14]);
+        // Cute button shoes
+        drawContouredRect(ctx, 6 + legL, legY + 6, 10, 5, P[1], P[15], '#9980FA', P[1]);
+        drawContouredRect(ctx, 18 + legR, legY + 6, 10, 5, P[1], P[15], '#9980FA', P[1]);
       } else {
         // Standing / Running legs
-        // Left Leg & Fabric Folds
-        drawContouredRect(ctx, 11 + legL, legY, 6, 11, P[1], P[13], P[13], P[14]);
-        drawFabricFolds(ctx, 12 + legL, legY + 4, 4, P[13], P[14], P[6]);
+        // Left Leg & Lavender Shorts
+        drawContouredRect(ctx, 11 + legL, legY, 6, 10, P[1], P[13], P[10], P[14]);
+        // Right Leg
+        drawContouredRect(ctx, 18 + legR, legY, 6, 10, P[1], P[13], P[10], P[14]);
 
-        // Right Leg & Thigh Holster
-        drawContouredRect(ctx, 18 + legR, legY, 6, 11, P[1], P[13], P[13], P[14]);
-        drawFabricFolds(ctx, 19 + legR, legY + 4, 4, P[13], P[14], P[6]);
+        // Shiny Chocolate Button Shoes
+        drawContouredRect(ctx, 10 + legL, legY + 10, 7, 6, P[1], P[15], '#9980FA', P[1]);
+        drawContouredRect(ctx, 18 + legR, legY + 10, 7, 6, P[1], P[15], '#9980FA', P[1]);
 
-        // Leather side holster on right thigh
-        ctx.fillStyle = P[15];
-        ctx.fillRect(22 + legR, legY + 2, 3, 5); // Holster body
-        ctx.fillStyle = P[1];
-        ctx.fillRect(21 + legR, legY + 3, 4, 1); // Retention strap
+        // Cute gold shoe buckles
         ctx.fillStyle = P[2];
-        ctx.fillRect(23 + legR, legY + 4, 1, 1); // Brass buckle
-
-        // Heavy Combat Boots (notched rubber soles & lacing)
-        drawContouredRect(ctx, 10 + legL, legY + 11, 7, 6, P[1], P[15], P[14], P[1]);
-        drawContouredRect(ctx, 18 + legR, legY + 11, 7, 6, P[1], P[15], P[14], P[1]);
-
-        // Boot sole treads (notches)
-        ctx.fillStyle = P[1];
-        ctx.fillRect(10 + legL, legY + 16, 7, 1);
-        ctx.fillRect(18 + legR, legY + 16, 7, 1);
-        ctx.fillStyle = P[14];
-        ctx.fillRect(12 + legL, legY + 12, 2, 2); // Laces
-        ctx.fillRect(20 + legR, legY + 12, 2, 2);
+        ctx.fillRect(12 + legL, legY + 11, 2, 2);
+        ctx.fillRect(20 + legR, legY + 11, 2, 2);
       }
 
       // ----------------------------------------------------
-      // 2. UTILITY BELT & AMMO CARTRIDGES
+      // 2. CANDY WAIST RIBBON & GOLDEN STAR BUCKLE
       // ----------------------------------------------------
       const beltY = isCrouch ? 24 : 21 + bob;
-      ctx.fillStyle = P[14];
+      ctx.fillStyle = P[4];
       ctx.fillRect(11, beltY, 14, 3);
-      ctx.fillStyle = P[1];
-      ctx.fillRect(11, beltY, 14, 1);
-      // Gold belt buckle
+      ctx.fillStyle = P[5];
+      ctx.fillRect(11, beltY + 2, 14, 1);
+      // Golden star buckle
       ctx.fillStyle = P[2];
-      ctx.fillRect(17, beltY, 3, 3);
-      ctx.fillStyle = P[3];
-      ctx.fillRect(18, beltY + 1, 1, 1);
-      // Brass ammo cartridges on belt
-      ctx.fillStyle = P[2];
-      ctx.fillRect(12, beltY + 1, 1, 2);
-      ctx.fillRect(14, beltY + 1, 1, 2);
-      ctx.fillRect(21, beltY + 1, 1, 2);
-      ctx.fillRect(23, beltY + 1, 1, 2);
+      ctx.fillRect(16, beltY, 4, 3);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(17, beltY + 1, 2, 1);
 
       // ----------------------------------------------------
-      // 3. TORSO (WHITE UNDERSHIRT & OLIVE TACTICAL VEST)
+      // 3. CHIBI TORSO (MINT TUNIC & MARSHMALLOW SHIRT)
       // ----------------------------------------------------
       const torsoY = isCrouch ? 15 : 12 + bob;
 
-      // White athletic muscle tee (center chest)
+      // Pure Marshmallow cream shirt
       drawContouredRect(ctx, 13, torsoY + 1, 9, 8, P[1], P[9], P[9], P[10]);
-      // Pectoral muscle crease
-      ctx.fillStyle = P[10];
-      ctx.fillRect(17, torsoY + 4, 1, 4);
 
-      // Olive Tactical Vest (with lapels, collar, and pockets)
-      // Left vest panel
-      drawContouredRect(ctx, 10, torsoY, 4, 9, P[1], P[11], P[11], P[12]);
-      // Right vest panel
-      drawContouredRect(ctx, 21, torsoY, 4, 9, P[1], P[11], P[11], P[12]);
-      // Vest collar trim
-      ctx.fillStyle = P[11];
-      ctx.fillRect(12, torsoY - 1, 3, 2);
-      ctx.fillRect(20, torsoY - 1, 3, 2);
-      // Brass snap pockets
+      // Pastel mint turquoise adventurer tunic panels
+      drawContouredRect(ctx, 10, torsoY, 4, 9, P[1], P[11], '#A8E6CF', P[12]);
+      drawContouredRect(ctx, 21, torsoY, 4, 9, P[1], P[11], '#A8E6CF', P[12]);
+      // Gold star buttons on tunic
       ctx.fillStyle = P[2];
-      ctx.fillRect(11, torsoY + 4, 2, 2);
-      ctx.fillRect(22, torsoY + 4, 2, 2);
+      ctx.fillRect(11, torsoY + 3, 2, 2);
+      ctx.fillRect(22, torsoY + 3, 2, 2);
 
       // ----------------------------------------------------
-      // 4. HEAD, MULTI-TONE BLONDE HAIR, RED HEADBAND & FACE
+      // 4. CHIBI HEAD, ANIME CATCHLIGHT EYES, BLUSH & RIBBON
       // ----------------------------------------------------
       const headY = isCrouch ? 7 : 4 + bob;
       const flut = opts.headbandFlutter ?? 0;
 
-      // Neck & jaw shading
-      ctx.fillStyle = P[8];
-      ctx.fillRect(16, headY + 8, 4, 2);
-
-      // Blonde Hair (Base volume)
-      drawContouredRect(ctx, 12, headY - 1, 12, 7, P[1], P[3], P[2], P[3]);
-      // Spiky mop hair crown
+      // Fluffy Buttercup Blonde Hair (Volume & Curls)
+      drawContouredRect(ctx, 10, headY - 2, 16, 9, P[1], P[2], '#FFF8A0', P[3]);
+      // Bouncy hair tufts
       ctx.fillStyle = P[2];
-      ctx.fillRect(11, headY - 2, 3, 3);
-      ctx.fillRect(14, headY - 4, 4, 4);
-      ctx.fillRect(18, headY - 4, 4, 4);
-      ctx.fillRect(22, headY - 2, 3, 3);
-      // Specular golden hair highlights
-      ctx.fillStyle = '#FFF8A0';
-      ctx.fillRect(15, headY - 3, 2, 2);
-      ctx.fillRect(19, headY - 3, 2, 2);
+      ctx.fillRect(9, headY - 3, 4, 4);
+      ctx.fillRect(14, headY - 5, 5, 4);
+      ctx.fillRect(19, headY - 5, 5, 4);
+      ctx.fillRect(23, headY - 3, 4, 4);
+      // Golden hair highlights
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(15, headY - 4, 3, 2);
+      ctx.fillRect(20, headY - 4, 2, 2);
 
-      // Red Headband (3-pixel band wrapped across brow)
-      drawContouredRect(ctx, 11, headY + 2, 14, 4, P[1], P[4], P[4], P[5]);
-      // Specular headband rim
-      ctx.fillStyle = '#FF5533';
-      ctx.fillRect(12, headY + 3, 11, 1);
+      // Coral Pink Ribbon / Cute Ears Bow across hair
+      drawContouredRect(ctx, 10, headY + 2, 16, 4, P[1], P[4], '#FFA0B0', P[5]);
+      // Center ribbon knot
+      ctx.fillStyle = P[5];
+      ctx.fillRect(17, headY + 1, 3, 3);
+      ctx.fillStyle = P[2];
+      ctx.fillRect(18, headY + 2, 1, 1);
 
-      // Fluttering Ribbon Tails (2 trailing silk ribbons with dynamic sine flutter & golden tips)
+      // Fluttering Ribbon Tails with golden fringe
       const rY = headY + 3 + flut;
-      // Top ribbon tail
-      ctx.fillStyle = P[1]; ctx.fillRect(5, rY - 1, 7, 4);
-      ctx.fillStyle = P[4]; ctx.fillRect(6, rY, 6, 2);
-      ctx.fillStyle = '#FF5533'; ctx.fillRect(6, rY, 4, 1);
-      ctx.fillStyle = P[2]; ctx.fillRect(4, rY, 2, 2); // Golden fringe
-      // Bottom ribbon tail
-      ctx.fillStyle = P[1]; ctx.fillRect(3, rY + 2 + flut * 0.7, 7, 4);
-      ctx.fillStyle = P[4]; ctx.fillRect(4, rY + 3 + flut * 0.7, 6, 2);
-      ctx.fillStyle = P[2]; ctx.fillRect(2, rY + 3 + flut * 0.7, 2, 2);
+      ctx.fillStyle = P[1]; ctx.fillRect(4, rY - 1, 7, 4);
+      ctx.fillStyle = P[4]; ctx.fillRect(5, rY, 6, 2);
+      ctx.fillStyle = '#FFA0B0'; ctx.fillRect(5, rY, 4, 1);
+      ctx.fillStyle = P[2]; ctx.fillRect(3, rY, 2, 2); // Golden fringe
+      // Lower ribbon flutter
+      ctx.fillStyle = P[1]; ctx.fillRect(2, rY + 2 + flut * 0.7, 7, 4);
+      ctx.fillStyle = P[4]; ctx.fillRect(3, rY + 3 + flut * 0.7, 6, 2);
+      ctx.fillStyle = P[2]; ctx.fillRect(1, rY + 3 + flut * 0.7, 2, 2);
 
-      // Face (3-Tone Shaded Skin: #FFCC99, #E09860, #905030)
-      drawContouredRect(ctx, 14, headY + 5, 9, 6, P[1], P[7], P[6], P[8]);
-      // Cheek highlight & nose
-      ctx.fillStyle = P[6]; ctx.fillRect(16, headY + 6, 3, 2);
-      ctx.fillStyle = P[8]; ctx.fillRect(21, headY + 7, 2, 1); // Nose shadow
-      // Cute expressive chibi-arcade eye with white sparkle glint
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(18, headY + 5, 4, 3); // Bright cartoon eye sclera
-      ctx.fillStyle = P[1]; ctx.fillRect(19, headY + 5, 2, 3); // Large dark arcade pupil
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(19, headY + 5, 1, 1); // Sparkling specular glint!
-      // Rosy arcade cheek blush
-      ctx.fillStyle = 'rgba(255, 110, 110, 0.4)'; ctx.fillRect(15, headY + 8, 3, 2);
+      // Cute Chibi Face (Porcelain warm tone)
+      drawContouredRect(ctx, 12, headY + 5, 12, 8, P[1], P[6], P[7], P[8]);
 
-      // Blonde bangs falling over headband
+      // ANIME CATCHLIGHT EYES (Wide, Gemstone Sparkling Eyes!)
+      // Sclera
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(16, headY + 5, 5, 4);
+      // Dark mocha pupil
+      ctx.fillStyle = P[1];
+      ctx.fillRect(17, headY + 5, 3, 4);
+      // Specular Primary Catchlight (Upper Left)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(17, headY + 5, 2, 2);
+      // Specular Secondary Sparkle (Lower Right)
+      ctx.fillRect(19, headY + 7, 1, 1);
+
+      // Rosy Cheek Blush
+      ctx.fillStyle = P[7];
+      ctx.fillRect(13, headY + 9, 3, 2);
+      ctx.fillRect(21, headY + 9, 3, 2);
+
+      // Cheerful Smile
+      ctx.fillStyle = '#EE5253';
+      ctx.fillRect(17, headY + 10, 2, 1);
+
+      // Cute Blonde Bangs framing face
       ctx.fillStyle = P[2];
-      ctx.fillRect(14, headY + 3, 2, 2);
-      ctx.fillRect(18, headY + 3, 3, 2);
+      ctx.fillRect(12, headY + 3, 3, 3);
+      ctx.fillRect(17, headY + 3, 3, 2);
+      ctx.fillRect(22, headY + 3, 3, 3);
 
       // ----------------------------------------------------
-      // 5. ARMS, HANDS, WEAPONS & MELEE KNIFE
+      // 5. TOY BLASTER, WEAPONS & MAGICAL STAR WAND
       // ----------------------------------------------------
       const armY = isCrouch ? 16 : 13 + bob;
 
       if (opts.knife) {
-        // Melee Combat Knife Action
+        // Melee Action: Magical Star Wand / Squeaky Mallet
         const k = opts.knife;
         if (k === 1) {
-          // Windup: arm drawn back, bowie knife gleaming
+          // Windup: arm drawn back, golden star wand shimmering
           drawContouredRect(ctx, 8, armY - 2, 5, 8, P[1], P[7], P[6], P[8]);
-          // Combat knife handle
-          ctx.fillStyle = P[15]; ctx.fillRect(7, armY - 6, 3, 5);
-          // Gleaming steel blade
-          ctx.fillStyle = P[9]; ctx.fillRect(7, armY - 13, 3, 8);
-          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(8, armY - 13, 1, 8);
+          // Wand handle
+          ctx.fillStyle = P[4]; ctx.fillRect(7, armY - 6, 3, 5);
+          // Golden star tip
+          ctx.fillStyle = P[2]; ctx.fillRect(6, armY - 14, 5, 5);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(7, armY - 13, 3, 3);
         } else if (k === 2) {
-          // Active Slash: extended thrust with gleaming white/silver slash arc!
+          // Active Slash: Glorious Rainbow Sparkle Arc Trail!
           drawContouredRect(ctx, 16, armY - 2, 10, 5, P[1], P[7], P[6], P[8]);
-          // Knife blade extended
-          ctx.fillStyle = P[9]; ctx.fillRect(25, armY - 4, 8, 3);
-          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(27, armY - 4, 6, 1);
-          // Brilliant dynamic slash trail
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(24, armY - 10, 3, 18);
-          ctx.fillRect(27, armY - 8, 7, 14);
-          ctx.fillStyle = '#A0D8EF';
-          ctx.fillRect(29, armY - 6, 6, 10);
+          // Wand extended
+          ctx.fillStyle = P[4]; ctx.fillRect(25, armY - 4, 8, 3);
+          ctx.fillStyle = P[2]; ctx.fillRect(32, armY - 6, 5, 5);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(33, armY - 5, 3, 3);
+          // Glorious Rainbow Sparkle Trail
+          ctx.fillStyle = '#FF6B81'; ctx.fillRect(23, armY - 12, 3, 22);
+          ctx.fillStyle = '#FFEAA7'; ctx.fillRect(26, armY - 10, 4, 18);
+          ctx.fillStyle = '#55E6C1'; ctx.fillRect(29, armY - 8, 5, 14);
+          ctx.fillStyle = '#48DBFB'; ctx.fillRect(33, armY - 6, 4, 10);
         } else {
-          // Follow-through
+          // Follow-through with floating star specks
           drawContouredRect(ctx, 18, armY + 1, 8, 5, P[1], P[7], P[6], P[8]);
-          ctx.fillStyle = P[9]; ctx.fillRect(25, armY + 3, 6, 3);
-          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(26, armY + 3, 4, 1);
+          ctx.fillStyle = P[2]; ctx.fillRect(26, armY + 2, 4, 4);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(27, armY + 3, 2, 2);
         }
       } else {
-        // Firearm Aiming & Directional Poses
+        // Firearm Aiming: Playful Golden Toy Blaster
         const aim = opts.aimAngle ?? 0;
-        // Muscular bare arm holding weapon
         drawContouredRect(ctx, 16, armY, 5, 5, P[1], P[7], P[6], P[8]);
 
-        // Gun metal receiver & barrel
-        ctx.fillStyle = P[15];
+        // Toy Blaster (Trumpet/Star shaped nozzle, pastel body)
+        ctx.fillStyle = P[11]; // Mint body
         if (aim === 0) {
-          // 0: Horizontal Forward (Rifle at shoulder height)
-          ctx.fillRect(19, armY, 11, 4);      // Receiver & barrel
-          ctx.fillStyle = P[10]; ctx.fillRect(20, armY + 1, 9, 1); // Steel shine
-          ctx.fillStyle = P[1]; ctx.fillRect(21, armY + 4, 3, 3);  // Magazine
-          ctx.fillStyle = P[15]; ctx.fillRect(28, armY - 1, 2, 2); // Front sight pin
+          // 0: Horizontal Forward
+          ctx.fillRect(19, armY, 10, 4);
+          ctx.fillStyle = P[4]; ctx.fillRect(21, armY + 4, 3, 3); // Strawberry grip
+          ctx.fillStyle = P[2]; ctx.fillRect(28, armY - 1, 3, 6); // Golden trumpet nozzle
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(20, armY + 1, 7, 1);
         } else if (aim === 1) {
-          // 1: 45° Up-Forward (Diagonal upward aim)
+          // 1: 45° Up-Forward
           ctx.fillRect(18, armY - 6, 8, 8);
           ctx.fillRect(23, armY - 9, 6, 6);
-          ctx.fillStyle = P[10]; ctx.fillRect(20, armY - 5, 7, 2);
-          ctx.fillStyle = P[15]; ctx.fillRect(28, armY - 11, 3, 3); // Muzzle tip
+          ctx.fillStyle = P[2]; ctx.fillRect(28, armY - 12, 4, 4);
         } else if (aim === 2) {
-          // 2: 90° Vertical Up (Straight up overhead)
+          // 2: 90° Vertical Up
           ctx.fillRect(16, armY - 11, 4, 12);
-          ctx.fillStyle = P[10]; ctx.fillRect(17, armY - 10, 2, 10);
-          ctx.fillStyle = P[15]; ctx.fillRect(15, armY - 12, 6, 2); // Flash hider
+          ctx.fillStyle = P[2]; ctx.fillRect(15, armY - 13, 6, 3);
         } else if (aim === 3) {
-          // 3: 45° Up-Back (Diagonal up-left)
+          // 3: 45° Up-Back
           ctx.fillRect(9, armY - 6, 8, 8);
           ctx.fillRect(5, armY - 9, 6, 6);
-          ctx.fillStyle = P[10]; ctx.fillRect(7, armY - 5, 7, 2);
+          ctx.fillStyle = P[2]; ctx.fillRect(3, armY - 12, 4, 4);
         } else if (aim === 4) {
           // 4: Horizontal Back
-          ctx.fillRect(5, armY, 11, 4);
-          ctx.fillStyle = P[10]; ctx.fillRect(6, armY + 1, 9, 1);
+          ctx.fillRect(5, armY, 10, 4);
+          ctx.fillStyle = P[2]; ctx.fillRect(3, armY - 1, 3, 6);
         } else if (aim === 5) {
-          // 5: 45° Down-Back (Airborne diagonal)
+          // 5: 45° Down-Back
           ctx.fillRect(8, armY + 3, 7, 7);
           ctx.fillRect(5, armY + 8, 5, 5);
+          ctx.fillStyle = P[2]; ctx.fillRect(3, armY + 12, 4, 4);
         } else if (aim === 6) {
-          // 6: 90° Vertical Down (Airborne straight down)
+          // 6: 90° Vertical Down
           ctx.fillRect(16, armY + 4, 4, 12);
-          ctx.fillStyle = P[10]; ctx.fillRect(17, armY + 5, 2, 10);
+          ctx.fillStyle = P[2]; ctx.fillRect(15, armY + 14, 6, 3);
         } else if (aim === 7) {
-          // 7: 45° Down-Forward (Airborne diagonal)
+          // 7: 45° Down-Forward
           ctx.fillRect(19, armY + 3, 7, 7);
           ctx.fillRect(23, armY + 8, 6, 5);
-          ctx.fillStyle = P[10]; ctx.fillRect(20, armY + 4, 7, 2);
+          ctx.fillStyle = P[2]; ctx.fillRect(28, armY + 12, 4, 4);
         }
 
-        // Muzzle Recoil Flash
+        // Toy Blaster Recoil Sparkle Rings
         if (opts.fire) {
           const mfx = aim === 2 ? 18 : aim === 6 ? 18 : aim === 1 ? 29 : 31;
-          const mfy = aim === 2 ? armY - 14 : aim === 6 ? armY + 16 : aim === 1 ? armY - 10 : armY + 1;
-          // Outer orange flare
-          ctx.fillStyle = PALETTES.FIRE[3];
-          ctx.fillRect(mfx - 4, mfy - 4, 9, 9);
-          // Intense yellow star
-          ctx.fillStyle = PALETTES.FIRE[2];
-          ctx.fillRect(mfx - 2, mfy - 2, 5, 5);
-          // Pure white core
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(mfx - 1, mfy - 1, 3, 3);
-          // Ejected brass shell casing
-          ctx.fillStyle = P[2];
-          ctx.fillRect(mfx - 12, mfy - 5, 3, 2);
+          const mfy = aim === 2 ? armY - 15 : aim === 6 ? armY + 17 : aim === 1 ? armY - 11 : armY + 2;
+          // Starburst rings
+          ctx.fillStyle = '#FF9FF3'; ctx.fillRect(mfx - 4, mfy - 4, 9, 9);
+          ctx.fillStyle = '#FFEAA7'; ctx.fillRect(mfx - 2, mfy - 2, 5, 5);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(mfx - 1, mfy - 1, 3, 3);
         }
       }
     };
@@ -965,6 +972,7 @@ export class ProceduralSpriteFactory {
     const AY = 40;
     const R = PALETTES.REBEL;
 
+    // Helper: Draw Bouncy Fluffy / Pastel Marcher
     const drawRebelBase = (
       ctx: CanvasContext2DLike,
       opts: {
@@ -979,134 +987,140 @@ export class ProceduralSpriteFactory {
       const legL = opts.legL ?? 0;
       const legR = opts.legR ?? 0;
 
-      // 1. Boots & Green Uniform Trousers
+      // 1. Petite Gumdrop Shoes & Chubby Mint Legs
       // Left leg
-      drawContouredRect(ctx, 11 + legL, 24 + bob, 6, 11, R[1], R[6], R[6], R[7]);
-      drawFabricFolds(ctx, 12 + legL, 28 + bob, 4, R[6], R[7], R[9]);
+      drawContouredRect(ctx, 11 + legL, 25 + bob, 6, 9, R[1], R[6], '#C8F7DC', R[7]);
       // Right leg
-      drawContouredRect(ctx, 18 + legR, 24 + bob, 6, 11, R[1], R[6], R[6], R[7]);
-      drawFabricFolds(ctx, 19 + legR, 28 + bob, 4, R[6], R[7], R[9]);
+      drawContouredRect(ctx, 18 + legR, 25 + bob, 6, 9, R[1], R[6], '#C8F7DC', R[7]);
 
-      // Combat boots with rubber sole tread
-      drawContouredRect(ctx, 10 + legL, 34, 7, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 18 + legR, 34, 7, 6, R[1], R[14], R[7], R[1]);
-      ctx.fillStyle = R[1];
-      ctx.fillRect(10 + legL, 39, 7, 1);
-      ctx.fillRect(18 + legR, 39, 7, 1);
-
-      // 2. Torso, Webbing Harness & Red Rebel Armband
-      drawContouredRect(ctx, 11, 13 + bob, 13, 11, R[1], R[6], R[6], R[7]);
-
-      // Webbing cross-belts across tunic
-      ctx.fillStyle = R[14];
-      ctx.fillRect(13, 14 + bob, 2, 9);
-      ctx.fillRect(19, 14 + bob, 2, 9);
-      ctx.fillRect(11, 21 + bob, 13, 2);
-      // Brass belt buckle
+      // Petite Gumdrop Shoes
+      drawContouredRect(ctx, 10 + legL, 34, 7, 6, R[1], R[14], '#A04070', R[1]);
+      drawContouredRect(ctx, 18 + legR, 34, 7, 6, R[1], R[14], '#A04070', R[1]);
+      // Gold shoe buckles
       ctx.fillStyle = R[13];
-      ctx.fillRect(16, 21 + bob, 3, 2);
+      ctx.fillRect(11 + legL, 36, 2, 2);
+      ctx.fillRect(19 + legR, 36, 2, 2);
 
-      // Red Rebel Armband on Left Sleeve
-      ctx.fillStyle = R[12];
-      ctx.fillRect(10, 15 + bob, 3, 5);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(11, 16 + bob, 1, 3); // Rebel insignia white core
+      // 2. Round Marshmallow Dough Body & Mint Jelly Uniform
+      drawContouredRect(ctx, 10, 14 + bob, 15, 12, R[1], R[4], '#FFFFFF', R[5]);
+      // Mint jelly vest overlay
+      drawContouredRect(ctx, 10, 16 + bob, 4, 9, R[1], R[6], '#C8F7DC', R[7]);
+      drawContouredRect(ctx, 21, 16 + bob, 4, 9, R[1], R[6], '#C8F7DC', R[7]);
 
-      // 3. Head & Authentic Steel Stahlhelm Helmet
-      // Face & Neck
-      drawContouredRect(ctx, 13, 9 + bob, 8, 5, R[1], R[4], R[4], R[5]);
-      // Comical expressive arcade eyes with specular glint & gas-mask snout
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(16, 9 + bob, 4, 3); // Wide white sclera
-      ctx.fillStyle = R[1]; ctx.fillRect(17, 9 + bob, 2, 3);      // Pupil
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(17, 9 + bob, 1, 1); // Specular arcade glint
-      ctx.fillStyle = R[3]; ctx.fillRect(16, 12 + bob, 5, 2);  // Gas mask filter snout
-
-      // German Stahlhelm Steel Helmet (with flared brim and specular metallic rim)
-      // Helmet dome
-      drawContouredRect(ctx, 11, 3 + bob, 13, 8, R[1], R[2], R[9], R[3]);
-      // Flared helmet skirt & rim
+      // Butter cookie waist belt
+      ctx.fillStyle = R[13];
+      ctx.fillRect(11, 23 + bob, 13, 3);
       ctx.fillStyle = R[1];
-      ctx.fillRect(9, 8 + bob, 17, 3);
-      // Bright metallic steel highlight along the rim
-      ctx.fillStyle = R[9];
-      ctx.fillRect(10, 8 + bob, 15, 1);
-      // Leather chin strap under jaw
-      ctx.fillStyle = R[14];
-      ctx.fillRect(14, 13 + bob, 6, 1);
+      ctx.fillRect(11, 23 + bob, 13, 1);
+      // Heart belt buckle
+      ctx.fillStyle = R[11];
+      ctx.fillRect(16, 23 + bob, 3, 3);
 
-      // 4. Weapon & Role-Specific Gear
+      // Heart emblem on left sleeve
+      ctx.fillStyle = R[11];
+      ctx.fillRect(9, 17 + bob, 3, 4);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(10, 18 + bob, 1, 2);
+
+      // 3. Round Fluffy Head, Googly Anime Eyes & Sky-Blue Macaron Cap
+      drawContouredRect(ctx, 11, 8 + bob, 13, 9, R[1], R[4], '#FFFFFF', R[5]);
+
+      // Big Googly Cartoon Eyes (Blinking & Specular Catchlights)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(14, 9 + bob, 4, 4);
+      ctx.fillRect(19, 9 + bob, 4, 4);
+      // Dark pupils
+      ctx.fillStyle = R[1];
+      ctx.fillRect(16, 10 + bob, 2, 3);
+      ctx.fillRect(21, 10 + bob, 2, 3);
+      // Bright Specular Catchlights
+      ctx.fillStyle = R[15];
+      ctx.fillRect(16, 10 + bob, 1, 1);
+      ctx.fillRect(21, 10 + bob, 1, 1);
+
+      // Rosy Cotton Candy Cheeks
+      ctx.fillStyle = R[12];
+      ctx.fillRect(12, 13 + bob, 3, 2);
+      ctx.fillRect(22, 13 + bob, 3, 2);
+
+      // Cheerful smiling mouth
+      ctx.fillStyle = '#EE5253';
+      ctx.fillRect(17, 14 + bob, 2, 1);
+
+      // Sky-Blue Fluffy Macaron Cap / Beret
+      drawContouredRect(ctx, 9, 3 + bob, 17, 7, R[1], R[2], '#A0CFFF', R[3]);
+      // Butter cookie pom-pom on top
+      ctx.fillStyle = R[13];
+      ctx.fillRect(16, 1 + bob, 4, 3);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(17, 2 + bob, 2, 1);
+
+      // 4. Role Gear & Whimsical Toys
       if (opts.type === 'rifle') {
-        // Bolt-action carbine with wooden stock and long steel barrel
-        ctx.fillStyle = R[11]; // Wooden stock
-        ctx.fillRect(15, 16 + bob, 7, 4);
-        ctx.fillStyle = R[10]; // Steel receiver
-        ctx.fillRect(20, 15 + bob, 5, 3);
-        ctx.fillStyle = R[9];  // Rifle barrel
-        ctx.fillRect(25, 15 + bob, 9, 2);
-        ctx.fillStyle = R[1];  // Front sight post
-        ctx.fillRect(32, 14 + bob, 2, 2);
+        // Confetti Party Pop-Gun with trumpet golden nozzle
+        ctx.fillStyle = R[9]; // Pastel lilac receiver
+        ctx.fillRect(16, 17 + bob, 6, 4);
+        ctx.fillStyle = R[2]; // Pastel blue barrel
+        ctx.fillRect(22, 16 + bob, 8, 3);
+        ctx.fillStyle = R[13]; // Golden trumpet nozzle
+        ctx.fillRect(30, 15 + bob, 3, 5);
 
         if (opts.action === 'fire') {
-          // Blazing rifle muzzle flash burst
-          ctx.fillStyle = PALETTES.FIRE[1];
-          ctx.fillRect(34, 13 + bob, 4, 4);
-          ctx.fillStyle = PALETTES.FIRE[2];
-          ctx.fillRect(33, 12 + bob, 7, 6);
-          ctx.fillStyle = PALETTES.FIRE[3];
-          ctx.fillRect(32, 11 + bob, 9, 8);
+          // Colorful Confetti & Star Sparkle Muzzle Burst!
+          ctx.fillStyle = '#FF9FF3'; ctx.fillRect(33, 14 + bob, 6, 6);
+          ctx.fillStyle = '#FFEAA7'; ctx.fillRect(35, 12 + bob, 3, 3);
+          ctx.fillStyle = '#55E6C1'; ctx.fillRect(34, 19 + bob, 4, 3);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(34, 15 + bob, 2, 2);
         }
       } else if (opts.type === 'knife') {
         if (opts.action === 'leap') {
-          // Leaping assault: raised overhead knife ready to stab downward!
-          drawContouredRect(ctx, 18, 2 + bob, 5, 10, R[1], R[4], R[4], R[5]);
-          ctx.fillStyle = R[9]; ctx.fillRect(20, 0 + bob, 3, 7);
-          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(21, 0 + bob, 1, 7); // Razor gleaming edge
+          // Leaping assault: raised rainbow swirl lollipop wand!
+          drawContouredRect(ctx, 18, 3 + bob, 5, 8, R[1], R[4], '#FFFFFF', R[5]);
+          // Big round swirl lollipop
+          ctx.fillStyle = R[11]; ctx.beginPath(); ctx.arc(22, 4 + bob, 6, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(22, 4 + bob, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = R[2]; ctx.beginPath(); ctx.arc(22, 4 + bob, 2, 0, Math.PI * 2); ctx.fill();
         } else {
-          // Low predatory knife crouch
-          drawContouredRect(ctx, 17, 14 + bob, 7, 4, R[1], R[4], R[4], R[5]);
-          ctx.fillStyle = R[9]; ctx.fillRect(23, 13 + bob, 8, 3);
-          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(25, 13 + bob, 5, 1);
+          // Low ready stance holding candy wand
+          drawContouredRect(ctx, 17, 15 + bob, 7, 4, R[1], R[4], '#FFFFFF', R[5]);
+          ctx.fillStyle = R[11]; ctx.fillRect(24, 14 + bob, 6, 5);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(25, 15 + bob, 4, 3);
         }
       } else if (opts.type === 'grenade') {
         if (opts.action === 'throw') {
-          // Full athletic overhand pitch
-          drawContouredRect(ctx, 18, 8 + bob, 8, 4, R[1], R[4], R[4], R[5]);
-          // Stick grenade flying through air
-          ctx.fillStyle = R[11]; ctx.fillRect(27, 4 + bob, 6, 2); // Wooden handle
-          ctx.fillStyle = '#3A5F20'; ctx.fillRect(31, 3 + bob, 4, 4); // Warhead
+          // Pitching a wrapped peppermint swirl bonbon
+          drawContouredRect(ctx, 18, 8 + bob, 8, 4, R[1], R[4], '#FFFFFF', R[5]);
+          // Flying peppermint bonbon
+          ctx.fillStyle = '#FF4757'; ctx.fillRect(28, 4 + bob, 6, 6);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(29, 5 + bob, 4, 4);
+          ctx.fillStyle = '#FF9FF3'; ctx.fillRect(26, 6 + bob, 2, 2); // twist wrap
+          ctx.fillRect(34, 6 + bob, 2, 2);
         } else {
-          // Preparing stick grenade (pulling friction fuse)
-          ctx.fillStyle = R[11]; ctx.fillRect(17, 15 + bob, 5, 2);
-          ctx.fillStyle = '#3A5F20'; ctx.fillRect(21, 14 + bob, 4, 4);
-          ctx.fillStyle = R[13]; ctx.fillRect(16, 17 + bob, 2, 2); // Porcelain ball
+          // Preparing peppermint bonbon
+          ctx.fillStyle = '#FF4757'; ctx.fillRect(20, 15 + bob, 5, 5);
+          ctx.fillStyle = '#FFFFFF'; ctx.fillRect(21, 16 + bob, 3, 3);
         }
       } else if (opts.type === 'shield') {
-        // Heavy Curved Ballistic Riot Shield (with observation visor & Rebel emblem)
+        // Strawberry Frosted Heart Cookie Shield with Rainbow Sprinkles!
         const sx = opts.action === 'bash' ? 24 : 20;
-        // Outer beveled shield armor
-        drawBeveledPlate(ctx, sx, 8 + bob, 8, 28, '#2C343E', '#606E7D', '#151A20', R[1]);
-        // Armored viewing visor slit
-        ctx.fillStyle = R[1];
-        ctx.fillRect(sx + 2, 13 + bob, 4, 3);
-        ctx.fillStyle = '#40E0D0'; // Bulletproof glass tint
-        ctx.fillRect(sx + 2, 14 + bob, 4, 1);
-        // Painted Rebel emblem on shield face
-        ctx.fillStyle = R[12];
-        ctx.fillRect(sx + 2, 21 + bob, 4, 4);
+        // Cookie base
+        drawBeveledPlate(ctx, sx, 8 + bob, 9, 28, '#FFCAD4', '#FFE5EC', '#F4ACB7', R[1]);
+        // Strawberry heart emblem
+        ctx.fillStyle = '#FF4757';
+        ctx.fillRect(sx + 2, 16 + bob, 5, 5);
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(sx + 3, 22 + bob, 2, 2);
-
-        // Bullet impact indentations / scratch marks
-        ctx.fillStyle = R[9];
-        ctx.fillRect(sx + 2, 18 + bob, 2, 1);
-        ctx.fillRect(sx + 3, 28 + bob, 2, 1);
+        ctx.fillRect(sx + 3, 17 + bob, 3, 3);
+        // Colorful candy sprinkles
+        ctx.fillStyle = '#FFE66D'; ctx.fillRect(sx + 3, 11 + bob, 3, 2);
+        ctx.fillStyle = '#55E6C1'; ctx.fillRect(sx + 4, 24 + bob, 2, 3);
+        ctx.fillStyle = '#48DBFB'; ctx.fillRect(sx + 3, 30 + bob, 3, 2);
 
         if (opts.action === 'bash') {
-          // Motion impact streaks
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(sx + 8, 12 + bob, 4, 1);
-          ctx.fillRect(sx + 8, 20 + bob, 6, 2);
-          ctx.fillRect(sx + 8, 28 + bob, 4, 1);
+          // Cheerful star impact sparks
+          ctx.fillStyle = '#FFEAA7';
+          ctx.fillRect(sx + 9, 12 + bob, 3, 3);
+          ctx.fillRect(sx + 10, 20 + bob, 4, 4);
+          ctx.fillRect(sx + 9, 28 + bob, 3, 3);
         }
       }
     };
@@ -1125,13 +1139,18 @@ export class ProceduralSpriteFactory {
       drawRebelBase(ctx, { type: 'rifle', action: 'fire', torsoBob: -1 });
     });
     this.registerSprite('rebel_rifle_death_0', W, H, AX, AY, (ctx) => {
-      // Blown backward, helmet flying off in air!
-      drawContouredRect(ctx, 4, 16, 24, 18, R[1], R[6], R[6], R[7]);
-      // Helmet flying high
-      drawContouredRect(ctx, 22, 6, 10, 7, R[1], R[2], R[9], R[3]);
-      // Face grimace
-      ctx.fillStyle = R[4]; ctx.fillRect(10, 18, 8, 5);
-      ctx.fillStyle = R[14]; ctx.fillRect(4, 28, 8, 6);
+      // Comical surprise tumble, macaron cap flying high with floating stars
+      drawContouredRect(ctx, 4, 16, 24, 18, R[1], R[4], '#FFFFFF', R[5]);
+      // Cap flying high
+      drawContouredRect(ctx, 22, 5, 11, 7, R[1], R[2], '#A0CFFF', R[3]);
+      ctx.fillStyle = R[13]; ctx.fillRect(26, 3, 3, 3);
+      // Comic spiral eyes (@ @)
+      ctx.fillStyle = R[1];
+      ctx.fillRect(9, 20, 3, 3);
+      ctx.fillRect(15, 20, 3, 3);
+      // Floating stars
+      ctx.fillStyle = '#FFEAA7'; ctx.fillRect(2, 10, 3, 3);
+      ctx.fillStyle = '#FF9FF3'; ctx.fillRect(18, 12, 3, 3);
     });
 
     // 2. Knife Charger
@@ -1164,281 +1183,152 @@ export class ProceduralSpriteFactory {
     });
 
     // ==========================================
-    // PARACHUTE CANOPY SPRITE (R1 DIVERSE SPAWNING)
+    // PARACHUTE CANOPY: PASTEL RAINBOW HOT-AIR BALLOON
     // ==========================================
     this.registerSprite('parachute_canopy', 48, 28, 24, 28, (ctx) => {
-      // 5-panel military olive dome
-      const oliveDark = '#2C3A20';
-      const oliveBase = '#4A6038';
-      const oliveLight = '#7A8B58';
-      const oliveHi = '#9AB070';
-      const white = '#FFFFFF';
-      const cordMetal = '#D0D8C8';
+      // 5-panel pastel rainbow hot-air balloon canopy
+      const panels = ['#FF6B81', '#FFEAA7', '#55E6C1', '#48DBFB', '#D980FA'];
+      drawContouredRect(ctx, 4, 2, 40, 20, R[1], '#FFFFFF', '#FFFFFF', '#E2D5F8');
 
-      // Outer dome silhouette
-      drawContouredRect(ctx, 4, 2, 40, 20, oliveDark, oliveBase, oliveHi, oliveDark);
-
-      // Curved top bevel
-      drawContouredRect(ctx, 8, 0, 32, 4, oliveDark, oliveLight, oliveHi, oliveBase);
-      drawContouredRect(ctx, 14, 0, 20, 2, oliveDark, oliveHi, oliveHi, oliveLight);
-
-      // 5 vertical panel seams
-      ctx.fillStyle = oliveDark;
-      ctx.fillRect(12, 3, 2, 18);
-      ctx.fillRect(20, 2, 2, 19);
-      ctx.fillRect(27, 2, 2, 19);
-      ctx.fillRect(35, 3, 2, 18);
-
-      // Scalloped bottom skirt
-      ctx.fillStyle = oliveBase;
+      // 5 pastel color stripes
       for (let s = 0; s < 5; s++) {
-        const sx = 4 + s * 8;
-        ctx.fillRect(sx, 20, 8, 3);
-        ctx.fillStyle = oliveDark;
-        ctx.fillRect(sx, 23, 8, 1);
-        ctx.fillStyle = oliveBase;
+        ctx.fillStyle = panels[s];
+        ctx.fillRect(6 + s * 7, 3, 7, 18);
       }
 
-      // White Rebel Star Insignia in center panel
-      ctx.fillStyle = white;
-      ctx.fillRect(23, 6, 3, 9);
-      ctx.fillRect(20, 9, 9, 3);
+      // Golden star emblem in center
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(22, 8, 4, 4);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(23, 9, 2, 2);
 
-      // 4 Heavy-duty suspension grommets along hem
-      ctx.fillStyle = cordMetal;
-      ctx.fillRect(6, 22, 3, 3);
-      ctx.fillRect(17, 22, 3, 3);
-      ctx.fillRect(29, 22, 3, 3);
-      ctx.fillRect(40, 22, 3, 3);
-
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(7, 23, 1, 1);
-      ctx.fillRect(18, 23, 1, 1);
-      ctx.fillRect(30, 23, 1, 1);
-      ctx.fillRect(41, 23, 1, 1);
+      // Cute scalloped edge with golden beads
+      for (let s = 0; s < 5; s++) {
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(8 + s * 7, 21, 3, 3);
+      }
     });
 
     // ==========================================
-    // AUTHENTIC REBEL CASUALTY & DEATH ANIMATIONS (R2)
+    // WHIMSICAL REBEL CASUALTY & DEFEAT ANIMATIONS
     // ==========================================
 
-    // --- 1. Standard Falling Death (Bullet / Pistol / Melee) ---
-    // Frame 0: Hit stagger, chest clutching
+    // --- 1. Standard Pop: Gentle Soap Bubble & Floating Hearts ---
     this.registerSprite('rebel_death_standard_0', W, H, AX, AY, (ctx) => {
-      drawContouredRect(ctx, 9, 25, 7, 10, R[1], R[6], R[6], R[7]);
-      drawContouredRect(ctx, 18, 25, 7, 10, R[1], R[6], R[6], R[7]);
-      drawContouredRect(ctx, 8, 35, 8, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 19, 35, 8, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 8, 14, 14, 12, R[1], R[6], R[6], R[7]);
-      ctx.fillStyle = R[4]; ctx.fillRect(12, 17, 7, 6);
-      ctx.fillStyle = R[12]; ctx.fillRect(7, 16, 3, 5);
-      drawContouredRect(ctx, 9, 8, 9, 6, R[1], R[4], R[4], R[5]);
-      ctx.fillStyle = R[15]; ctx.fillRect(13, 9, 3, 2);
-      ctx.fillStyle = R[1]; ctx.fillRect(14, 9, 1, 2);
-      ctx.fillStyle = R[3]; ctx.fillRect(11, 12, 4, 2);
-      drawContouredRect(ctx, 5, 2, 14, 8, R[1], R[2], R[9], R[3]);
-      ctx.fillStyle = R[9]; ctx.fillRect(4, 7, 16, 2);
+      // Surprise wobble!
+      drawContouredRect(ctx, 9, 14, 18, 16, R[1], R[4], '#FFFFFF', R[5]);
+      // Big wide cartoon eyes (O O)
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(12, 17, 5, 5); ctx.fillRect(19, 17, 5, 5);
+      ctx.fillStyle = R[1]; ctx.fillRect(14, 18, 2, 3); ctx.fillRect(21, 18, 2, 3);
+      // Floating question mark
+      ctx.fillStyle = '#FF6B81'; ctx.fillRect(17, 4, 3, 2); ctx.fillRect(19, 6, 2, 3); ctx.fillRect(18, 11, 2, 2);
     });
 
-    // Frame 1: Knee buckle, falling backward at 45°
     this.registerSprite('rebel_death_standard_1', W, H, AX, AY, (ctx) => {
-      drawContouredRect(ctx, 12, 27, 10, 8, R[1], R[6], R[6], R[7]);
-      drawContouredRect(ctx, 8, 33, 9, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 19, 33, 9, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 5, 17, 15, 11, R[1], R[6], R[6], R[7]);
-      ctx.fillStyle = R[12]; ctx.fillRect(4, 19, 3, 4);
-      ctx.fillStyle = R[4]; ctx.fillRect(20, 20, 6, 4);
-      drawContouredRect(ctx, 3, 11, 9, 6, R[1], R[4], R[4], R[5]);
-      ctx.fillStyle = R[15]; ctx.fillRect(6, 12, 3, 2);
-      ctx.fillStyle = R[1]; ctx.fillRect(5, 14, 4, 3);
-      drawContouredRect(ctx, 0, 4, 13, 8, R[1], R[2], R[9], R[3]);
-      ctx.fillStyle = R[9]; ctx.fillRect(0, 9, 14, 2);
+      // Jelly pudding wobble
+      drawContouredRect(ctx, 6, 18, 24, 14, R[1], R[4], '#FFFFFF', R[5]);
+      ctx.fillStyle = R[12]; ctx.fillRect(10, 21, 4, 3); ctx.fillRect(22, 21, 4, 3);
+      // Happy closed eyes (^ ^)
+      ctx.fillStyle = R[1]; ctx.fillRect(11, 19, 4, 1); ctx.fillRect(21, 19, 4, 1);
     });
 
-    // Frame 2: Back and shoulders slamming ground, boots kicked up
     this.registerSprite('rebel_death_standard_2', 42, 32, 21, 30, (ctx) => {
-      drawContouredRect(ctx, 6, 18, 20, 9, R[1], R[6], R[6], R[7]);
-      ctx.fillStyle = R[12]; ctx.fillRect(10, 19, 4, 3);
-      drawContouredRect(ctx, 24, 14, 8, 8, R[1], R[6], R[6], R[7]);
-      drawContouredRect(ctx, 30, 10, 8, 7, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 22, 22, 8, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 2, 19, 8, 6, R[1], R[4], R[4], R[5]);
-      drawContouredRect(ctx, 2, 8, 12, 7, R[1], R[2], R[9], R[3]);
-      ctx.fillStyle = R[9]; ctx.fillRect(1, 13, 13, 2);
-      ctx.fillStyle = '#C8B080';
-      ctx.fillRect(0, 29, 40, 2);
+      // Popping soap bubble ring with floating hearts
+      ctx.strokeStyle = '#48DBFB'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(21, 16, 14, 0, Math.PI * 2); ctx.stroke();
+      // Floating pink hearts
+      ctx.fillStyle = '#FF6B81';
+      ctx.fillRect(10, 10, 3, 3); ctx.fillRect(12, 10, 3, 3); ctx.fillRect(11, 13, 3, 3);
+      ctx.fillRect(28, 12, 3, 3); ctx.fillRect(30, 12, 3, 3); ctx.fillRect(29, 15, 3, 3);
+      // Golden stars
+      ctx.fillStyle = '#FFEAA7'; ctx.fillRect(20, 6, 3, 3); ctx.fillRect(22, 22, 3, 3);
     });
 
-    // Frame 3: Flat sprawled corpse with dropped rifle
     this.registerSprite('rebel_death_standard_3', 42, 24, 21, 22, (ctx) => {
-      drawContouredRect(ctx, 6, 12, 24, 7, R[1], R[6], R[6], R[7]);
-      ctx.fillStyle = R[12]; ctx.fillRect(12, 13, 4, 2);
-      drawContouredRect(ctx, 28, 11, 10, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 2, 12, 7, 5, R[1], R[4], R[4], R[5]);
-      drawContouredRect(ctx, 0, 5, 11, 7, R[1], R[2], R[9], R[3]);
-      ctx.fillStyle = R[9]; ctx.fillRect(0, 10, 12, 2);
-      ctx.fillStyle = R[11]; ctx.fillRect(8, 19, 14, 3);
-      ctx.fillStyle = R[9];  ctx.fillRect(22, 19, 12, 2);
+      // Floating hearts drifting away peacefully
+      ctx.fillStyle = '#FF6B81';
+      ctx.fillRect(14, 6, 4, 4); ctx.fillRect(17, 6, 4, 4); ctx.fillRect(15, 10, 5, 4);
+      ctx.fillStyle = '#FFEAA7';
+      ctx.fillRect(8, 14, 3, 3); ctx.fillRect(30, 8, 3, 3);
+      ctx.fillStyle = '#55E6C1'; ctx.fillRect(25, 15, 3, 3);
     });
 
-    // --- 2. Explosion Blowback (Grenade / Rocket / Blast) ---
-    // Air tumble: Center-anchored soldier tumbling without helmet
+    // --- 2. Explosion: Bouncing with White Surrender Flag ---
     this.registerSprite('rebel_death_explosion_air', 38, 38, 19, 19, (ctx) => {
-      drawContouredRect(ctx, 11, 11, 16, 14, R[1], R[6], R[7], R[1]);
-      ctx.fillStyle = '#181818'; ctx.fillRect(13, 15, 6, 6);
-      drawContouredRect(ctx, 2, 18, 10, 7, R[1], R[6], R[7], R[1]);
-      drawContouredRect(ctx, 0, 23, 7, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 22, 22, 10, 7, R[1], R[6], R[7], R[1]);
-      drawContouredRect(ctx, 30, 24, 7, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 4, 6, 8, 6, R[1], R[4], R[4], R[5]);
-      drawContouredRect(ctx, 25, 7, 8, 6, R[1], R[4], R[4], R[5]);
-      drawContouredRect(ctx, 14, 2, 10, 9, R[1], R[4], R[4], R[5]);
-      ctx.fillStyle = R[14]; ctx.fillRect(13, 2, 11, 3);
-      ctx.fillStyle = R[15]; ctx.fillRect(16, 4, 3, 2);
-      ctx.fillStyle = R[1];  ctx.fillRect(17, 4, 1, 2);
-      ctx.fillStyle = R[1];  ctx.fillRect(16, 7, 6, 3);
-      ctx.fillStyle = '#FF4030'; ctx.fillRect(18, 8, 2, 2);
+      // Bouncing in the air with comical spiral eyes
+      drawContouredRect(ctx, 11, 11, 16, 16, R[1], R[4], '#FFFFFF', R[5]);
+      // Spiral eyes
+      ctx.fillStyle = R[1]; ctx.fillRect(13, 14, 3, 3); ctx.fillRect(19, 14, 3, 3);
+      // Waving tiny white surrender flag on a stick!
+      ctx.fillStyle = '#BC6C25'; ctx.fillRect(28, 6, 2, 16); // flag pole
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(30, 6, 7, 6);   // white flag
     });
 
-    // Detached Flying Stahlhelm Helmet (14x12, anchor 7, 6)
     this.registerSprite('rebel_death_explosion_helmet', 14, 12, 7, 6, (ctx) => {
-      drawContouredRect(ctx, 1, 1, 12, 7, R[1], R[2], R[9], R[3]);
-      ctx.fillStyle = R[1]; ctx.fillRect(0, 6, 14, 3);
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(2, 6, 5, 1);
-      ctx.fillStyle = R[9]; ctx.fillRect(7, 6, 6, 1);
-      ctx.fillStyle = R[14];
-      ctx.fillRect(4, 9, 2, 3);
-      ctx.fillRect(8, 9, 2, 2);
+      // Flying sky-blue macaron cap with yellow pom-pom
+      drawContouredRect(ctx, 1, 3, 12, 7, R[1], R[2], '#A0CFFF', R[3]);
+      ctx.fillStyle = R[13]; ctx.fillRect(5, 1, 4, 3);
     });
 
-    // Ground impact bounce on stomach
     this.registerSprite('rebel_death_explosion_land_0', 44, 28, 22, 26, (ctx) => {
-      drawContouredRect(ctx, 10, 12, 22, 11, R[1], R[6], R[7], R[1]);
-      ctx.fillStyle = '#181818'; ctx.fillRect(16, 14, 8, 6);
-      drawContouredRect(ctx, 28, 14, 12, 8, R[1], R[6], R[7], R[1]);
-      drawContouredRect(ctx, 36, 15, 7, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 3, 15, 9, 7, R[1], R[4], R[4], R[5]);
-      ctx.fillStyle = R[14]; ctx.fillRect(2, 14, 8, 3);
-      drawContouredRect(ctx, 2, 8, 10, 6, R[1], R[4], R[4], R[5]);
-      ctx.fillStyle = '#D0B880';
-      ctx.fillRect(0, 24, 44, 2);
-      ctx.fillStyle = '#886840';
-      ctx.fillRect(4, 26, 36, 2);
+      // Soft marshmallow cushion bounce landing
+      ctx.fillStyle = '#F8EDEB';
+      ctx.beginPath(); ctx.arc(22, 20, 14, 0, Math.PI * 2); ctx.fill();
+      drawContouredRect(ctx, 14, 10, 16, 12, R[1], R[4], '#FFFFFF', R[5]);
+      ctx.fillStyle = R[12]; ctx.fillRect(15, 14, 3, 2); ctx.fillRect(25, 14, 3, 2);
     });
 
-    // Scorched flat sprawled corpse
     this.registerSprite('rebel_death_explosion_land_1', 44, 22, 22, 20, (ctx) => {
-      drawContouredRect(ctx, 8, 8, 24, 8, R[1], '#283020', '#181818', R[1]);
-      ctx.fillStyle = '#080808'; ctx.fillRect(14, 9, 10, 5);
-      drawContouredRect(ctx, 30, 8, 12, 6, R[1], '#181818', '#101010', R[1]);
-      drawContouredRect(ctx, 2, 9, 8, 6, R[1], R[4], '#805030', R[1]);
-      ctx.fillStyle = '#505050';
-      ctx.fillRect(18, 3, 2, 3);
-      ctx.fillRect(19, 0, 2, 3);
+      // Settled on cushion waving surrender flag with sheepish smile
+      ctx.fillStyle = '#FCD5CE'; ctx.fillRect(8, 16, 28, 6);
+      drawContouredRect(ctx, 14, 8, 16, 10, R[1], R[4], '#FFFFFF', R[5]);
+      // Little white flag
+      ctx.fillStyle = '#BC6C25'; ctx.fillRect(32, 2, 2, 14);
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(34, 2, 6, 5);
+      // Smile
+      ctx.fillStyle = '#EE5253'; ctx.fillRect(21, 13, 3, 1);
     });
 
-    // --- 3. Flamethrower Burning Death (Fire / Flame Shot) ---
-    // Thrash 0: Arms raised high, intense flames
+    // --- 3. Cotton Candy Fluff Dance ---
     this.registerSprite('rebel_death_burn_thrash_0', 36, 44, 18, 42, (ctx) => {
-      drawContouredRect(ctx, 11, 26, 6, 12, R[1], R[6], R[7], R[1]);
-      drawContouredRect(ctx, 18, 26, 6, 12, R[1], R[6], R[7], R[1]);
-      drawContouredRect(ctx, 10, 36, 7, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 18, 36, 7, 6, R[1], R[14], R[7], R[1]);
-      drawContouredRect(ctx, 10, 14, 14, 13, R[1], R[6], R[7], R[1]);
-      drawContouredRect(ctx, 5, 4, 6, 12, R[1], R[4], R[4], R[5]);
-      drawContouredRect(ctx, 23, 4, 6, 12, R[1], R[4], R[4], R[5]);
-      drawContouredRect(ctx, 12, 7, 10, 7, R[1], R[4], R[4], R[5]);
-      ctx.fillStyle = R[1]; ctx.fillRect(15, 9, 5, 4);
-      ctx.fillStyle = PALETTES.FIRE[4];
-      ctx.fillRect(8, 12, 18, 15);
-      ctx.fillStyle = PALETTES.FIRE[3];
-      ctx.fillRect(10, 10, 14, 15);
-      ctx.fillStyle = PALETTES.FIRE[2];
-      ctx.fillRect(13, 8, 8, 12);
-      ctx.fillStyle = PALETTES.FIRE[1];
-      ctx.fillRect(15, 9, 4, 7);
+      // Wrapped in colorful cotton candy fluff, dancing comically!
+      ctx.fillStyle = '#FF9FF3';
+      ctx.beginPath(); ctx.arc(18, 24, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#48DBFB';
+      ctx.beginPath(); ctx.arc(12, 18, 8, 0, Math.PI * 2); ctx.arc(24, 18, 8, 0, Math.PI * 2); ctx.fill();
+      // Peeking cute eyes
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(15, 14, 3, 3); ctx.fillRect(19, 14, 3, 3);
+      ctx.fillStyle = R[1]; ctx.fillRect(16, 15, 2, 2); ctx.fillRect(20, 15, 2, 2);
     });
 
-    // Thrash 1: Hunched forward, arms thrashing down
     this.registerSprite('rebel_death_burn_thrash_1', 36, 44, 18, 42, (ctx) => {
-      drawContouredRect(ctx, 9, 27, 7, 11, R[1], '#382010', '#201008', R[1]);
-      drawContouredRect(ctx, 19, 27, 7, 11, R[1], '#382010', '#201008', R[1]);
-      drawContouredRect(ctx, 8, 36, 8, 6, R[1], '#181818', '#101010', R[1]);
-      drawContouredRect(ctx, 19, 36, 8, 6, R[1], '#181818', '#101010', R[1]);
-      drawContouredRect(ctx, 8, 16, 18, 13, R[1], '#382010', '#201008', R[1]);
-      drawContouredRect(ctx, 5, 12, 6, 10, R[1], R[4], '#804020', R[1]);
-      drawContouredRect(ctx, 23, 12, 6, 10, R[1], R[4], '#804020', R[1]);
-      drawContouredRect(ctx, 12, 11, 10, 7, R[1], '#503020', '#301810', R[1]);
-      ctx.fillStyle = PALETTES.FIRE[4]; ctx.fillRect(6, 14, 22, 16);
-      ctx.fillStyle = PALETTES.FIRE[3]; ctx.fillRect(9, 12, 16, 16);
-      ctx.fillStyle = PALETTES.FIRE[2]; ctx.fillRect(12, 10, 10, 14);
-      ctx.fillStyle = PALETTES.FIRE[1]; ctx.fillRect(14, 11, 6, 8);
-      ctx.fillStyle = PALETTES.FIRE[8];
-      ctx.fillRect(11, 2, 4, 5);
-      ctx.fillRect(18, 0, 5, 6);
+      // Waddling to shake off fluff
+      ctx.fillStyle = '#FF9FF3';
+      ctx.beginPath(); ctx.arc(18, 22, 15, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFEAA7';
+      ctx.beginPath(); ctx.arc(10, 26, 6, 0, Math.PI * 2); ctx.arc(26, 26, 6, 0, Math.PI * 2); ctx.fill();
     });
 
-    // Charcoal 0: Pitch-black charred silhouette with glowing orange molten embers
     this.registerSprite('rebel_death_burn_charcoal_0', 36, 38, 18, 36, (ctx) => {
-      const charcoalDark = '#101010';
-      const charcoalBase = '#202020';
-      const charcoalHi = '#383838';
-      const emberOrange = '#FF5500';
-      const emberYellow = '#FFA010';
-
-      drawContouredRect(ctx, 8, 22, 9, 12, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
-      drawContouredRect(ctx, 18, 22, 9, 12, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
-      drawContouredRect(ctx, 7, 31, 8, 5, charcoalDark, charcoalDark, charcoalBase, charcoalDark);
-      drawContouredRect(ctx, 19, 31, 8, 5, charcoalDark, charcoalDark, charcoalBase, charcoalDark);
-      drawContouredRect(ctx, 9, 12, 16, 12, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
-      drawContouredRect(ctx, 12, 5, 10, 8, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
-      drawContouredRect(ctx, 6, 14, 5, 10, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
-      drawContouredRect(ctx, 23, 14, 5, 10, charcoalDark, charcoalBase, charcoalHi, charcoalDark);
-
-      ctx.fillStyle = emberOrange;
-      ctx.fillRect(14, 15, 6, 2);
-      ctx.fillRect(17, 19, 4, 2);
-      ctx.fillRect(11, 25, 3, 2);
-      ctx.fillRect(21, 25, 3, 2);
-      ctx.fillStyle = emberYellow;
-      ctx.fillRect(15, 16, 3, 1);
-      ctx.fillRect(18, 20, 2, 1);
-
-      ctx.fillStyle = '#404040';
-      ctx.fillRect(14, 1, 3, 3);
-      ctx.fillRect(19, 0, 3, 3);
+      // Big soft cotton candy ball with peeking cute smile
+      ctx.fillStyle = '#FFCAD4';
+      ctx.beginPath(); ctx.arc(18, 22, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(16, 18, 2, 2); ctx.fillRect(20, 18, 2, 2);
+      ctx.fillStyle = '#FF6B81'; ctx.fillRect(18, 22, 2, 1);
     });
 
-    // Ash 0: Collapsing crumbled pile of smoking black ash and glowing embers
     this.registerSprite('rebel_death_burn_ash_0', 34, 20, 17, 18, (ctx) => {
-      const ashDark = '#181818';
-      const ashBase = '#2C2C2C';
-      const ashLight = '#444444';
-
-      drawContouredRect(ctx, 4, 6, 26, 12, ashDark, ashBase, ashLight, ashDark);
-      drawContouredRect(ctx, 8, 2, 18, 7, ashDark, ashBase, ashLight, ashDark);
-
-      ctx.fillStyle = '#E84800';
-      ctx.fillRect(10, 8, 4, 2);
-      ctx.fillRect(18, 10, 5, 2);
-      ctx.fillStyle = '#FFA010';
-      ctx.fillRect(12, 9, 2, 1);
-      ctx.fillRect(20, 11, 2, 1);
+      // Colorful sugar candy sprinkle pile
+      ctx.fillStyle = '#FFCAD4'; ctx.fillRect(6, 10, 22, 8);
+      ctx.fillStyle = '#FFE66D'; ctx.fillRect(10, 8, 3, 2); ctx.fillRect(18, 9, 3, 2);
+      ctx.fillStyle = '#48DBFB'; ctx.fillRect(14, 12, 3, 2); ctx.fillRect(22, 11, 3, 2);
     });
 
-    // Ash 1: Flat settled ash pile on ground
     this.registerSprite('rebel_death_burn_ash_1', 32, 14, 16, 12, (ctx) => {
-      const ashDark = '#141414';
-      const ashBase = '#242424';
-      const ashLight = '#383838';
-
-      drawContouredRect(ctx, 2, 4, 28, 8, ashDark, ashBase, ashLight, ashDark);
-      drawContouredRect(ctx, 7, 2, 18, 4, ashDark, ashBase, ashLight, ashDark);
-
-      ctx.fillStyle = '#903000';
-      ctx.fillRect(14, 6, 3, 2);
-      ctx.fillStyle = '#505050';
-      ctx.fillRect(15, 0, 2, 3);
+      // Settled candy sprinkles with tiny floating heart
+      ctx.fillStyle = '#FFCAD4'; ctx.fillRect(4, 6, 24, 6);
+      ctx.fillStyle = '#FF6B81'; ctx.fillRect(14, 1, 3, 3);
     });
 
     // Backward compatibility aliases
@@ -1446,11 +1336,10 @@ export class ProceduralSpriteFactory {
     this.aliasSprite('soldier_knife_idle', 'rebel_knife_idle');
     this.aliasSprite('soldier_grenade_idle', 'rebel_grenade_idle');
     this.aliasSprite('soldier_shield_idle', 'rebel_shield_idle');
-
   }
 
   // ==========================================
-  // 3. HOSTAGE POW (PRISONER OF WAR)
+  // 3. RESCUED BUNNY PALS (CHARMING RESCUE FRIENDS)
   // ==========================================
   private generatePowSprites(): void {
     const W = 32;
@@ -1459,7 +1348,7 @@ export class ProceduralSpriteFactory {
     const AY = 36;
     const P = PALETTES.POW;
 
-    // Helper: Draw Hostage POW with bushy beard, bare muscular chest, ripped shorts, rope bonds
+    // Helper: Draw Rescued Bunny Pal (Fluffy white fur, pink ears, cute paws)
     const drawPow = (
       ctx: CanvasContext2DLike,
       opts: {
@@ -1474,131 +1363,157 @@ export class ProceduralSpriteFactory {
       const sway = opts.sway ?? 0;
 
       if (opts.tied) {
-        // Sitting on heels, wrists bound in front with thick twisted hemp cord
-        // Head & Sunburned Face
-        drawContouredRect(ctx, 12, 8, 8, 7, P[1], P[4], P[4], P[5]);
-        // Cute big cartoon hostage eyes with sparkling glints & rosy cheeks
-        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(14, 9, 3, 3);
-        ctx.fillStyle = P[1]; ctx.fillRect(15, 9, 2, 3);
-        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(15, 9, 1, 1);
-        ctx.fillStyle = 'rgba(255, 120, 120, 0.45)'; ctx.fillRect(13, 12, 2, 2);
+        // Chubby bunny sitting gently, tied with silky gift ribbon
+        // Long fluffy ears with sweet pink inner pads
+        drawContouredRect(ctx, 11 + sway, 1, 4, 10, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(12 + sway, 3, 2, 6);
+        drawContouredRect(ctx, 17 + sway, 2, 4, 10, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(18 + sway, 4, 2, 6);
 
-        // Wild bright yellow mop of hair
-        drawContouredRect(ctx, 9, 3, 14, 7, P[1], P[2], '#FFF8A0', P[3]);
+        // Round chubby bunny head
+        drawContouredRect(ctx, 9, 9, 14, 11, P[1], P[2], '#FFFFFF', P[3]);
+
+        // Sparkling anime eyes
+        ctx.fillStyle = P[15]; ctx.fillRect(11, 12, 3, 4); ctx.fillRect(18, 12, 3, 4);
+        ctx.fillStyle = P[10]; ctx.fillRect(11, 12, 1, 2); ctx.fillRect(18, 12, 1, 2);
+
+        // Pink heart nose & rosy blushing cheeks
+        ctx.fillStyle = P[11]; ctx.fillRect(15, 15, 2, 2);
+        ctx.fillStyle = P[5]; ctx.fillRect(9, 15, 3, 2); ctx.fillRect(20, 15, 3, 2);
+
+        // Chubby bunny body
+        drawContouredRect(ctx, 8, 19, 16, 12, P[1], P[2], '#FFFFFF', P[3]);
+
+        // Silky satin gift ribbon bow binding
+        ctx.fillStyle = P[7]; ctx.fillRect(7, 22, 18, 4);
+        ctx.fillStyle = P[9]; ctx.fillRect(7, 23, 18, 1);
+        // Ribbon bow knot
+        ctx.fillStyle = P[7]; ctx.fillRect(14, 20, 4, 4);
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(15, 21, 2, 2);
+
+        // Cute paws
         ctx.fillStyle = P[2];
-        ctx.fillRect(8, 2, 4, 3);
-        ctx.fillRect(14, 1, 4, 3);
-        ctx.fillRect(20, 2, 4, 3);
-
-        // Bare Chest & Muscular Shoulders
-        drawContouredRect(ctx, 10, 14, 12, 10, P[1], P[4], P[4], P[5]);
-        // Pectoral definition
-        ctx.fillStyle = P[5];
-        ctx.fillRect(15, 17, 2, 4);
-
-        // Legendary Massive Bushy Beard (covering chin down to waist!)
-        drawContouredRect(ctx, 9 + sway, 13, 14, 13, P[1], P[2], '#FFF8A0', P[3]);
-        // Textured beard strand locks
-        ctx.fillStyle = P[3];
-        ctx.fillRect(11 + sway, 18, 2, 6);
-        ctx.fillRect(15 + sway, 19, 2, 6);
-        ctx.fillRect(19 + sway, 18, 2, 6);
-
-        // Tattered Blue Boxer Shorts
-        drawContouredRect(ctx, 8, 24, 16, 8, P[1], P[6], P[6], P[7]);
-        // Yellow fray tassels
-        ctx.fillStyle = P[13];
-        ctx.fillRect(9, 31, 3, 2);
-        ctx.fillRect(18, 31, 3, 2);
-
-        // Hemp Rope Binding Wrists (braided cord texture)
-        drawContouredRect(ctx, 7, 18, 18, 5, P[1], P[8], '#F8E8B0', P[9]);
-        ctx.fillStyle = P[9];
-        ctx.fillRect(9, 19, 2, 3);
-        ctx.fillRect(13, 19, 2, 3);
-        ctx.fillRect(17, 19, 2, 3);
-        ctx.fillRect(21, 19, 2, 3);
+        ctx.fillRect(10, 31, 4, 4); ctx.fillRect(18, 31, 4, 4);
         return;
       }
 
       if (opts.freed) {
-        // Freed: Flying rope fragments, cheering arms raised high!
-        drawContouredRect(ctx, 12, 6, 8, 7, P[1], P[4], P[4], P[5]);
-        // Hair
-        drawContouredRect(ctx, 9, 2, 14, 6, P[1], P[2], '#FFF8A0', P[3]);
-        // Raised muscular arms
-        drawContouredRect(ctx, 5, 3, 4, 10, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 23, 3, 4, 10, P[1], P[4], P[4], P[5]);
-        // Flying severed rope fragments
-        ctx.fillStyle = P[8];
-        ctx.fillRect(2, 6, 3, 2);
-        ctx.fillRect(27, 7, 3, 2);
-        ctx.fillRect(15, 2, 2, 3);
-        // Beard
-        drawContouredRect(ctx, 10, 11, 12, 10, P[1], P[2], '#FFF8A0', P[3]);
-        // Torso & abs
-        drawContouredRect(ctx, 11, 19, 10, 8, P[1], P[4], P[4], P[5]);
-        // Tattered shorts
-        drawContouredRect(ctx, 9, 25, 14, 7, P[1], P[6], P[6], P[7]);
-        // Bare legs
-        drawContouredRect(ctx, 10, 31, 4, 6, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 18, 31, 4, 6, P[1], P[4], P[4], P[5]);
+        // Freed: Silky ribbon bursts into golden glitter stars!
+        // Ears raised high cheering
+        drawContouredRect(ctx, 9, 1, 4, 11, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(10, 3, 2, 7);
+        drawContouredRect(ctx, 19, 1, 4, 11, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(20, 3, 2, 7);
+
+        // Raised happy paws
+        drawContouredRect(ctx, 5, 12, 4, 6, P[1], P[2], '#FFFFFF', P[3]);
+        drawContouredRect(ctx, 23, 12, 4, 6, P[1], P[2], '#FFFFFF', P[3]);
+
+        // Happy head & beaming eyes (^ ^)
+        drawContouredRect(ctx, 9, 9, 14, 11, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[1]; ctx.fillRect(11, 13, 3, 1); ctx.fillRect(18, 13, 3, 1);
+        ctx.fillStyle = P[11]; ctx.fillRect(15, 15, 2, 2);
+        ctx.fillStyle = P[5]; ctx.fillRect(9, 15, 3, 2); ctx.fillRect(20, 15, 3, 2);
+
+        // Chubby body & mint bow tie
+        drawContouredRect(ctx, 8, 19, 16, 12, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[6]; ctx.fillRect(13, 19, 6, 3); // mint bow tie
+
+        // Golden stars bursting around
+        ctx.fillStyle = P[13];
+        ctx.fillRect(4, 6, 3, 3); ctx.fillRect(25, 7, 3, 3); ctx.fillRect(14, 2, 3, 3);
+
+        // Feet
+        ctx.fillStyle = P[2]; ctx.fillRect(9, 31, 5, 4); ctx.fillRect(18, 31, 5, 4);
         return;
       }
 
       if (opts.salute) {
-        // Iconic Arcade Military Salute ("THANK YOU!")
-        drawContouredRect(ctx, 12, 6, 8, 7, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 9, 2, 14, 6, P[1], P[2], '#FFF8A0', P[3]);
-        // Beard
-        drawContouredRect(ctx, 10, 11, 12, 10, P[1], P[2], '#FFF8A0', P[3]);
-        // Right Arm in Crisp Military Salute to brow
-        drawContouredRect(ctx, 19, 4, 9, 4, P[1], P[4], P[4], P[5]);
-        // White sparkling tooth twinkle glint!
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(17, 8, 3, 3);
-        ctx.fillRect(16, 9, 5, 1);
-        ctx.fillRect(18, 7, 1, 5);
-        // Torso, shorts & legs
-        drawContouredRect(ctx, 11, 19, 10, 8, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 9, 25, 14, 7, P[1], P[6], P[6], P[7]);
-        drawContouredRect(ctx, 10, 31, 4, 6, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 18, 31, 4, 6, P[1], P[4], P[4], P[5]);
+        // Cheerful Double-Paw Wave ("THANK YOU!")
+        drawContouredRect(ctx, 10, 2, 4, 10, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(11, 4, 2, 6);
+        drawContouredRect(ctx, 18, 2, 4, 10, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(19, 4, 2, 6);
+
+        // Head
+        drawContouredRect(ctx, 9, 9, 14, 11, P[1], P[2], '#FFFFFF', P[3]);
+        // Big sparkling eyes
+        ctx.fillStyle = P[15]; ctx.fillRect(11, 12, 3, 4); ctx.fillRect(18, 12, 3, 4);
+        ctx.fillStyle = P[10]; ctx.fillRect(11, 12, 2, 2); ctx.fillRect(18, 12, 2, 2);
+        ctx.fillStyle = P[11]; ctx.fillRect(15, 15, 2, 2);
+        ctx.fillStyle = P[5]; ctx.fillRect(9, 15, 3, 2); ctx.fillRect(20, 15, 3, 2);
+
+        // Waving paw raised
+        drawContouredRect(ctx, 23, 7, 5, 5, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(24, 8, 3, 3); // Pink paw pad
+
+        // Floating hearts
+        ctx.fillStyle = P[11];
+        ctx.fillRect(26, 2, 3, 3); ctx.fillRect(28, 2, 3, 3); ctx.fillRect(27, 4, 3, 2);
+
+        // Body & mint bow tie
+        drawContouredRect(ctx, 8, 19, 16, 12, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[6]; ctx.fillRect(13, 19, 6, 3);
+        ctx.fillStyle = P[2]; ctx.fillRect(9, 31, 5, 4); ctx.fillRect(18, 31, 5, 4);
         return;
       }
 
       if (opts.dropItem) {
-        // Reaching into shorts and pulling out red gift crate with gold ribbon!
-        drawContouredRect(ctx, 12, 7, 8, 7, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 9, 3, 14, 6, P[1], P[2], '#FFF8A0', P[3]);
-        drawContouredRect(ctx, 10, 12, 12, 9, P[1], P[2], '#FFF8A0', P[3]);
-        drawContouredRect(ctx, 9, 23, 14, 7, P[1], P[6], P[6], P[7]);
-        // Red supply crate with golden ribbon
-        drawBeveledPlate(ctx, 20, 16, 11, 10, P[12], '#FF6040', '#801808', P[1]);
-        // Gold ribbon cross
-        ctx.fillStyle = P[13];
-        ctx.fillRect(25, 16, 2, 10);
-        ctx.fillRect(20, 20, 11, 2);
-        // Legs
-        drawContouredRect(ctx, 10, 30, 4, 6, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 18, 30, 4, 6, P[1], P[4], P[4], P[5]);
+        // Pulling out a gift-wrapped strawberry cupcake box with golden ribbon!
+        drawContouredRect(ctx, 10, 2, 4, 10, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(11, 4, 2, 6);
+        drawContouredRect(ctx, 18, 2, 4, 10, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(19, 4, 2, 6);
+
+        // Head
+        drawContouredRect(ctx, 9, 9, 14, 11, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[15]; ctx.fillRect(11, 12, 3, 4); ctx.fillRect(18, 12, 3, 4);
+        ctx.fillStyle = P[10]; ctx.fillRect(11, 12, 2, 2); ctx.fillRect(18, 12, 2, 2);
+        ctx.fillStyle = P[11]; ctx.fillRect(15, 15, 2, 2);
+        ctx.fillStyle = P[5]; ctx.fillRect(9, 15, 3, 2); ctx.fillRect(20, 15, 3, 2);
+
+        // Chubby body
+        drawContouredRect(ctx, 8, 19, 16, 12, P[1], P[2], '#FFFFFF', P[3]);
+
+        // Strawberry Gift Box with Golden Ribbon
+        drawBeveledPlate(ctx, 19, 16, 12, 11, P[8], '#FFE5EC', '#F4ACB7', P[1]);
+        ctx.fillStyle = P[13]; // Gold ribbon cross
+        ctx.fillRect(24, 16, 2, 11);
+        ctx.fillRect(19, 21, 12, 2);
+        // Strawberry topper
+        ctx.fillStyle = P[12]; ctx.fillRect(23, 13, 4, 3);
+        ctx.fillStyle = P[14]; ctx.fillRect(24, 12, 2, 2); // green leaf
+
+        // Feet
+        ctx.fillStyle = P[2]; ctx.fillRect(9, 31, 5, 4); ctx.fillRect(18, 31, 5, 4);
         return;
       }
 
       if (opts.escapeFrame !== undefined) {
-        // 4-Frame Comedic Sprint (high knees & pumping arms fleeing)
+        // 4-Frame Joyful Bunny Hops (Ears flapping, happy bounce)
         const f = opts.escapeFrame;
-        const off = f % 2 ? -4 : 4;
-        drawContouredRect(ctx, 12, 6, 8, 7, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 9, 2, 14, 6, P[1], P[2], '#FFF8A0', P[3]);
-        drawContouredRect(ctx, 11, 11, 10, 9, P[1], P[2], '#FFF8A0', P[3]);
-        // Pumping arms
-        drawContouredRect(ctx, 6 + off, 12, 4, 7, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 22 - off, 12, 4, 7, P[1], P[4], P[4], P[5]);
-        // Shorts & running legs
-        drawContouredRect(ctx, 10, 21, 12, 7, P[1], P[6], P[6], P[7]);
-        drawContouredRect(ctx, 10 + off, 27, 4, 8, P[1], P[4], P[4], P[5]);
-        drawContouredRect(ctx, 18 - off, 27, 4, 8, P[1], P[4], P[4], P[5]);
+        const off = f % 2 ? -3 : 3;
+        // Bouncing ears
+        drawContouredRect(ctx, 9 + off, 2, 4, 9, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(10 + off, 4, 2, 5);
+        drawContouredRect(ctx, 17 - off, 3, 4, 9, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[4]; ctx.fillRect(18 - off, 5, 2, 5);
+
+        // Head
+        drawContouredRect(ctx, 9, 9, 14, 11, P[1], P[2], '#FFFFFF', P[3]);
+        ctx.fillStyle = P[15]; ctx.fillRect(11, 12, 3, 4); ctx.fillRect(18, 12, 3, 4);
+        ctx.fillStyle = P[10]; ctx.fillRect(11, 12, 1, 2); ctx.fillRect(18, 12, 1, 2);
+        ctx.fillStyle = P[11]; ctx.fillRect(15, 15, 2, 2);
+        ctx.fillStyle = P[5]; ctx.fillRect(9, 15, 3, 2); ctx.fillRect(20, 15, 3, 2);
+
+        // Running paws
+        drawContouredRect(ctx, 6 + off, 14, 4, 6, P[1], P[2], '#FFFFFF', P[3]);
+        drawContouredRect(ctx, 22 - off, 14, 4, 6, P[1], P[2], '#FFFFFF', P[3]);
+
+        // Chubby body & scampering feet
+        drawContouredRect(ctx, 8, 19, 16, 11, P[1], P[2], '#FFFFFF', P[3]);
+        drawContouredRect(ctx, 9 + off, 28, 5, 6, P[1], P[2], '#FFFFFF', P[3]);
+        drawContouredRect(ctx, 18 - off, 28, 5, 6, P[1], P[2], '#FFFFFF', P[3]);
       }
     };
 
@@ -1637,93 +1552,125 @@ export class ProceduralSpriteFactory {
   private generateVehicleSprites(): void {
     const V = PALETTES.VEHICLE;
 
-    // 1. Tank Hull (Width 136, Height 68, AX 68, AY 60)
+    // 1. Confectionery Macaron Roller Wagon Hull (Width 136, Height 68, AX 68, AY 60)
     this.registerSprite('iron_technical_hull', 136, 68, 68, 60, (ctx) => {
-      // Main armored chassis base (Heavy welded olive green steel plates)
-      drawBeveledPlate(ctx, 8, 14, 120, 38, V[2], V[3], V[4], V[1]);
+      // Strawberry macaron top shell (Rich pastel strawberry pink with royal plum outline)
+      drawBeveledPlate(ctx, 10, 14, 116, 20, V[2], V[3], V[4], V[1]);
 
-      // Segmented armor plate seams
-      ctx.fillStyle = V[1];
-      ctx.fillRect(40, 15, 2, 36);
-      ctx.fillRect(80, 15, 2, 36);
-      ctx.fillRect(10, 32, 116, 2);
-
-      // Rust streaks dripping from seams
-      ctx.fillStyle = V[11];
-      ctx.fillRect(41, 24, 1, 6);
-      ctx.fillRect(81, 20, 1, 8);
-      ctx.fillRect(28, 34, 1, 5);
-
-      // Metallic Rivets across upper and lower armor borders
-      for (let x = 14; x < 120; x += 12) {
-        drawRivet(ctx, x, 17, V[8], '#FFFFFF', V[1]);
-        drawRivet(ctx, x, 46, V[8], '#FFFFFF', V[1]);
-      }
-
-      // Front Spiked Ram Bumper (Heavy steel reinforcement)
-      drawBeveledPlate(ctx, 120, 22, 12, 26, V[7], V[8], V[1], V[1]);
-      // Spikes on bumper
-      ctx.fillStyle = V[8];
-      ctx.fillRect(130, 24, 4, 3);
-      ctx.fillRect(130, 32, 5, 4);
-      ctx.fillRect(130, 42, 4, 3);
-
-      // Rear Twin Exhaust Smokestacks (with soot stains & dynamic heat)
-      drawContouredRect(ctx, 10, 6, 7, 12, V[1], V[10], V[7], V[1]);
-      drawContouredRect(ctx, 18, 8, 7, 10, V[1], V[10], V[7], V[1]);
-      // Soot on hull around exhaust
-      ctx.fillStyle = '#101010';
-      ctx.fillRect(9, 14, 18, 4);
-
-      // Yellow & Black Diagonal Hazard Caution Stripes
-      ctx.fillStyle = V[14];
-      ctx.fillRect(48, 26, 28, 8);
-      ctx.fillStyle = V[1];
-      for (let s = 48; s < 76; s += 6) {
-        ctx.fillRect(s, 26, 3, 8);
-      }
-
-      // Red Rebel Army Insignia stamped on side
-      ctx.fillStyle = V[12];
-      ctx.fillRect(92, 24, 8, 8);
+      // Whipped marshmallow cream filling middle layer
+      drawContouredRect(ctx, 12, 32, 112, 10, V[1], V[7], '#FFFFFF', V[8]);
+      // Piped cream dollop swirls
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(95, 25, 2, 6);
-      ctx.fillRect(93, 27, 6, 2);
+      for (let x = 16; x < 120; x += 12) {
+        ctx.beginPath();
+        ctx.arc(x, 37, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Strawberry macaron bottom biscuit base
+      drawBeveledPlate(ctx, 10, 40, 116, 14, V[4], V[2], V[1], V[1]);
+
+      // Decorative sugar pearl beads across upper biscuit crest
+      for (let x = 18; x < 118; x += 12) {
+        ctx.fillStyle = V[1];
+        ctx.beginPath(); ctx.arc(x, 18, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = V[15];
+        ctx.beginPath(); ctx.arc(x, 18, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(x - 1, 16, 1, 1);
+      }
+
+      // Front bumper: Golden crispy waffle ram with smiling face grill
+      drawBeveledPlate(ctx, 118, 22, 14, 28, V[8], '#FFF7ED', V[6], V[1]);
+      // Cheerful smiling mouth on front grill
+      ctx.fillStyle = V[1];
+      ctx.beginPath();
+      ctx.arc(125, 34, 5, 0, Math.PI);
+      ctx.fill();
+      // Rosy blush cheek on grill
+      ctx.fillStyle = V[11];
+      ctx.beginPath(); ctx.arc(121, 32, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(129, 32, 2, 0, Math.PI * 2); ctx.fill();
+
+      // Rear twin candy-cane soda straw exhaust smokestacks
+      drawContouredRect(ctx, 12, 4, 7, 12, V[1], '#FFFFFF', V[11], V[1]);
+      drawContouredRect(ctx, 21, 6, 7, 10, V[1], '#FFFFFF', V[10], V[1]);
+      // Striped diagonal candy pattern on straws
+      ctx.fillStyle = V[11];
+      ctx.fillRect(13, 6, 5, 2); ctx.fillRect(13, 11, 5, 2);
+      ctx.fillStyle = V[10];
+      ctx.fillRect(22, 8, 5, 2); ctx.fillRect(22, 12, 5, 2);
+      // Floating tiny heart steam puffs from straws
+      ctx.fillStyle = V[3];
+      ctx.fillRect(14, 1, 3, 2); ctx.fillRect(23, 2, 3, 2);
+
+      // Cheerful pastel candy sprinkles on side panel
+      const sprinkles = [
+        { x: 38, y: 22, c: V[14] }, // Lemon
+        { x: 50, y: 20, c: V[10] }, // Mint
+        { x: 62, y: 23, c: V[13] }, // Lavender
+        { x: 74, y: 21, c: '#67E8F9' }, // Cyan
+        { x: 86, y: 24, c: V[11] }, // Berry
+        { x: 44, y: 26, c: '#FFFFFF' },
+        { x: 56, y: 27, c: V[14] },
+        { x: 68, y: 25, c: V[10] },
+        { x: 80, y: 26, c: V[13] },
+      ];
+      for (const sp of sprinkles) {
+        ctx.fillStyle = sp.c;
+        ctx.fillRect(sp.x, sp.y, 4, 2);
+      }
+
+      // Sweet strawberry emblem badge stamped on side
+      ctx.fillStyle = V[1];
+      ctx.beginPath(); ctx.arc(102, 26, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = V[12];
+      ctx.beginPath(); ctx.arc(102, 26, 6, 0, Math.PI * 2); ctx.fill();
+      // Strawberry seeds & leafy green cap
+      ctx.fillStyle = V[10]; ctx.fillRect(100, 20, 4, 2);
+      ctx.fillStyle = V[15];
+      ctx.fillRect(100, 24, 1, 1); ctx.fillRect(103, 25, 1, 1); ctx.fillRect(101, 28, 1, 1);
     });
 
-    // 2. Animated Caterpillar Treads (4 frames, 136x24, AX 68, AY 12)
+    // 2. Animated Chocolate Wafer Treads with Peppermint Pinwheels (4 frames, 136x24, AX 68, AY 12)
     for (let frame = 0; frame < 4; frame++) {
       this.registerSprite(`iron_technical_treads_${frame}`, 136, 24, 68, 12, (ctx) => {
-        // Continuous rubber-and-steel track loop
+        // Warm chocolate wafer track frame
         drawBeveledPlate(ctx, 6, 2, 124, 20, V[5], V[6], V[1], V[1]);
 
-        // 5 Steel Road Wheels with Spoked Hubs (synchronized rotation!)
+        // 5 Spinning Peppermint Swirl Candy Wheels
         const wheelCenters = [20, 44, 68, 92, 116];
         for (const cx of wheelCenters) {
-          // Wheel outer tire rim
+          // Wheel outer candy rim
           ctx.fillStyle = V[1];
-          ctx.fillRect(cx - 8, 3, 16, 16);
-          ctx.fillStyle = V[7];
-          ctx.fillRect(cx - 7, 4, 14, 14);
-          ctx.fillStyle = V[1];
-          ctx.fillRect(cx - 5, 6, 10, 10);
-          ctx.fillStyle = V[6];
-          ctx.fillRect(cx - 3, 8, 6, 6);
+          ctx.beginPath(); ctx.arc(cx, 12, 8, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = V[7]; // Marshmallow white base
+          ctx.beginPath(); ctx.arc(cx, 12, 7, 0, Math.PI * 2); ctx.fill();
 
-          // Center grease hub bearing
-          ctx.fillStyle = V[10];
-          ctx.fillRect(cx - 1, 10, 3, 3);
-
-          // Rotating 4-spoke hub pattern by frame
+          // 4-Spoke Peppermint Candy Swirl rotating with frame
           const ang = (frame * Math.PI) / 2;
-          const cosA = Math.round(Math.cos(ang) * 4);
-          const sinA = Math.round(Math.sin(ang) * 4);
-          ctx.fillStyle = V[8];
-          ctx.fillRect(cx + cosA - 1, 11 + sinA - 1, 2, 2);
-          ctx.fillRect(cx - cosA - 1, 11 - sinA - 1, 2, 2);
+          ctx.save();
+          ctx.translate(cx, 12);
+          ctx.rotate(ang);
+          ctx.fillStyle = V[11]; // Strawberry swirl
+          ctx.beginPath();
+          ctx.arc(0, 0, 6, 0, Math.PI / 2);
+          ctx.lineTo(0, 0);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(0, 0, 6, Math.PI, Math.PI * 1.5);
+          ctx.lineTo(0, 0);
+          ctx.fill();
+
+          // Center gumdrop axle hub
+          ctx.fillStyle = V[10]; // Mint gumdrop
+          ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(-1, -1, 1, 1);
+          ctx.restore();
         }
 
-        // Ground Cleats on Track Outer Loop (caterpillar link pins)
+        // Biscuit tread cleats / cookie crumbs along track top and bottom
         ctx.fillStyle = V[8];
         const offset = (frame * 3) % 8;
         for (let x = 8 + offset; x < 124; x += 8) {
@@ -1733,44 +1680,78 @@ export class ProceduralSpriteFactory {
       });
     }
 
-    // 3. Rotating 360° Autocannon Turret (48x28, AX 24, AY 20)
+    // 3. Rotating Pistachio & Bubblegum Dome Turret with Twin Candy Cane Cannons (48x28, AX 24, AY 20)
     this.registerSprite('iron_technical_turret', 48, 28, 24, 20, (ctx) => {
-      // Armored cupola dome with commander hatch
-      drawBeveledPlate(ctx, 8, 6, 28, 18, V[9], V[3], V[4], V[1]);
-      // Periscope vision visor slit
+      // Rounded pistachio cream & bubblegum cupola dome
+      drawBeveledPlate(ctx, 8, 6, 28, 18, V[9], V[3], V[10], V[1]);
+
+      // Cute periscope visor slit with anime sparkle eyes
       ctx.fillStyle = V[1];
-      ctx.fillRect(14, 10, 12, 3);
-      ctx.fillStyle = '#40E0D0';
-      ctx.fillRect(15, 11, 10, 1);
+      ctx.fillRect(14, 10, 14, 4);
+      ctx.fillStyle = '#48DBFB';
+      ctx.fillRect(15, 11, 12, 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(16, 11, 2, 1); ctx.fillRect(22, 11, 2, 1); // Twin catchlights
 
-      // Twin Heavy Autocannon Barrels extending forward
-      drawContouredRect(ctx, 32, 10, 14, 4, V[1], V[10], V[7], V[1]);
-      drawContouredRect(ctx, 32, 16, 14, 4, V[1], V[10], V[7], V[1]);
+      // Twin Candy Cane Cannon Barrels extending forward
+      drawContouredRect(ctx, 32, 10, 14, 4, V[1], '#FFFFFF', V[11], V[1]);
+      drawContouredRect(ctx, 32, 16, 14, 4, V[1], '#FFFFFF', V[11], V[1]);
+      // Red candy cane stripes on cannons
+      ctx.fillStyle = V[11];
+      ctx.fillRect(34, 10, 2, 4); ctx.fillRect(38, 10, 2, 4); ctx.fillRect(42, 10, 2, 4);
+      ctx.fillRect(34, 16, 2, 4); ctx.fillRect(38, 16, 2, 4); ctx.fillRect(42, 16, 2, 4);
 
-      // Ventilated cooling jacket perforations
-      ctx.fillStyle = V[1];
-      ctx.fillRect(35, 11, 2, 2);
-      ctx.fillRect(39, 11, 2, 2);
-      ctx.fillRect(35, 17, 2, 2);
-      ctx.fillRect(39, 17, 2, 2);
-
-      // Fluted Flash Suppressor Muzzle Tips
-      drawBeveledPlate(ctx, 44, 9, 3, 6, V[7], V[8], V[1]);
-      drawBeveledPlate(ctx, 44, 15, 3, 6, V[7], V[8], V[1]);
+      // Frosted sugar doughnut muzzle tips
+      drawBeveledPlate(ctx, 44, 9, 3, 6, V[14], '#FFFFFF', V[1]);
+      drawBeveledPlate(ctx, 44, 15, 3, 6, V[14], '#FFFFFF', V[1]);
     });
 
-    // 4. Burnt-out Wreckage
+    // 4. Sleepy Dessert Wreckage (136x68, AX 68, AY 60)
     this.registerSprite('iron_technical_wreckage', 136, 68, 68, 60, (ctx) => {
-      drawBeveledPlate(ctx, 8, 16, 120, 36, '#1F1F1F', '#424242', '#0A0A0A', '#101010');
-      // Jagged blast breaches
-      ctx.fillStyle = '#050505';
-      ctx.fillRect(30, 24, 30, 20);
+      // Soft lavender and cocoa crumb dessert resting peacefully
+      drawBeveledPlate(ctx, 10, 16, 116, 36, '#4A3B52', '#7A6284', '#2C1E32', V[1]);
+
+      // Crumbled macaron shell with melted strawberry compote oozing gently
+      ctx.fillStyle = V[12];
+      ctx.beginPath();
+      ctx.arc(48, 34, 14, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = V[11];
-      ctx.fillRect(20, 20, 45, 10);
-      // Smoldering red-hot embers inside breach
-      ctx.fillStyle = '#E84800';
-      ctx.fillRect(36, 32, 6, 4);
-      ctx.fillRect(46, 34, 4, 3);
+      ctx.fillRect(34, 34, 40, 12);
+      ctx.fillRect(26, 40, 52, 8);
+
+      // Comical sleepy curved eyes (^ ^) on the resting dessert hull
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(80, 28, 4, Math.PI, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(94, 28, 4, Math.PI, 0);
+      ctx.stroke();
+
+      // Cute rosy blush
+      ctx.fillStyle = V[11];
+      ctx.beginPath(); ctx.arc(74, 32, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(100, 32, 3, 0, Math.PI * 2); ctx.fill();
+
+      // Scattered candy rainbow sprinkles on the crumbs
+      ctx.fillStyle = V[14]; ctx.fillRect(42, 30, 3, 2);
+      ctx.fillStyle = V[10]; ctx.fillRect(58, 36, 3, 2);
+      ctx.fillStyle = '#67E8F9'; ctx.fillRect(70, 42, 3, 2);
+      ctx.fillStyle = V[13]; ctx.fillRect(92, 40, 3, 2);
+
+      // Soft "zZz" sleep puff in pure pixel art
+      ctx.fillStyle = '#FFFFFF';
+      // small 'z'
+      ctx.fillRect(106, 18, 3, 1);
+      ctx.fillRect(107, 19, 1, 1);
+      ctx.fillRect(106, 20, 3, 1);
+      // larger 'Z'
+      ctx.fillRect(111, 14, 4, 1);
+      ctx.fillRect(113, 15, 1, 1);
+      ctx.fillRect(112, 16, 1, 1);
+      ctx.fillRect(111, 17, 4, 1);
     });
   }
 
@@ -1780,329 +1761,490 @@ export class ProceduralSpriteFactory {
   private generateFortressSprites(): void {
     const F = PALETTES.FORTRESS;
 
-    // 1. Intact Hull Phase 1 (260x140, AX 130, AY 70)
+    // 1. Grand Sugar Citadel Hull Phase 1 (260x140, AX 130, AY 70)
     this.registerSprite('tetsuyuki_hull_p1', 260, 140, 130, 70, (ctx) => {
-      // Massive Naval Battleship Fuselage Plating
+      // Lavender sugar-stone citadel palace battlements
       drawBeveledPlate(ctx, 10, 18, 240, 104, F[2], F[3], F[4], F[1]);
 
-      // Recessed Armor Panel Seam Lines
+      // Scalloped royal icing battlement caps & decorative cornice drips
+      ctx.fillStyle = F[3];
+      ctx.fillRect(10, 16, 240, 5);
+      for (let x = 14; x < 246; x += 14) {
+        ctx.beginPath();
+        ctx.arc(x, 21, 6, 0, Math.PI);
+        ctx.fill();
+      }
+
+      // Confectionery sugar-mortar seam lines between lavender sugar blocks
       ctx.fillStyle = F[5];
       for (let x = 36; x < 240; x += 34) {
-        ctx.fillRect(x, 20, 2, 98);
+        ctx.fillRect(x, 24, 2, 94);
       }
       ctx.fillRect(12, 54, 236, 2);
       ctx.fillRect(12, 86, 236, 2);
 
-      // Heavy Structural Rivet Grid across all panels
+      // Sugar pearl bead rivets across battlement tiers
       for (let x = 18; x < 240; x += 17) {
-        drawRivet(ctx, x, 22, F[3], '#FFFFFF', F[5]);
-        drawRivet(ctx, x, 50, F[3], '#FFFFFF', F[5]);
-        drawRivet(ctx, x, 82, F[3], '#FFFFFF', F[5]);
-        drawRivet(ctx, x, 114, F[3], '#FFFFFF', F[5]);
+        ctx.fillStyle = F[1];
+        ctx.beginPath(); ctx.arc(x, 26, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = F[15];
+        ctx.beginPath(); ctx.arc(x, 26, 2, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = F[1];
+        ctx.beginPath(); ctx.arc(x, 58, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = F[15];
+        ctx.beginPath(); ctx.arc(x, 58, 2, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = F[1];
+        ctx.beginPath(); ctx.arc(x, 88, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = F[15];
+        ctx.beginPath(); ctx.arc(x, 88, 2, 0, Math.PI * 2); ctx.fill();
       }
 
-      // Yellow & Black Industrial Hazard Caution Stripes on Lower Keel
+      // Crispy golden baked waffle cone tower sections on sides
       ctx.fillStyle = F[6];
       ctx.fillRect(40, 96, 140, 14);
-      ctx.fillStyle = F[7];
-      for (let x = 40; x < 180; x += 14) {
-        ctx.fillRect(x, 96, 7, 14);
+      ctx.fillStyle = F[7]; // Waffle diagonal grid
+      for (let x = 40; x < 180; x += 10) {
+        ctx.fillRect(x, 96, 3, 14);
       }
 
-      // Reinforced coastal cliff mounting anchors
-      drawBeveledPlate(ctx, 16, 114, 46, 18, '#30261C', '#54321A', '#1A140E', F[1]);
-      drawBeveledPlate(ctx, 180, 114, 56, 18, '#30261C', '#54321A', '#1A140E', F[1]);
+      // Candy cane decorative pillar supports along lower foundation
+      drawBeveledPlate(ctx, 16, 114, 46, 18, F[6], '#FFF7ED', F[7], F[1]);
+      drawBeveledPlate(ctx, 180, 114, 56, 18, F[6], '#FFF7ED', F[7], F[1]);
+      // Candy cane stripes on foundation pillars
+      ctx.fillStyle = F[10];
+      for (let x = 18; x < 60; x += 8) { ctx.fillRect(x, 116, 3, 14); }
+      for (let x = 182; x < 232; x += 8) { ctx.fillRect(x, 116, 3, 14); }
 
-      // Bulkhead inspection portholes
-      ctx.fillStyle = F[1];
-      ctx.fillRect(60, 32, 8, 8);
-      ctx.fillRect(100, 32, 8, 8);
-      ctx.fillRect(140, 32, 8, 8);
-      ctx.fillStyle = '#40E0D0';
-      ctx.fillRect(62, 34, 4, 4);
-      ctx.fillRect(102, 34, 4, 4);
-      ctx.fillRect(142, 34, 4, 4);
+      // Smiling sugar glaze arched stained-glass windows
+      const windowX = [60, 100, 140, 180];
+      const winColors = [F[14], F[8], F[9], F[10]];
+      for (let i = 0; i < windowX.length; i++) {
+        const wx = windowX[i];
+        const wc = winColors[i];
+        // Window arch frame
+        ctx.fillStyle = F[1];
+        ctx.fillRect(wx - 1, 31, 12, 14);
+        ctx.fillStyle = wc;
+        ctx.fillRect(wx, 34, 10, 10);
+        ctx.beginPath(); ctx.arc(wx + 5, 34, 5, Math.PI, 0); ctx.fill();
+        // Star sparkle in window
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(wx + 4, 33, 2, 6);
+        ctx.fillRect(wx + 2, 35, 6, 2);
+      }
     });
 
-    // 2. Hull Phase 2 (Catastrophic Breach & Exposed Girders)
+    // 2. Sugar Citadel Hull Phase 2 (Molten Strawberry Compote & Rainbow Sprinkles Breach)
     this.registerSprite('tetsuyuki_hull_p2', 260, 140, 130, 70, (ctx) => {
-      // Base battleship fuselage
+      // Base citadel fuselage
       drawBeveledPlate(ctx, 10, 18, 240, 104, F[2], F[3], F[4], F[1]);
 
-      // Catastrophic 80x64 Jagged Hull Breach in front left section
-      ctx.fillStyle = '#06080C';
+      // Delicious molten strawberry jam compote breach in front-left section (80x64)
+      ctx.fillStyle = F[1];
       ctx.fillRect(20, 32, 80, 64);
+      ctx.fillStyle = F[12]; // Rich strawberry compote
+      ctx.fillRect(22, 34, 76, 60);
 
-      // Exposed structural steel I-beams & sheared girders
-      ctx.fillStyle = F[4];
-      ctx.fillRect(30, 34, 5, 60);
-      ctx.fillRect(52, 34, 5, 60);
-      ctx.fillRect(74, 34, 5, 60);
-      ctx.fillRect(22, 60, 76, 5);
+      // Exposed crispy waffle biscuit wafers inside the breach
+      ctx.fillStyle = F[6];
+      ctx.fillRect(30, 36, 6, 56);
+      ctx.fillRect(52, 36, 6, 56);
+      ctx.fillRect(74, 36, 6, 56);
+      ctx.fillRect(24, 60, 72, 6);
+      ctx.fillStyle = F[7]; // Waffle grid marks
+      ctx.fillRect(32, 40, 2, 48);
+      ctx.fillRect(54, 40, 2, 48);
+      ctx.fillRect(76, 40, 2, 48);
 
-      // Severed Copper Hydraulic Lines with dripping fluid & electrical sparks
+      // Luscious whipped cream dollops oozing from breach edges
+      ctx.fillStyle = F[3];
+      ctx.beginPath();
+      ctx.arc(26, 42, 6, 0, Math.PI * 2);
+      ctx.arc(38, 34, 7, 0, Math.PI * 2);
+      ctx.arc(88, 48, 8, 0, Math.PI * 2);
+      ctx.arc(76, 88, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sparkling candy sugar crystal conduits with glowing sparks
       ctx.fillStyle = F[14];
       ctx.fillRect(36, 68, 18, 3);
       ctx.fillRect(44, 76, 22, 3);
-      // Bright electrical sparks
+      // Bright star sparks
       ctx.fillStyle = F[9];
-      ctx.fillRect(56, 66, 3, 3);
-      ctx.fillRect(64, 78, 3, 3);
+      ctx.fillRect(56, 66, 4, 4);
+      ctx.fillRect(64, 78, 4, 4);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(57, 67, 2, 2);
+      ctx.fillRect(65, 79, 2, 2);
 
-      // Charred battle damage rust and black soot spread around the crater
-      ctx.fillStyle = F[12];
-      ctx.fillRect(94, 28, 40, 44);
-      ctx.fillStyle = '#101010';
-      ctx.fillRect(98, 34, 32, 32);
+      // Rainbow candy sprinkles scattered around the breach crater
+      const breachSprinkles = [
+        { x: 96, y: 32, c: F[9] },
+        { x: 104, y: 38, c: F[14] },
+        { x: 112, y: 30, c: F[10] },
+        { x: 100, y: 46, c: F[8] },
+        { x: 118, y: 44, c: '#FFFFFF' },
+        { x: 108, y: 52, c: F[9] },
+      ];
+      for (const sp of breachSprinkles) {
+        ctx.fillStyle = sp.c;
+        ctx.fillRect(sp.x, sp.y, 4, 2);
+      }
     });
 
-    // 3. Hull Phase 3 (Critical Overheating & Exposed Reactor Core)
+    // 3. Sugar Citadel Hull Phase 3 (Radiant Sugar Overdrive & Glowing Heart Crystal Sanctum)
     this.registerSprite('tetsuyuki_hull_p3', 260, 140, 130, 70, (ctx) => {
-      // Overheated deep thermal crimson glowing hull
-      drawBeveledPlate(ctx, 10, 18, 240, 104, '#38140C', '#8B0000', '#180402', F[1]);
+      // Overheated radiant strawberry ruby glaze hull
+      drawBeveledPlate(ctx, 10, 18, 240, 104, F[13], F[11], F[12], F[1]);
 
-      // Open Central Reactor Core Chamber (64x64)
-      ctx.fillStyle = '#040608';
+      // Open Central Crystal Sanctum Chamber (68x68)
+      ctx.fillStyle = F[1];
       ctx.fillRect(96, 36, 68, 68);
+      ctx.fillStyle = '#2A0818';
+      ctx.fillRect(98, 38, 64, 64);
 
-      // Warning hazard stripes framing the reactor hatch
-      ctx.fillStyle = F[6];
-      ctx.fillRect(92, 32, 76, 4);
-      ctx.fillRect(92, 104, 76, 4);
-      ctx.fillStyle = F[7];
-      for (let x = 92; x < 168; x += 8) {
-        ctx.fillRect(x, 32, 4, 4);
-        ctx.fillRect(x, 104, 4, 4);
+      // Rainbow candy sugar tiles framing the crystal sanctum
+      const rainbowHues = [F[10], F[9], F[8], F[14], F[3]];
+      for (let i = 0; i < 8; i++) {
+        ctx.fillStyle = rainbowHues[i % rainbowHues.length];
+        ctx.fillRect(92 + i * 9, 32, 7, 4);
+        ctx.fillRect(92 + i * 9, 106, 7, 4);
       }
 
-      // Overheating radiator cooling vents venting cherry red heat
-      ctx.fillStyle = F[13];
+      // Shimmering candy radiator cooling vents venting glowing cotton candy heat
+      ctx.fillStyle = F[10];
       ctx.fillRect(174, 38, 44, 10);
       ctx.fillRect(174, 56, 44, 10);
       ctx.fillRect(174, 74, 44, 10);
-      ctx.fillStyle = '#FF4422';
+      ctx.fillStyle = F[11];
       ctx.fillRect(178, 41, 36, 4);
       ctx.fillRect(178, 59, 36, 4);
       ctx.fillRect(178, 77, 36, 4);
+
+      // Radiating golden star sparkles around the citadel
+      ctx.fillStyle = F[9];
+      ctx.fillRect(180, 24, 4, 4);
+      ctx.fillRect(220, 30, 3, 3);
+      ctx.fillRect(190, 92, 4, 4);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(181, 25, 2, 2);
     });
 
-    // 4. Underside 60mm Heavy Artillery Cannon (64x32, AX 16, AY 16)
+    // 4. Giant Peppermint Swirl Heavy Artillery Cannon (64x32, AX 16, AY 16)
     this.registerSprite('tetsuyuki_cannon', 64, 32, 16, 16, (ctx) => {
-      // Heavy swivel turret mount
+      // Cupcake swivel turret mount with scalloped sugar frosting
       drawBeveledPlate(ctx, 4, 4, 24, 24, F[2], F[3], F[4], F[1]);
-      // Recoil hydraulic cylinder
-      ctx.fillStyle = F[4];
+      ctx.fillStyle = F[3];
+      ctx.beginPath();
+      ctx.arc(16, 16, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = F[10]; // Pink center cherry
+      ctx.beginPath();
+      ctx.arc(16, 16, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Recoil marshmallow buffer
+      ctx.fillStyle = F[6];
       ctx.fillRect(20, 8, 12, 16);
-      // Massive artillery barrel extending forward
-      drawContouredRect(ctx, 24, 10, 36, 12, F[1], F[3], '#FFFFFF', F[4]);
-      // Stepped muzzle crown
-      drawBeveledPlate(ctx, 56, 8, 6, 16, F[3], '#FFFFFF', F[1]);
+
+      // Striped Peppermint Candy Cane Artillery Barrel extending forward
+      drawContouredRect(ctx, 24, 10, 36, 12, F[1], '#FFFFFF', F[10], F[4]);
+      // Diagonal red peppermint stripes
+      ctx.fillStyle = F[10];
+      for (let s = 26; s < 56; s += 8) {
+        ctx.fillRect(s, 11, 4, 10);
+      }
+
+      // Stepped crispy waffle cone muzzle crown with golden sugar ring
+      drawBeveledPlate(ctx, 56, 8, 6, 16, F[6], F[9], F[1]);
+      ctx.fillStyle = F[9];
+      ctx.fillRect(57, 10, 2, 12);
     });
 
-    // 5. Dorsal Rocket Launcher Pod (48x36, AX 24, AY 30)
+    // 5. Cupcake & Bonbon Missile Launcher Pod (48x36, AX 24, AY 30)
     this.registerSprite('tetsuyuki_rocket_pod_open', 48, 36, 24, 30, (ctx) => {
-      drawBeveledPlate(ctx, 4, 6, 40, 28, F[2], F[3], F[4], F[1]);
-      // 5 Missile launch silos armed with red warhead rockets
+      // Waffle cone pod casing with frosted lavender trim
+      drawBeveledPlate(ctx, 4, 6, 40, 28, F[6], F[3], F[7], F[1]);
+      // 5 Missile launch silos loaded with candy bonbon rockets
       const tubes = [8, 15, 22, 29, 36];
       for (const tx of tubes) {
-        ctx.fillStyle = '#0E1116';
+        ctx.fillStyle = F[1];
         ctx.fillRect(tx, 12, 5, 16);
-        // Rocket warhead
-        ctx.fillStyle = '#FFFFFF';
+        // Rocket pastel body
+        ctx.fillStyle = F[3];
         ctx.fillRect(tx + 1, 12, 3, 10);
-        ctx.fillStyle = '#E74C3C';
-        ctx.fillRect(tx + 1, 9, 3, 4); // Red warhead tip
+        // Pastel star candy warhead tip
+        ctx.fillStyle = F[10];
+        ctx.fillRect(tx + 1, 9, 3, 4);
+        ctx.fillStyle = F[9];
+        ctx.fillRect(tx + 2, 8, 1, 2);
       }
     });
 
-    // 6. Forward Rotary 6-Barrel Gatling Gun (36x24, AX 18, AY 12)
+    // 6. Rainbow Sprinkle Rotary Gatling Gun (36x24, AX 18, AY 12)
     this.registerSprite('tetsuyuki_gatling', 36, 24, 18, 12, (ctx) => {
+      // Confectionery mount gear
       drawBeveledPlate(ctx, 4, 4, 16, 16, F[2], F[3], F[4], F[1]);
-      // 6 Rotating barrels
-      ctx.fillStyle = F[5];
-      ctx.fillRect(18, 6, 16, 2);
-      ctx.fillRect(18, 9, 16, 2);
-      ctx.fillRect(18, 13, 16, 2);
-      ctx.fillRect(18, 16, 16, 2);
-      // Revolving barrel bracket disc
+
+      // 6 Rotating candy-striped barrels
+      const barrelHues = [F[10], F[14], F[8], F[9]];
+      ctx.fillStyle = barrelHues[0]; ctx.fillRect(18, 6, 16, 2);
+      ctx.fillStyle = barrelHues[1]; ctx.fillRect(18, 9, 16, 2);
+      ctx.fillStyle = barrelHues[2]; ctx.fillRect(18, 13, 16, 2);
+      ctx.fillStyle = barrelHues[3]; ctx.fillRect(18, 16, 16, 2);
+
+      // Revolving peppermint pinwheel bracket disc with golden star center
       drawBeveledPlate(ctx, 26, 5, 4, 14, F[3], '#FFFFFF', F[4]);
+      ctx.fillStyle = F[9];
+      ctx.fillRect(27, 10, 2, 4);
     });
 
-    // 7. Thermal Plasma Laser Beam (240x24, AX 0, AY 12)
+    // 7. Radiant Rainbow Prism Laser Beam (240x24, AX 0, AY 12)
     this.registerSprite('tetsuyuki_laser_beam', 240, 24, 0, 12, (ctx) => {
-      // Intense plasma red outer aura
+      // Spectacular pastel rainbow gradient beam
+      // Outer strawberry pink aura
       ctx.fillStyle = F[10]; ctx.fillRect(0, 1, 240, 22);
-      // Fiery orange mid-beam
-      ctx.fillStyle = '#FFA010'; ctx.fillRect(0, 4, 240, 16);
-      // Intense yellow core
-      ctx.fillStyle = '#FFF060'; ctx.fillRect(0, 7, 240, 10);
-      // Pure white blinding center
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 9, 240, 6);
+      // Lavender violet mid-band
+      ctx.fillStyle = '#D8B4E2'; ctx.fillRect(0, 3, 240, 18);
+      // Sky aqua turquoise mid-beam
+      ctx.fillStyle = F[14]; ctx.fillRect(0, 5, 240, 14);
+      // Mint emerald highlight
+      ctx.fillStyle = F[8]; ctx.fillRect(0, 7, 240, 10);
+      // Radiant golden honey center
+      ctx.fillStyle = F[9]; ctx.fillRect(0, 9, 240, 6);
+      // Sparkling white diamond core
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 10, 240, 4);
     });
 
-    // 8. Pulsing Reactor Core (48x48, AX 24, AY 24)
+    // 8. Pulsing Heart-Shaped Sugar Crystal Core (48x48, AX 24, AY 24)
     this.registerSprite('tetsuyuki_reactor_core', 48, 48, 24, 24, (ctx) => {
-      // Rotating outer magnetic containment ring
+      // Rotating ornate royal icing filigree ring
       ctx.fillStyle = F[1];
       ctx.fillRect(4, 4, 40, 40);
-      ctx.fillStyle = F[4];
+      ctx.fillStyle = F[3];
       ctx.fillRect(6, 6, 36, 36);
 
-      // Turquoise glowing plasma field
+      // Emerald mint candy halo
       ctx.fillStyle = F[8];
       ctx.beginPath();
       ctx.arc(24, 24, 15, 0, Math.PI * 2);
       ctx.fill();
 
-      // Blinding white-hot plasma heart
-      ctx.fillStyle = F[9];
+      // Glowing pink Heart-Shaped Sugar Crystal
+      ctx.fillStyle = F[13];
       ctx.beginPath();
-      ctx.arc(24, 24, 9, 0, Math.PI * 2);
+      ctx.arc(19, 20, 6, 0, Math.PI * 2);
+      ctx.arc(29, 20, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(13, 22);
+      ctx.lineTo(35, 22);
+      ctx.lineTo(24, 34);
+      ctx.closePath();
       ctx.fill();
 
-      // Radiating energy discharge spikes
+      // Sparkling candy star highlight inside heart
+      ctx.fillStyle = F[9];
+      ctx.beginPath();
+      ctx.arc(24, 22, 4, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(22, 1, 4, 46);
-      ctx.fillRect(1, 22, 46, 4);
+      ctx.fillRect(23, 20, 2, 2);
+
+      // Radiating golden candy light rays
+      ctx.fillStyle = F[9];
+      ctx.fillRect(23, 1, 2, 46);
+      ctx.fillRect(1, 23, 46, 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(23, 11, 2, 2);
+      ctx.fillRect(23, 35, 2, 2);
+      ctx.fillRect(11, 23, 2, 2);
+      ctx.fillRect(35, 23, 2, 2);
     });
   }
 
   // ==========================================
-  // 6. PROJECTILES & WEAPON EFFECTS
+  // 6. PROJECTILES & WEAPON EFFECTS (CANDY & BUBBLEGUM)
   // ==========================================
   private generateProjectileSprites(): void {
-    // Handgun bullet (8x4, brass body with white tip & tracer tail)
+    // Handgun bullet: Sparkling Star Candy Projectile (8x4, AX 4, AY 2)
     this.registerSprite('proj_bullet_handgun', 8, 4, 4, 2, (ctx) => {
-      ctx.fillStyle = '#FFA010'; ctx.fillRect(0, 1, 3, 2); // Tracer
-      ctx.fillStyle = '#FFF060'; ctx.fillRect(2, 1, 4, 2); // Brass body
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(6, 1, 2, 2); // Point
+      // Golden sugar sparkle tracer
+      ctx.fillStyle = '#FED7AA'; ctx.fillRect(0, 1, 2, 2);
+      // Pastel honey star body
+      ctx.fillStyle = '#FDE047'; ctx.fillRect(2, 0, 4, 4);
+      // Star points & glint
+      ctx.fillStyle = '#FEF9C3'; ctx.fillRect(1, 1, 6, 2);
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(3, 1, 2, 2);
     });
 
-    // Heavy Machine Gun bullet (12x6, blue energetic aura with white-hot core)
+    // Heavy Machine Gun bullet: Cyan Bubblegum Energy Pellet (12x6, AX 6, AY 3)
     this.registerSprite('proj_bullet_hmg', 12, 6, 6, 3, (ctx) => {
-      ctx.fillStyle = '#3A7BD5'; ctx.fillRect(0, 1, 11, 4); // Blue energetic aura
-      ctx.fillStyle = '#FFF060'; ctx.fillRect(2, 2, 8, 2);  // Yellow body
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(7, 2, 5, 2);  // Blinding point
+      // Sweet aqua bubble aura
+      ctx.fillStyle = '#67E8F9'; ctx.fillRect(0, 1, 11, 4);
+      // Soft cyan bubblegum sphere
+      ctx.fillStyle = '#38BDF8'; ctx.fillRect(2, 1, 8, 4);
+      // Sparkling white center glint
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(5, 2, 4, 2);
     });
 
-    // Spent brass shell casings tumbling (4 angles, 6x6, AX 3, AY 3)
+    // Spent shell casings: Tumbling Butterscotch Drops (4 angles, 6x6, AX 3, AY 3)
     for (let i = 0; i < 4; i++) {
       this.registerSprite(`casing_brass_${i}`, 6, 6, 3, 3, (ctx) => {
         ctx.save();
         ctx.translate(3, 3);
         ctx.rotate((i * Math.PI) / 2);
-        ctx.fillStyle = '#D8C890'; ctx.fillRect(-2, -1, 4, 2);
-        ctx.fillStyle = '#908050'; ctx.fillRect(-2, -1, 1, 2); // Primer pocket
-        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, -1, 2, 1);  // Glint
+        // Golden butterscotch candy drop
+        ctx.fillStyle = '#F59E0B'; ctx.fillRect(-2, -2, 4, 4);
+        ctx.fillStyle = '#FDE047'; ctx.fillRect(-1, -1, 3, 2);
+        // Glint
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, -1, 1, 1);
         ctx.restore();
       });
     }
 
-    // Flame stream fireballs (5 expanding sizes, multi-tier heat gradient)
+    // Flame stream fireballs: Swirling Cotton Candy Puffs (5 expanding sizes)
     const flameRadii = [6, 10, 15, 20, 25];
     for (let i = 0; i < flameRadii.length; i++) {
       const r = flameRadii[i];
       const size = r * 2 + 4;
       this.registerSprite(`proj_flame_${i}`, size, size, size / 2, size / 2, (ctx) => {
-        // Red outer combustion rim
+        // Pastel strawberry pink outer puff
         ctx.fillStyle = PALETTES.FIRE[4];
         ctx.beginPath(); ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2); ctx.fill();
-        // Orange body
+        // Warm peach midtone
         ctx.fillStyle = PALETTES.FIRE[3];
         ctx.beginPath(); ctx.arc(size / 2, size / 2, r * 0.75, 0, Math.PI * 2); ctx.fill();
-        // Yellow hot midtone
+        // Sweet buttercream yellow core
         ctx.fillStyle = PALETTES.FIRE[2];
         ctx.beginPath(); ctx.arc(size / 2, size / 2, r * 0.5, 0, Math.PI * 2); ctx.fill();
-        // White core
+        // Marshmallow white heart
         ctx.fillStyle = PALETTES.FIRE[1];
         ctx.beginPath(); ctx.arc(size / 2, size / 2, r * 0.25, 0, Math.PI * 2); ctx.fill();
       });
     }
 
-    // Hand Grenade (14x14, 4 rotation angles, pineapple fragmentation grid)
+    // Hand Grenade: Peppermint Bonbon Grenade with Wrapped Twists (14x14, 4 angles)
     for (let i = 0; i < 4; i++) {
       this.registerSprite(`proj_grenade_${i}`, 14, 14, 7, 7, (ctx) => {
         ctx.save();
         ctx.translate(7, 7);
         ctx.rotate((i * Math.PI) / 2);
-        // Pineapple body
-        drawContouredRect(ctx, -4, -4, 8, 9, '#181818', '#3A5F20', '#6B8E23', '#203010');
-        // Segmentation grooves
-        ctx.fillStyle = '#1D2E12';
-        ctx.fillRect(-4, -1, 8, 1);
-        ctx.fillRect(-1, -4, 1, 9);
-        // Safety lever spoon & brass fuse
-        ctx.fillStyle = '#808890'; ctx.fillRect(-2, -6, 3, 2);
-        ctx.fillStyle = '#D8C890'; ctx.fillRect(1, -5, 2, 2);
+        // Round peppermint candy body
+        ctx.fillStyle = '#2C1B38';
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        // Red candy swirl stripes
+        ctx.fillStyle = '#FB7185';
+        ctx.fillRect(-3, -1, 6, 2);
+        ctx.fillRect(-1, -3, 2, 6);
+        // Cute candy wrapper twist ends
+        ctx.fillStyle = '#FBCFE8';
+        ctx.beginPath();
+        ctx.moveTo(-4, -1); ctx.lineTo(-6, -3); ctx.lineTo(-6, 3); ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(4, -1); ctx.lineTo(6, -3); ctx.lineTo(6, 3); ctx.closePath(); ctx.fill();
         ctx.restore();
       });
     }
 
-    // Micro-Rocket (18x10, finned missile with white fuselage & propulsion flame)
+    // Micro-Rocket: Whimsical Carrot Rocket with Leafy Green Fins (18x10, AX 9, AY 5)
     this.registerSprite('proj_rocket', 18, 10, 9, 5, (ctx) => {
-      // Missile fuselage
-      drawContouredRect(ctx, 4, 3, 10, 4, '#181818', '#E8F0F8', '#FFFFFF', '#B0B8C0');
-      // Red warhead tip
-      ctx.fillStyle = '#E74C3C'; ctx.fillRect(14, 3, 3, 4);
-      // Stabilizing fins
-      ctx.fillStyle = '#384048';
+      // Orange carrot body
+      drawContouredRect(ctx, 4, 3, 10, 4, '#2C1B38', '#FB923C', '#FDBA74', '#EA580C');
+      // White sugar tip
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(14, 4, 3, 2);
+      // Leafy green stabilizing fins
+      ctx.fillStyle = '#4ADE80';
       ctx.fillRect(2, 1, 4, 2);
       ctx.fillRect(2, 7, 4, 2);
-      // Rocket propulsion flame
-      ctx.fillStyle = '#FFA010'; ctx.fillRect(0, 3, 3, 4);
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(1, 4, 2, 2);
+      // Sweet rainbow propulsion spark
+      ctx.fillStyle = '#FDE047'; ctx.fillRect(0, 3, 3, 4);
+      ctx.fillStyle = '#F472B6'; ctx.fillRect(1, 4, 2, 2);
     });
 
-    // Heavy Mortar Shell (16x12, teardrop shell with finned tail & impact fuze)
+    // Heavy Mortar Shell: Giant Polka-Dot Bonbon (16x12, AX 8, AY 6)
     this.registerSprite('proj_mortar', 16, 12, 8, 6, (ctx) => {
-      drawContouredRect(ctx, 2, 2, 12, 8, '#181818', '#485058', '#808890', '#2B2B28');
-      // Red impact fuze tip
-      ctx.fillStyle = '#E74C3C'; ctx.fillRect(13, 4, 3, 4);
-      // Copper driving band
-      ctx.fillStyle = '#B87333'; ctx.fillRect(6, 3, 2, 6);
+      // Rounded bonbon shell body
+      drawContouredRect(ctx, 2, 2, 12, 8, '#2C1B38', '#F472B6', '#FBCFE8', '#DB2777');
+      // White icing polka dots
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(4, 4, 2, 2);
+      ctx.fillRect(8, 6, 2, 2);
+      ctx.fillRect(11, 4, 2, 2);
+      // Candy wrapper crimped tail
+      ctx.fillStyle = '#A7F3D0'; ctx.fillRect(13, 3, 2, 6);
     });
   }
 
   // ==========================================
-  // 7. MULTI-FRAME EXPLOSIONS
+  // 7. MULTI-FRAME CELEBRATORY EXPLOSIONS
   // ==========================================
   private generateExplosionSprites(): void {
-    // 1. Small Explosion (4 frames, 28x28, AX 14, AY 14)
+    // 1. Small Explosion: Soap Bubble Pop & Confetti Dots (4 frames, 28x28, AX 14, AY 14)
     for (let f = 0; f < 4; f++) {
       const size = 28;
       this.registerSprite(`explosion_small_${f}`, size, size, size / 2, size / 2, (ctx) => {
         const rad = 4 + f * 3;
         if (f < 2) {
-          ctx.fillStyle = PALETTES.FIRE[1]; ctx.beginPath(); ctx.arc(14, 14, rad, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = PALETTES.FIRE[2]; ctx.beginPath(); ctx.arc(14, 14, rad * 0.7, 0, Math.PI * 2); ctx.fill();
+          // Translucent bubble expanding
+          ctx.strokeStyle = '#67E8F9';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(14, 14, rad, 0, Math.PI * 2); ctx.stroke();
+          // Pastel star burst core
+          ctx.fillStyle = PALETTES.FIRE[1]; ctx.beginPath(); ctx.arc(14, 14, rad * 0.6, 0, Math.PI * 2); ctx.fill();
         } else {
-          ctx.fillStyle = PALETTES.FIRE[4]; ctx.beginPath(); ctx.arc(14, 14, rad, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = PALETTES.FIRE[7]; ctx.fillRect(8, 8, 12, 12); // Smoke puff
+          // Confetti dots popping outward
+          const confettiColors = ['#FF9FF3', '#FECA57', '#54A0FF', '#1DD1A1'];
+          for (let i = 0; i < 6; i++) {
+            const ang = (i * Math.PI) / 3;
+            const dist = rad + 2;
+            const cx = 14 + Math.cos(ang) * dist;
+            const cy = 14 + Math.sin(ang) * dist;
+            ctx.fillStyle = confettiColors[i % confettiColors.length];
+            ctx.fillRect(cx - 1, cy - 1, 3, 3);
+          }
+          // Soft marshmallow puff
+          ctx.fillStyle = PALETTES.FIRE[6];
+          ctx.beginPath(); ctx.arc(14, 14, rad * 0.4, 0, Math.PI * 2); ctx.fill();
         }
       });
     }
 
-    // 2. Medium Explosion (6 frames, 52x52, AX 26, AY 26)
+    // 2. Medium Explosion: Confectionery Blossom Burst & Flying Candy Stars (6 frames, 52x52, AX 26, AY 26)
     for (let f = 0; f < 6; f++) {
       const size = 52;
       this.registerSprite(`explosion_medium_${f}`, size, size, size / 2, size / 2, (ctx) => {
         const rad = 6 + f * 3.5;
-        const col = f < 2 ? PALETTES.FIRE[1] : f < 4 ? PALETTES.FIRE[3] : PALETTES.FIRE[7];
+        const col = f < 2 ? PALETTES.FIRE[1] : f < 4 ? PALETTES.FIRE[3] : PALETTES.FIRE[6];
+
+        // Soft pastel floral ring
         ctx.fillStyle = col;
         ctx.beginPath(); ctx.arc(26, 26, rad, 0, Math.PI * 2); ctx.fill();
 
-        // Edge flying sparks
-        if (f < 4) {
-          ctx.fillStyle = PALETTES.FIRE[2];
-          ctx.fillRect(26 - rad - 2, 26, 3, 3);
-          ctx.fillRect(26 + rad - 1, 26, 3, 3);
-          ctx.fillRect(26, 26 - rad - 2, 3, 3);
-          ctx.fillRect(26, 26 + rad - 1, 3, 3);
+        // Flying confetti stars & diamond glints
+        const confettiHues = ['#FF9FF3', '#FECA57', '#54A0FF', '#1DD1A1', '#FDA4AF', '#FDE047'];
+        for (let i = 0; i < 8; i++) {
+          const ang = (i * Math.PI) / 4 + f * 0.2;
+          const dist = rad + (f > 2 ? 6 : 2);
+          const px = 26 + Math.cos(ang) * dist;
+          const py = 26 + Math.sin(ang) * dist;
+          ctx.fillStyle = confettiHues[i % confettiHues.length];
+          ctx.fillRect(px - 1, py - 1, 3, 3);
+        }
+
+        // Center white sparkle
+        if (f < 3) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(24, 24, 4, 4);
         }
       });
     }
 
-    // 3. Large Boss Detonation (8 frames, 100x100, AX 50, AY 50)
+    // 3. Large Boss Detonation: Fairytale Celebration Fireworks (8 frames, 100x100, AX 50, AY 50)
     for (let f = 0; f < 8; f++) {
       const size = 100;
       this.registerSprite(`explosion_large_${f}`, size, size, size / 2, size / 2, (ctx) => {
@@ -2110,38 +2252,46 @@ export class ProceduralSpriteFactory {
         const rad = 10 + progress * 36;
 
         if (progress < 0.5) {
-          // Shockwave expansion ring
-          ctx.strokeStyle = PALETTES.FIRE[1];
+          // Pastel rainbow shockwave ring
+          const rainbowColors = ['#FF9FF3', '#FECA57', '#54A0FF', '#1DD1A1'];
+          ctx.strokeStyle = rainbowColors[f % rainbowColors.length];
           ctx.lineWidth = 3;
           ctx.beginPath(); ctx.arc(50, 50, rad * 1.1, 0, Math.PI * 2); ctx.stroke();
 
-          // Blazing white & orange fireball core
+          // Warm pastel star core
           ctx.fillStyle = PALETTES.FIRE[2]; ctx.beginPath(); ctx.arc(50, 50, rad, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = PALETTES.FIRE[1]; ctx.beginPath(); ctx.arc(50, 50, rad * 0.5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(50, 50, rad * 0.5, 0, Math.PI * 2); ctx.fill();
         } else {
-          // Billowing dark soot and smoke with flying embers
-          ctx.fillStyle = PALETTES.FIRE[8]; ctx.beginPath(); ctx.arc(50, 50, rad, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = PALETTES.FIRE[5]; ctx.beginPath(); ctx.arc(50, 50, rad * 0.4, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = PALETTES.FIRE[2];
-          ctx.fillRect(30, 30, 3, 3);
-          ctx.fillRect(70, 40, 3, 3);
-          ctx.fillRect(40, 70, 3, 3);
+          // Multi-colored celebration confetti shower & marshmallow cloud puffs
+          ctx.fillStyle = PALETTES.FIRE[7]; ctx.beginPath(); ctx.arc(50, 50, rad * 0.8, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = PALETTES.FIRE[6]; ctx.beginPath(); ctx.arc(50, 50, rad * 0.4, 0, Math.PI * 2); ctx.fill();
+
+          // Flying celebration star particles and heart glints
+          const partyColors = ['#FF9FF3', '#FECA57', '#54A0FF', '#1DD1A1', '#FF6B6B', '#F8A5C2'];
+          for (let i = 0; i < 12; i++) {
+            const ang = (i * Math.PI) / 6 + f * 0.3;
+            const dist = rad * 0.9 + (i % 3) * 6;
+            const px = 50 + Math.cos(ang) * dist;
+            const py = 50 + Math.sin(ang) * dist;
+            ctx.fillStyle = partyColors[i % partyColors.length];
+            ctx.fillRect(px - 2, py - 2, 4, 4);
+          }
         }
       });
     }
   }
 
   // ==========================================
-  // 8. RETRO ARCADE HUD BADGES & DIGITS
+  // 8. CUTE RETRO ARCADE HUD BADGES & DIGITS
   // ==========================================
   private generateHudSprites(): void {
     const H = PALETTES.HUD;
 
-    // "H" Heavy Machine Gun Badge (24x20)
+    // "H" Heavy Machine Gun Candy Sticker Badge (24x20)
     this.registerSprite('hud_badge_hmg', 24, 20, 0, 0, (ctx) => {
-      // Golden beveled border
+      // Golden scalloped border
       drawBeveledPlate(ctx, 0, 0, 24, 20, H[4], H[2], H[3], H[1]);
-      // Bold 3D letter 'H'
+      // 3D marshmallow letter 'H'
       ctx.fillStyle = H[1];
       ctx.fillRect(7, 6, 3, 10);
       ctx.fillRect(16, 6, 3, 10);
@@ -2151,12 +2301,15 @@ export class ProceduralSpriteFactory {
       ctx.fillRect(6, 5, 3, 10);
       ctx.fillRect(15, 5, 3, 10);
       ctx.fillRect(9, 9, 6, 3);
+      // Sparkle star glint
+      ctx.fillStyle = H[3];
+      ctx.fillRect(17, 4, 2, 2);
     });
 
-    // "F" Flame Shot Badge (24x20)
+    // "F" Flame Shot Strawberry Jelly Badge (24x20)
     this.registerSprite('hud_badge_flame', 24, 20, 0, 0, (ctx) => {
       drawBeveledPlate(ctx, 0, 0, 24, 20, H[5], H[2], H[3], H[1]);
-      // Bold 3D letter 'F'
+      // 3D marshmallow letter 'F'
       ctx.fillStyle = H[1];
       ctx.fillRect(8, 6, 3, 10);
       ctx.fillRect(11, 6, 7, 3);
@@ -2166,12 +2319,15 @@ export class ProceduralSpriteFactory {
       ctx.fillRect(7, 5, 3, 10);
       ctx.fillRect(10, 5, 7, 3);
       ctx.fillRect(10, 9, 5, 3);
+      // Sparkle star glint
+      ctx.fillStyle = H[3];
+      ctx.fillRect(16, 4, 2, 2);
     });
 
-    // Default Handgun Badge (24x20)
+    // Default Handgun Lilac Toy Blaster Badge (24x20)
     this.registerSprite('hud_badge_pistol', 24, 20, 0, 0, (ctx) => {
-      drawBeveledPlate(ctx, 0, 0, 24, 20, '#455A64', H[2], H[3], H[1]);
-      // Pistol icon with drop shadow
+      drawBeveledPlate(ctx, 0, 0, 24, 20, H[10], H[2], H[3], H[1]);
+      // Toy blaster icon
       ctx.fillStyle = H[1];
       ctx.fillRect(7, 8, 10, 3);
       ctx.fillRect(13, 11, 4, 5);
@@ -2179,23 +2335,49 @@ export class ProceduralSpriteFactory {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(6, 7, 10, 3);
       ctx.fillRect(12, 10, 4, 5);
+      // Sparkle
+      ctx.fillStyle = H[3];
+      ctx.fillRect(15, 6, 2, 2);
     });
 
-    // Grenade Icon (16x16)
+    // Peppermint Bonbon Grenade Icon (16x16)
     this.registerSprite('hud_icon_grenade', 16, 16, 0, 0, (ctx) => {
-      drawBeveledPlate(ctx, 2, 3, 12, 12, H[9], '#81C784', H[10], H[1]);
-      // Brass fuse
-      ctx.fillStyle = '#D4AC0D'; ctx.fillRect(6, 1, 4, 3);
+      // Swirled round candy
+      ctx.fillStyle = H[1];
+      ctx.beginPath(); ctx.arc(8, 8, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath(); ctx.arc(8, 8, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = H[5];
+      ctx.fillRect(5, 7, 6, 2);
+      ctx.fillRect(7, 5, 2, 6);
+      // Wrapper crimps
+      ctx.fillStyle = H[11];
+      ctx.fillRect(1, 6, 2, 4);
+      ctx.fillRect(13, 6, 2, 4);
     });
 
-    // POW Hostage Icon (16x16)
+    // Rescued Bunny Pal Icon (16x16)
     this.registerSprite('hud_icon_pow', 16, 16, 0, 0, (ctx) => {
-      ctx.fillStyle = '#F8E060'; ctx.fillRect(3, 2, 10, 6);
-      ctx.fillStyle = '#F0B070'; ctx.fillRect(4, 6, 8, 4);
-      ctx.fillStyle = '#F8E060'; ctx.fillRect(3, 9, 10, 6); // Beard
+      // Bunny head
+      ctx.fillStyle = H[1];
+      ctx.beginPath(); ctx.arc(8, 10, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath(); ctx.arc(8, 10, 4, 0, Math.PI * 2); ctx.fill();
+      // Fluffy ears
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(5, 2, 2, 5);
+      ctx.fillRect(9, 2, 2, 5);
+      // Pink inner ear
+      ctx.fillStyle = H[11];
+      ctx.fillRect(5, 3, 1, 3);
+      ctx.fillRect(10, 3, 1, 3);
+      // Rosy cheeks
+      ctx.fillStyle = H[11];
+      ctx.fillRect(5, 10, 1, 1);
+      ctx.fillRect(10, 10, 1, 1);
     });
 
-    // Score & Ammo Digits 0 to 9 (8x12 each, 3D gold arcade numbers)
+    // Score & Ammo Digits 0 to 9 (8x12 each, Honey-Gold Jelly Arcade Digits)
     const digitBitmaps: Record<string, string[]> = {
       '0': ['1111', '1001', '1001', '1001', '1001', '1111'],
       '1': ['0010', '0110', '0010', '0010', '0010', '0111'],
@@ -2213,7 +2395,7 @@ export class ProceduralSpriteFactory {
       const digitKey = String(d);
       const rows = digitBitmaps[digitKey];
       this.registerSprite(`hud_digit_${d}`, 8, 12, 0, 0, (ctx) => {
-        // Drop shadow
+        // Confectionery drop shadow
         ctx.fillStyle = H[1];
         for (let y = 0; y < rows.length; y++) {
           for (let x = 0; x < rows[y].length; x++) {
@@ -2222,8 +2404,8 @@ export class ProceduralSpriteFactory {
             }
           }
         }
-        // Gold face
-        ctx.fillStyle = H[7];
+        // Honey-gold face
+        ctx.fillStyle = H[2];
         for (let y = 0; y < rows.length; y++) {
           for (let x = 0; x < rows[y].length; x++) {
             if (rows[y][x] === '1') {
@@ -2231,8 +2413,8 @@ export class ProceduralSpriteFactory {
             }
           }
         }
-        // Bevel highlight on top edges
-        ctx.fillStyle = '#FFFFFF';
+        // Vanilla sugar glint highlight on top edge
+        ctx.fillStyle = H[3];
         for (let x = 0; x < rows[0].length; x++) {
           if (rows[0][x] === '1') {
             ctx.fillRect(x * 2, 0, 2, 1);
@@ -2241,17 +2423,25 @@ export class ProceduralSpriteFactory {
       });
     }
 
-    // Special symbol 'infinity' (for default handgun ammo)
+    // Special symbol 'infinity' (for default handgun ammo): Pink Ribbon Pretzel
     this.registerSprite('hud_symbol_infinity', 12, 10, 0, 0, (ctx) => {
-      ctx.fillStyle = H[6];
+      ctx.fillStyle = H[8];
       ctx.fillRect(1, 3, 4, 4);
       ctx.fillRect(7, 3, 4, 4);
       ctx.fillRect(3, 4, 6, 2);
+      ctx.fillStyle = H[11];
+      ctx.fillRect(2, 4, 2, 2);
+      ctx.fillRect(8, 4, 2, 2);
     });
 
-    // Boss Health Bar Frame (184x12)
+    // Boss Health Bar Frame (184x12): Crispy Waffle Bar Frame with Confectionery Trim
     this.registerSprite('hud_boss_bar_frame', 184, 12, 0, 0, (ctx) => {
-      drawBeveledPlate(ctx, 0, 0, 184, 12, '#222222', H[2], H[3], H[1]);
+      drawBeveledPlate(ctx, 0, 0, 184, 12, '#3A1E4A', H[2], H[3], H[1]);
+      // Waffle pattern dots
+      ctx.fillStyle = H[7];
+      for (let x = 6; x < 178; x += 8) {
+        ctx.fillRect(x, 4, 2, 4);
+      }
     });
   }
 
@@ -2692,6 +2882,273 @@ export class ProceduralSpriteFactory {
       ctx.fillRect(10, 10, 6, 2);
       ctx.fillRect(32, 12, 4, 2);
       ctx.restore();
+    });
+
+    // ==========================================
+    // NOVEL CUTE ENEMIES EXPANSION SPRITES (M2)
+    // ==========================================
+
+    // Cute Marshmallow Slime (28x24, anchor: 14, 20)
+    this.registerExpansionSprite('cute_marshmallow_slime', 28, 24, 14, 20, (ctx) => {
+      // Pillowy marshmallow dome body
+      ctx.fillStyle = '#FBCFE8'; // Pastel strawberry pink
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(14, 13, 11, 8, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(14, 13, 9, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Soft white powdered sugar highlight
+      ctx.fillStyle = '#FFF1F2';
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(14, 8, 8, 3, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(14, 8, 5, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Cute anime dot eyes
+      ctx.fillStyle = '#1E162B';
+      ctx.fillRect(10, 11, 2, 3);
+      ctx.fillRect(16, 11, 2, 3);
+      // Specular eye catchlight
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(10, 11, 1, 1);
+      ctx.fillRect(16, 11, 1, 1);
+
+      // Rosy blushing cheeks
+      ctx.fillStyle = '#FDA4AF';
+      ctx.fillRect(8, 14, 3, 2);
+      ctx.fillRect(17, 14, 3, 2);
+
+      // Tiny happy smile
+      ctx.fillStyle = '#BE185D';
+      ctx.fillRect(13, 15, 2, 1);
+    });
+
+    // Cute Honey Bee (28x24, anchor: 14, 12)
+    this.registerExpansionSprite('cute_honey_bee', 28, 24, 14, 12, (ctx) => {
+      // Chubby honey-gold body
+      ctx.fillStyle = '#FBBF24';
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(14, 12, 10, 8, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(14, 12, 8, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Chocolate / molasses stripes
+      ctx.fillStyle = '#78350F';
+      ctx.fillRect(11, 5, 3, 14);
+      ctx.fillRect(17, 6, 3, 12);
+
+      // Translucent fluttering wings
+      ctx.fillStyle = 'rgba(224, 242, 254, 0.85)';
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(10, 4, 4, 7, -0.4, 0, Math.PI * 2);
+        (ctx as any).ellipse(16, 4, 4, 7, 0.4, 0, Math.PI * 2);
+      } else {
+        ctx.arc(10, 4, 4, 0, Math.PI * 2);
+        ctx.arc(16, 4, 4, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Antennae with golden pollen balls
+      ctx.fillStyle = '#78350F';
+      ctx.fillRect(20, 4, 1, 4);
+      ctx.fillRect(22, 5, 1, 4);
+      ctx.fillStyle = '#FDE047';
+      ctx.fillRect(19, 3, 3, 2);
+      ctx.fillRect(22, 4, 3, 2);
+
+      // Cute face
+      ctx.fillStyle = '#1E162B';
+      ctx.fillRect(21, 10, 2, 3);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(22, 10, 1, 1);
+      ctx.fillStyle = '#F472B6';
+      ctx.fillRect(20, 13, 2, 2);
+    });
+
+    // Cute Donut Roller (28x28, anchor: 14, 14)
+    this.registerExpansionSprite('cute_donut_roller', 28, 28, 14, 14, (ctx) => {
+      // Golden baked pastry ring
+      ctx.fillStyle = '#D97706';
+      ctx.beginPath();
+      ctx.arc(14, 14, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Strawberry frosting coating
+      ctx.fillStyle = '#F472B6';
+      ctx.beginPath();
+      ctx.arc(14, 14, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Donut hole
+      ctx.fillStyle = '#1E162B';
+      ctx.beginPath();
+      ctx.arc(14, 14, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Multi-colored candy sprinkles
+      ctx.fillStyle = '#6EE7B7'; // Mint
+      ctx.fillRect(8, 7, 3, 1);
+      ctx.fillRect(18, 19, 3, 1);
+      ctx.fillStyle = '#FDE047'; // Lemon
+      ctx.fillRect(18, 8, 1, 3);
+      ctx.fillRect(7, 17, 1, 3);
+      ctx.fillStyle = '#DDD6FE'; // Lavender
+      ctx.fillRect(13, 5, 2, 2);
+      ctx.fillRect(14, 21, 2, 2);
+      ctx.fillStyle = '#BAE6FD'; // Sky
+      ctx.fillRect(6, 12, 2, 2);
+      ctx.fillRect(20, 13, 2, 2);
+    });
+
+    // Cute Gummy Colossus Boss (80x90, anchor: 40, 80)
+    this.registerExpansionSprite('cute_gummy_colossus', 80, 90, 40, 80, (ctx) => {
+      ctx.save();
+      ctx.fillStyle = '#F43F5E';
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(40, 52, 26, 28, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(40, 52, 26, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Head
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(40, 24, 22, 20, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(40, 24, 20, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Rounded Bear Ears
+      ctx.fillStyle = '#BE123C';
+      ctx.beginPath();
+      ctx.arc(22, 10, 8, 0, Math.PI * 2);
+      ctx.arc(58, 10, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FDA4AF'; // Inner ear
+      ctx.beginPath();
+      ctx.arc(22, 10, 4, 0, Math.PI * 2);
+      ctx.arc(58, 10, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Chunky Paws & Feet
+      ctx.fillStyle = '#BE123C';
+      ctx.beginPath();
+      ctx.arc(16, 42, 7, 0, Math.PI * 2);
+      ctx.arc(64, 42, 7, 0, Math.PI * 2);
+      ctx.arc(26, 78, 9, 0, Math.PI * 2);
+      ctx.arc(54, 78, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Paw pads
+      ctx.fillStyle = '#FECDD3';
+      ctx.beginPath();
+      ctx.arc(26, 79, 4, 0, Math.PI * 2);
+      ctx.arc(54, 79, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Gelatinous translucent highlights
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(34, 46, 12, 18, -0.3, 0, Math.PI * 2);
+      } else {
+        ctx.arc(34, 46, 12, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Innocent big anime sparkle eyes
+      ctx.fillStyle = '#1E162B';
+      ctx.fillRect(31, 20, 5, 6);
+      ctx.fillRect(45, 20, 5, 6);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(32, 21, 2, 2);
+      ctx.fillRect(34, 24, 1, 1);
+      ctx.fillRect(46, 21, 2, 2);
+      ctx.fillRect(48, 24, 1, 1);
+
+      // Gummy muzzle & heart button nose
+      ctx.fillStyle = '#FDA4AF';
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(40, 29, 8, 5, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(40, 29, 6, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.fillStyle = '#9F1239';
+      ctx.fillRect(38, 27, 4, 3);
+
+      // Cheerful rosy cheeks
+      ctx.fillStyle = '#FB7185';
+      ctx.beginPath();
+      ctx.arc(26, 28, 4, 0, Math.PI * 2);
+      ctx.arc(54, 28, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // Cute Mini Gummy Cub (26x30, anchor: 13, 24)
+    this.registerExpansionSprite('cute_gummy_cub', 26, 30, 13, 24, (ctx) => {
+      ctx.fillStyle = '#4ADE80'; // Emerald pastel lime
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(13, 16, 8, 9, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(13, 16, 8, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Head
+      ctx.beginPath();
+      if (typeof (ctx as any).ellipse === 'function') {
+        (ctx as any).ellipse(13, 9, 7, 6, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(13, 9, 6, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      // Ears
+      ctx.fillStyle = '#22C55E';
+      ctx.beginPath();
+      ctx.arc(7, 4, 3, 0, Math.PI * 2);
+      ctx.arc(19, 4, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Feet
+      ctx.beginPath();
+      ctx.arc(9, 23, 3, 0, Math.PI * 2);
+      ctx.arc(17, 23, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Specular highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.fillRect(10, 7, 2, 2);
+
+      // Eyes
+      ctx.fillStyle = '#1E162B';
+      ctx.fillRect(10, 8, 2, 2);
+      ctx.fillRect(15, 8, 2, 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(10, 8, 1, 1);
+      ctx.fillRect(15, 8, 1, 1);
+
+      // Pink blush
+      ctx.fillStyle = '#F472B6';
+      ctx.fillRect(8, 11, 2, 1);
+      ctx.fillRect(17, 11, 2, 1);
     });
   }
 }

@@ -7,7 +7,6 @@
 import { Platform } from '../core/physics/Platform';
 import { Camera } from './Camera';
 import { ParallaxBackground } from './ParallaxBackground';
-import { PALETTES } from './sprites/Palette';
 import {
   CanvasBuffer,
   CanvasContext2DLike,
@@ -19,6 +18,15 @@ import { Vector2D, vec2 } from '../core/math/Vector2D';
 import { AimAngle, PlayerKinematics, PlayerPosture } from '../core/player/PlayerKinematics';
 import { RenderCorpseState } from '../core/entities/enemies/DeathCorpseManager';
 import { WeaponType } from '../core/weapons/WeaponTypes';
+import {
+  RenderBubbleState,
+  RenderPetState,
+  RenderAltarState,
+  RenderPickupState,
+  RenderFeverState,
+  RenderPerkCardState,
+  CuteEnemyState,
+} from '../core/cute/CuteGameTypes';
 
 export interface LetterboxBounds {
   scale: number;
@@ -121,6 +129,15 @@ export interface RenderHUDState {
   continueCountdown?: number;
   showTutorial?: boolean;
   tutorialAlpha?: number;
+  cuteFever?: RenderFeverState;
+  cutePerks?: {
+    active: boolean;
+    cards: RenderPerkCardState[];
+    selectedIndex?: number;
+  };
+  cuteAltars?: RenderAltarState[];
+  cuteLoopState?: string;
+  bannerText?: string;
 }
 
 export interface RenderCinematicFXState {
@@ -173,8 +190,24 @@ export interface RenderSceneState {
   explosions?: RenderExplosionState[];
   hud?: RenderHUDState;
   cinematicFX?: RenderCinematicFXState;
+  cuteBubbles?: RenderBubbleState[];
+  cutePet?: RenderPetState;
+  cuteAltars?: RenderAltarState[];
+  cutePickups?: RenderPickupState[];
+  cuteEnemies?: CuteEnemyState[];
+  cuteOrbiters?: Array<{ angle: number; radius: number }>;
+  cuteTrails?: Array<{ x: number; y: number; age: number; maxAge: number; color: string }>;
 }
 
+export interface ScorePopup {
+  text: string;
+  x: number;
+  y: number;
+  startY: number;
+  time: number;
+  duration: number;
+  color?: string;
+}
 
 export class CanvasRenderer {
   public static readonly VIRTUAL_WIDTH = 960;
@@ -192,6 +225,10 @@ export class CanvasRenderer {
 
   // Accumulated render time for animations
   private elapsedTime: number = 0;
+
+  // Floating score popups
+  private scorePopups: ScorePopup[] = [];
+  private lastScore: number = 0;
 
   constructor(options?: { camera?: Camera; parallax?: ParallaxBackground; spriteFactory?: ProceduralSpriteFactory; hudOverlay?: HUDOverlay }) {
     this.virtualBuffer = createCanvasBuffer(CanvasRenderer.VIRTUAL_WIDTH, CanvasRenderer.VIRTUAL_HEIGHT);
@@ -229,10 +266,10 @@ export class CanvasRenderer {
   }
 
   /**
-   * Clears virtual framebuffer with deep dark background.
+   * Clears virtual framebuffer with deep dark cute plum background.
    */
   public clear(): void {
-    this.virtualCtx.fillStyle = '#0E141C';
+    this.virtualCtx.fillStyle = '#1E162B';
     this.virtualCtx.fillRect(0, 0, CanvasRenderer.VIRTUAL_WIDTH, CanvasRenderer.VIRTUAL_HEIGHT);
   }
 
@@ -242,6 +279,7 @@ export class CanvasRenderer {
   public renderScene(scene: RenderSceneState): void {
     const time = scene.time ?? this.elapsedTime;
     const cam = scene.camera;
+    const dt = 0.016;
 
     this.clear();
 
@@ -258,8 +296,38 @@ export class CanvasRenderer {
       this.renderObstaclesPass(scene.obstacles, cam);
     }
 
+    // Pass 2.8: Cute Blossom Altars
+    if (scene.cuteAltars && scene.cuteAltars.length > 0) {
+      this.renderCuteAltarsPass(scene.cuteAltars, cam, time);
+    }
+
+    // Pass 2.9: Cute Pickups (Candies, Stars)
+    if (scene.cutePickups && scene.cutePickups.length > 0) {
+      this.renderCutePickupsPass(scene.cutePickups, cam, time);
+    }
+
     // Pass 3: Entities (POWs, Boss, Enemies, Player)
     this.renderEntitiesPass(scene, cam, time);
+
+    // Pass 3.1: Cute Living Enemies (Slimes, Bees, Donut Rollers, Gummy Colossus, Cubs)
+    if (scene.cuteEnemies && scene.cuteEnemies.length > 0) {
+      this.renderCuteEnemiesPass(scene.cuteEnemies, cam, time);
+    }
+
+    // Pass 3.2: Cute Pet Companion ("Mochi the Cloud Bunny")
+    if (scene.cutePet) {
+      this.renderCutePetPass(scene.cutePet, cam, time);
+    }
+
+    // Pass 3.3: Cute Bubbles (Trapped & Free)
+    if (scene.cuteBubbles && scene.cuteBubbles.length > 0) {
+      this.renderCuteBubblesPass(scene.cuteBubbles, cam, time);
+    }
+
+    // Pass 3.4: Orbiting Bubbles & Sugar Trails
+    if (scene.cuteOrbiters || scene.cuteTrails) {
+      this.renderCutePerkVisualsPass(scene, cam, time);
+    }
 
     // Pass 3.5: Tactical Aiming Reticle / Crosshair
     if (scene.player && scene.player.state !== 'death') {
@@ -273,6 +341,9 @@ export class CanvasRenderer {
     if (scene.cinematicFX) {
       this.renderCinematicFXPass(scene.cinematicFX, cam, time);
     }
+
+    // Pass 4.8: Bouncy Floating Score Popups
+    this.renderScorePopupsPass(dt);
 
     // Pass 5: Retro Arcade HUD Overlay (Screen Space)
     if (scene.hud) {
@@ -318,11 +389,10 @@ export class CanvasRenderer {
   }
 
   // ==========================================
-  // PASS 2: TERRAIN & PLATFORMS
+  // PASS 2: TERRAIN & PLATFORMS (CONFECTIONERY)
   // ==========================================
   private renderPlatformsPass(platforms: Platform[], camera: Camera): void {
     const ctx = this.virtualCtx;
-    const T = PALETTES.TERRAIN;
 
     for (const plat of platforms) {
       if (!camera.isVisible(plat.bounds)) continue;
@@ -336,78 +406,79 @@ export class CanvasRenderer {
       if (plat.type === 'SOLID') {
         const isBunkerOrWall = plat.id.includes('bunker') || plat.id.includes('wall') || plat.id.includes('redoubt');
         if (isBunkerOrWall) {
-          // Military reinforced concrete bunker / blast wall
-          ctx.fillStyle = '#4B5563'; // concrete slab top
-          ctx.fillRect(sx, sy, w, Math.min(6, h));
-          ctx.fillStyle = '#9CA3AF'; // bevel highlight
-          ctx.fillRect(sx, sy, w, 2);
+          // Gingerbread cookie bunker / frosted candy barrier
+          ctx.fillStyle = '#8D5B4C'; // warm gingerbread
+          ctx.fillRect(sx, sy, w, h);
 
-          if (h > 6) {
-            ctx.fillStyle = '#374151'; // darker concrete facade
-            ctx.fillRect(sx, sy + 6, w, h - 6);
+          // Frosted royal icing top border
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(sx, sy, w, Math.min(4, h));
+          // Scalloped icing drops
+          for (let ix = sx + 4; ix < sx + w - 2; ix += 10) {
+            ctx.beginPath();
+            ctx.arc(ix, sy + Math.min(4, h), 3, 0, Math.PI);
+            ctx.fill();
+          }
 
-            // Vertical armor panel seams every 24px
-            ctx.fillStyle = '#1F2937';
-            for (let px = sx + 20; px < sx + w - 4; px += 24) {
-              ctx.fillRect(px, sy + 6, 2, h - 6);
-              // Rivets on seams
-              ctx.fillStyle = '#9CA3AF';
-              ctx.fillRect(px - 1, sy + 8, 2, 2);
-              if (h > 24) ctx.fillRect(px - 1, sy + 20, 2, 2);
-              ctx.fillStyle = '#1F2937';
-            }
+          // Candy sprinkles & sugar pearl buttons
+          const candyHues = ['#FB7185', '#38BDF8', '#FDE047', '#4ADE80'];
+          for (let px = sx + 14; px < sx + w - 6; px += 18) {
+            ctx.fillStyle = candyHues[(px >> 4) % candyHues.length];
+            ctx.fillRect(px, sy + 7, 4, 3);
+          }
 
-            // Pillbox embrasure firing slit if bunker has sufficient width
-            if (w >= 50 && h >= 20) {
-              const slitX = sx + Math.floor(w / 2) - 16;
-              const slitY = sy + 10;
-              ctx.fillStyle = '#111827';
-              ctx.fillRect(slitX, slitY, 32, 6);
-              ctx.fillStyle = '#1F2937';
-              ctx.fillRect(slitX + 2, slitY + 1, 28, 4);
-              ctx.fillStyle = '#6B7280';
-              ctx.fillRect(slitX - 2, slitY - 2, 36, 2);
-            }
+          // Archway cookie embrasure if wide enough
+          if (w >= 50 && h >= 20) {
+            const slitX = sx + Math.floor(w / 2) - 16;
+            const slitY = sy + 10;
+            ctx.fillStyle = '#4A2E50';
+            ctx.fillRect(slitX, slitY, 32, 6);
+            ctx.fillStyle = '#FDE047';
+            ctx.fillRect(slitX + 2, slitY + 1, 28, 4);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(slitX - 2, slitY - 2, 36, 2);
           }
         } else {
-          // Ground terrain: multi-layered sand crest, strata, and rocky earth base
+          // Ground terrain: Shortcake Strata!
           // Capped at 42px depth to reveal tropical parallax background scenery beneath!
           const renderH = Math.min(h, 42);
 
-          // Layer 1: Sunlit golden sand crest (0..5px)
-          ctx.fillStyle = T[2];
+          // Layer 1: Strawberry jelly glaze crest with white sugar crystal sprinkles (0..4px)
+          ctx.fillStyle = '#FB7185';
           ctx.fillRect(sx, sy, w, Math.min(4, renderH));
-          ctx.fillStyle = '#FFF3D0';
-          for (let gx = sx + (Math.abs(plat.bounds.x) % 7); gx < sx + w; gx += 14) {
-            ctx.fillRect(gx, sy, 2, 1);
+          ctx.fillStyle = '#FFFFFF';
+          for (let gx = sx + (Math.abs(plat.bounds.x) % 7); gx < sx + w; gx += 12) {
+            ctx.fillRect(gx, sy + 1, 2, 1);
+            ctx.fillRect(gx + 4, sy + 2, 1, 1);
           }
 
-          // Layer 2: Dune / Sandstone strata (4..12px)
+          // Layer 2: Whipped vanilla marshmallow cream filling layer (4..12px)
           if (renderH > 4) {
-            ctx.fillStyle = T[3];
+            ctx.fillStyle = '#FFF7ED';
             ctx.fillRect(sx, sy + 4, w, Math.min(8, renderH - 4));
-            ctx.fillStyle = '#C29B62';
-            for (let gx = sx + 4; gx < sx + w; gx += 16) {
-              ctx.fillRect(gx, sy + 6, 3, 2);
+            ctx.fillStyle = '#FFFFFF';
+            for (let cx = sx + 4; cx < sx + w; cx += 14) {
+              ctx.beginPath();
+              ctx.arc(cx, sy + 7, 3, 0, Math.PI * 2);
+              ctx.fill();
             }
           }
 
-          // Layer 3: Compressed earth & rock strata (12..24px)
+          // Layer 3: Fluffy golden sponge cake layer (12..24px)
           if (renderH > 12) {
-            ctx.fillStyle = T[4];
+            ctx.fillStyle = '#FED7AA';
             ctx.fillRect(sx, sy + 12, w, Math.min(12, renderH - 12));
-            ctx.fillStyle = '#3D2614';
-            for (let rx = sx + 8; rx < sx + w; rx += 20) {
-              ctx.fillRect(rx, sy + 16, 3, 2);
-              ctx.fillRect(rx + 8, sy + 20, 2, 2);
+            ctx.fillStyle = '#FB923C';
+            for (let rx = sx + 6; rx < sx + w; rx += 16) {
+              ctx.fillRect(rx, sy + 15, 3, 2);
             }
           }
 
-          // Layer 4: Rocky shoreline base (24..42px)
+          // Layer 4: Crunchy chocolate biscuit crumb base (24..42px)
           if (renderH > 24) {
-            ctx.fillStyle = '#2D1B0D';
+            ctx.fillStyle = '#7C4A2D';
             ctx.fillRect(sx, sy + 24, w, renderH - 24);
-            ctx.fillStyle = '#1A1612';
+            ctx.fillStyle = '#4A2E50';
             for (let bx = sx; bx < sx + w; bx += 8) {
               const toothH = (bx % 3) + 1;
               ctx.fillRect(bx, sy + renderH - toothH, 6, toothH);
@@ -415,54 +486,60 @@ export class CanvasRenderer {
           }
         }
       } else {
-        // SEMI_SOLID: Wooden pier dock planks, high bridges, watchtowers, crane decks
-        // 1. Deck top planks
-        ctx.fillStyle = T[8];
+        // SEMI_SOLID: Crispy baked wafer biscuit platforms with candy cane stilts!
+        // 1. Crispy golden wafer deck
+        ctx.fillStyle = '#FED7AA';
         ctx.fillRect(sx, sy, w, Math.min(5, h));
-        ctx.fillStyle = T[9];
-        for (let bx = sx + 12; bx < sx + w; bx += 14) {
-          ctx.fillRect(bx, sy, 1, Math.min(5, h));
+        // Waffle diamond grid accent
+        ctx.fillStyle = '#FB923C';
+        for (let bx = sx + 10; bx < sx + w; bx += 12) {
+          ctx.fillRect(bx, sy, 2, Math.min(5, h));
+        }
+        // Scalloped sugar frosting drips on edge
+        ctx.fillStyle = '#FFFFFF';
+        for (let fx = sx + 4; fx < sx + w; fx += 10) {
+          ctx.beginPath();
+          ctx.arc(fx, sy + Math.min(5, h), 2.5, 0, Math.PI);
+          ctx.fill();
         }
 
-        // 2. Horizontal bearer beam underneath
+        // 2. Horizontal chocolate wafer support beam underneath
         if (h > 5) {
-          ctx.fillStyle = T[9];
+          ctx.fillStyle = '#7C4A2D';
           ctx.fillRect(sx, sy + 5, w, Math.min(6, h - 5));
-          ctx.fillStyle = T[7];
-          ctx.fillRect(sx + 2, sy + 5, 4, Math.min(6, h - 5));
-          if (w > 20) {
-            ctx.fillRect(sx + w - 6, sy + 5, 4, Math.min(6, h - 5));
-          }
+          ctx.fillStyle = '#A0633C';
+          ctx.fillRect(sx, sy + 6, w, 2);
         }
 
-        // 3. Timber Stilts / Pilings extending downwards
+        // 3. Striped Peppermint Candy Cane Stilts
         const isTower = plat.id.includes('tower') || plat.id.includes('crane') || plat.id.includes('catwalk');
         const stiltHeight = isTower ? 90 : 54;
 
         for (let px = sx + 12; px < sx + w - 8; px += 36) {
-          ctx.fillStyle = '#3D2614';
+          ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(px, sy + h, 6, stiltHeight);
-          ctx.fillStyle = '#7D5836';
-          ctx.fillRect(px + 1, sy + h, 2, stiltHeight);
-          ctx.fillStyle = '#9AA0AB';
-          ctx.fillRect(px + 2, sy + h + 2, 2, 2);
+          // Red candy cane diagonal stripes
+          ctx.fillStyle = '#FB7185';
+          for (let py = sy + h + 2; py < sy + h + stiltHeight; py += 8) {
+            ctx.fillRect(px, py, 6, 3);
+          }
         }
 
-        // Diagonal cross bracing between pilings if wide enough
+        // Diagonal licorice cross-bracing
         if (w >= 70) {
-          ctx.fillStyle = '#2A1A0D';
-          ctx.fillRect(sx + 14, sy + h + 14, w - 28, 3);
-          ctx.fillRect(sx + 14, sy + h + 32, w - 28, 3);
+          ctx.fillStyle = '#4A2E50';
+          ctx.fillRect(sx + 14, sy + h + 14, w - 28, 2);
+          ctx.fillRect(sx + 14, sy + h + 32, w - 28, 2);
         }
 
-        // 4. Watchtower ladder if tower platform
+        // 4. Candy Rope Ladder if tower
         if (isTower) {
           const ladderX = sx + 10;
           const ladderH = 80;
-          ctx.fillStyle = '#4E331A';
+          ctx.fillStyle = '#FDE047'; // golden sugar rope
           ctx.fillRect(ladderX, sy + h, 2, ladderH);
           ctx.fillRect(ladderX + 10, sy + h, 2, ladderH);
-          ctx.fillStyle = '#A88850';
+          ctx.fillStyle = '#F472B6'; // pink candy rungs
           for (let ry = sy + h + 6; ry < sy + h + ladderH - 4; ry += 8) {
             ctx.fillRect(ladderX + 2, ry, 8, 2);
           }
@@ -472,7 +549,7 @@ export class CanvasRenderer {
   }
 
   // ==========================================
-  // PASS 2.5: DESTRUCTIBLE OBSTACLES
+  // PASS 2.5: DESTRUCTIBLE OBSTACLES (WHIMSICAL)
   // ==========================================
   private renderObstaclesPass(obstacles: RenderObstacleState[], camera: Camera): void {
     const ctx = this.virtualCtx;
@@ -488,89 +565,90 @@ export class CanvasRenderer {
 
       switch (obs.obstacleType) {
         case 'SANDBAG_BARRICADE': {
-          // Double-stacked burlap sandbags
+          // Stacked marshmallow cushions!
           const bagH = Math.floor(h * 0.55);
           const bottomY = sy + h - bagH;
 
-          // Bottom row
-          ctx.fillStyle = '#8B8070';
+          // Bottom marshmallow row (Soft pastel mint #A7F3D0)
+          ctx.fillStyle = '#6EE7B7';
           ctx.fillRect(sx, bottomY, w, bagH);
-          ctx.fillStyle = '#A69B88';
+          ctx.fillStyle = '#A7F3D0';
           ctx.fillRect(sx + 1, bottomY + 1, w - 2, bagH - 2);
-          ctx.fillStyle = '#C2B8A3';
+          ctx.fillStyle = '#E0F2FE';
           ctx.fillRect(sx + 2, bottomY + 1, w - 4, 2);
 
-          // Top row (staggered)
+          // Top marshmallow row (Soft pastel pink #FBCFE8)
           const topH = h - bagH + 1;
           const topW = w - 6;
-          ctx.fillStyle = '#8B8070';
+          ctx.fillStyle = '#F472B6';
           ctx.fillRect(sx + 3, sy, topW, topH);
-          ctx.fillStyle = '#B5AA96';
+          ctx.fillStyle = '#FBCFE8';
           ctx.fillRect(sx + 4, sy + 1, topW - 2, topH - 2);
-          ctx.fillStyle = '#D6CCB8';
+          ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(sx + 5, sy + 1, topW - 4, 2);
 
-          // Rope ties & seams
-          ctx.fillStyle = '#5A5244';
-          ctx.fillRect(sx + Math.floor(w * 0.35), sy, 2, h);
-          ctx.fillRect(sx + Math.floor(w * 0.7), bottomY, 2, bagH);
+          // Golden honey satin ribbon tie
+          ctx.fillStyle = '#FDE047';
+          ctx.fillRect(sx + Math.floor(w * 0.4), sy, 3, h);
           break;
         }
         case 'SUPPLY_CRATE': {
-          // Military supply crate
-          ctx.fillStyle = '#5A3D1E';
+          // Whimsical Gift Box Crate with Satin Ribbon & Bow!
+          ctx.fillStyle = '#B388D6';
           ctx.fillRect(sx, sy, w, h);
-          ctx.fillStyle = '#8B6232';
+          ctx.fillStyle = '#D8B4E2';
           ctx.fillRect(sx + 1, sy + 1, w - 2, h - 2);
-          ctx.fillStyle = '#A67C46';
-          ctx.fillRect(sx + 2, sy + 2, w - 4, h - 4);
-
-          // Diagonal / edge cross bracing
-          ctx.fillStyle = '#5A3D1E';
-          ctx.fillRect(sx + 2, sy + 2, 2, h - 4);
-          ctx.fillRect(sx + w - 4, sy + 2, 2, h - 4);
+          ctx.fillStyle = '#F3E8FF';
           ctx.fillRect(sx + 2, sy + 2, w - 4, 2);
-          ctx.fillRect(sx + 2, sy + h - 4, w - 4, 2);
 
-          // Ammo stencil icon (gold diamond/star)
-          ctx.fillStyle = '#FCE071';
-          const cx = sx + Math.floor(w / 2);
-          const cy = sy + Math.floor(h / 2);
-          ctx.fillRect(cx - 2, cy - 2, 5, 5);
-          ctx.fillStyle = '#FFF3B0';
-          ctx.fillRect(cx - 1, cy - 1, 3, 3);
+          // Bright lemon-gold satin ribbon (horizontal & vertical)
+          ctx.fillStyle = '#FDE047';
+          const midX = sx + Math.floor(w / 2) - 2;
+          const midY = sy + Math.floor(h / 2) - 2;
+          ctx.fillRect(midX, sy, 4, h);
+          ctx.fillRect(sx, midY, w, 4);
+
+          // Cute ribbon bow on top
+          ctx.fillStyle = '#FEF08A';
+          ctx.beginPath();
+          ctx.arc(midX, sy - 1, 3, 0, Math.PI * 2);
+          ctx.arc(midX + 4, sy - 1, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Star gift tag
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(midX + 1, midY + 1, 2, 2);
           break;
         }
         case 'EXPLOSIVE_BARREL': {
-          // Red explosive fuel barrel
-          ctx.fillStyle = '#881212';
+          // Fruity Soda Pop Can / Strawberry Fizz Barrel
+          ctx.fillStyle = '#DB2777';
           ctx.fillRect(sx, sy, w, h);
-          ctx.fillStyle = '#D32F2F';
+          ctx.fillStyle = '#FB7185';
           ctx.fillRect(sx + 1, sy + 1, w - 2, h - 2);
-          ctx.fillStyle = '#EF5350';
+          ctx.fillStyle = '#FDA4AF';
           ctx.fillRect(sx + 2, sy + 1, 3, h - 2);
 
-          // Steel rims (top and bottom)
-          ctx.fillStyle = '#374151';
-          ctx.fillRect(sx, sy + 2, w, 2);
-          ctx.fillRect(sx, sy + h - 4, w, 2);
-          ctx.fillStyle = '#9CA3AF';
-          ctx.fillRect(sx + 2, sy + 2, w - 4, 1);
-          ctx.fillRect(sx + 2, sy + h - 4, w - 4, 1);
+          // Shiny metallic rims
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(sx, sy + 1, w, 2);
+          ctx.fillRect(sx, sy + h - 3, w, 2);
 
-          // Hazard yellow caution band
+          // Cheerful bubbly wave band across middle
           const bandY = sy + Math.floor(h / 2) - 2;
-          ctx.fillStyle = '#FBBF24';
-          ctx.fillRect(sx + 1, bandY, w - 2, 5);
-          // Caution slashes
-          ctx.fillStyle = '#111827';
-          ctx.fillRect(sx + 3, bandY, 2, 5);
-          ctx.fillRect(sx + 8, bandY, 2, 5);
-          if (w > 12) ctx.fillRect(sx + 13, bandY, 2, 5);
+          ctx.fillStyle = '#67E8F9';
+          ctx.fillRect(sx + 1, bandY, w - 2, 4);
+          // Soda fizz bubbles
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(sx + 3, bandY + 1, 2, 2);
+          ctx.fillRect(sx + 8, bandY + 1, 2, 2);
+          if (w > 12) ctx.fillRect(sx + 13, bandY + 1, 2, 2);
 
-          // Barrel cap
-          ctx.fillStyle = '#1F2937';
-          ctx.fillRect(sx + Math.floor(w / 2) - 2, sy - 1, 4, 2);
+          // Cute smiling fruit face on barrel
+          ctx.fillStyle = '#2C1A2E';
+          ctx.fillRect(sx + Math.floor(w / 2) - 3, bandY - 4, 1, 2);
+          ctx.fillRect(sx + Math.floor(w / 2) + 2, bandY - 4, 1, 2);
+          ctx.fillRect(sx + Math.floor(w / 2) - 1, bandY - 2, 2, 1);
           break;
         }
       }
@@ -885,9 +963,66 @@ export class CanvasRenderer {
   }
 
   // ==========================================
+  // PASS 4.8: BOUNCY FLOATING SCORE POPUPS
+  // ==========================================
+  public addScorePopup(text: string, x: number, y: number, color: string = '#FDE047'): void {
+    this.scorePopups.push({
+      text,
+      x,
+      y,
+      startY: y,
+      time: 0,
+      duration: 0.85,
+      color,
+    });
+    if (this.scorePopups.length > 20) {
+      this.scorePopups.shift();
+    }
+  }
+
+  private renderScorePopupsPass(dt: number): void {
+    const ctx = this.virtualCtx;
+    for (let i = this.scorePopups.length - 1; i >= 0; i--) {
+      const p = this.scorePopups[i];
+      p.time += dt;
+      if (p.time >= p.duration) {
+        this.scorePopups.splice(i, 1);
+        continue;
+      }
+      const progress = p.time / p.duration;
+      // Bouncy upward float
+      const currentY = p.startY - Math.sin(progress * Math.PI * 0.5) * 32;
+      const alpha = Math.max(0, 1 - progress * progress);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      if (typeof ctx.fillText === 'function') {
+        (ctx as any).font = 'bold 14px sans-serif';
+        (ctx as any).textAlign = 'center';
+        // Confectionery drop shadow
+        ctx.fillStyle = '#2C1A2E';
+        ctx.fillText(p.text, p.x + 1, currentY + 1);
+        // Main glowing honey-gold text
+        ctx.fillStyle = p.color ?? '#FDE047';
+        ctx.fillText(p.text, p.x, currentY);
+      } else {
+        ctx.fillStyle = p.color ?? '#FDE047';
+        ctx.fillRect(p.x - 2, currentY - 2, 4, 4);
+      }
+      ctx.restore();
+    }
+  }
+
+  // ==========================================
   // PASS 5: RETRO ARCADE HUD OVERLAY
   // ==========================================
   private renderHudPass(hud: RenderHUDState): void {
+    if (this.lastScore > 0 && hud.score > this.lastScore) {
+      const diff = hud.score - this.lastScore;
+      const word = diff >= 500 ? 'SWEET! +' + diff : (diff >= 200 ? 'POP! +' + diff : '+' + diff);
+      this.addScorePopup(word, 480 + (Math.sin(this.elapsedTime * 10) * 60), 240, '#FDE047');
+    }
+    this.lastScore = hud.score;
     this.hudOverlay.render(this.virtualCtx, hud, this.elapsedTime);
   }
 
@@ -1094,7 +1229,7 @@ export class CanvasRenderer {
   }
 
   /**
-   * Pistol Reticle: Precision laser targeting pip, 4 corner brackets, and faint tracer line.
+   * Pistol Reticle: Sparkling Star Reticle (Golden dashed laser tracer, 4 corner star brackets, central radiant star pip).
    */
   private drawPistolCrosshair(
     ctx: CanvasContext2DLike,
@@ -1106,8 +1241,8 @@ export class CanvasRenderer {
   ): void {
     ctx.save();
 
-    // 1. Faint dashed laser tracer line from muzzle to crosshair
-    ctx.strokeStyle = 'rgba(46, 204, 113, 0.4)';
+    // 1. Faint dashed golden tracer line from muzzle to crosshair
+    ctx.strokeStyle = 'rgba(253, 224, 71, 0.45)';
     ctx.lineWidth = 1;
     if (typeof (ctx as any).setLineDash === 'function') {
       (ctx as any).setLineDash([2, 3]);
@@ -1120,40 +1255,35 @@ export class CanvasRenderer {
       (ctx as any).setLineDash([]);
     }
 
-    // 2. 4 Corner brackets (L-shaped) framing the crosshair (radius 6px)
-    ctx.strokeStyle = '#2ECC71';
+    // 2. 4 Corner star-shaped bracket marks framing the crosshair (radius 6px)
+    ctx.strokeStyle = '#FDE047';
     ctx.lineWidth = 1;
     ctx.beginPath();
     // Top-Left corner
-    ctx.moveTo(rx - 6, ry - 3);
-    ctx.lineTo(rx - 6, ry - 6);
-    ctx.lineTo(rx - 3, ry - 6);
+    ctx.moveTo(rx - 6, ry - 3); ctx.lineTo(rx - 6, ry - 6); ctx.lineTo(rx - 3, ry - 6);
     // Top-Right corner
-    ctx.moveTo(rx + 3, ry - 6);
-    ctx.lineTo(rx + 6, ry - 6);
-    ctx.lineTo(rx + 6, ry - 3);
+    ctx.moveTo(rx + 3, ry - 6); ctx.lineTo(rx + 6, ry - 6); ctx.lineTo(rx + 6, ry - 3);
     // Bottom-Left corner
-    ctx.moveTo(rx - 6, ry + 3);
-    ctx.lineTo(rx - 6, ry + 6);
-    ctx.lineTo(rx - 3, ry + 6);
+    ctx.moveTo(rx - 6, ry + 3); ctx.lineTo(rx - 6, ry + 6); ctx.lineTo(rx - 3, ry + 6);
     // Bottom-Right corner
-    ctx.moveTo(rx + 3, ry + 6);
-    ctx.lineTo(rx + 6, ry + 6);
-    ctx.lineTo(rx + 6, ry + 3);
+    ctx.moveTo(rx + 3, ry + 6); ctx.lineTo(rx + 6, ry + 6); ctx.lineTo(rx + 6, ry + 3);
     ctx.stroke();
 
-    // 3. Central bright green laser dot with white core
-    ctx.fillStyle = '#2ECC71';
-    ctx.fillRect(rx - 1.5, ry - 1.5, 3, 3);
+    // 3. Central sparkling pastel golden star with white core
+    ctx.fillStyle = '#FDE047';
+    ctx.fillRect(rx - 2, ry - 2, 4, 4);
+    ctx.fillStyle = '#FEF9C3';
+    ctx.fillRect(rx - 3, ry - 1, 6, 2);
+    ctx.fillRect(rx - 1, ry - 3, 2, 6);
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(rx - 0.5, ry - 0.5, 1, 1);
+    ctx.fillRect(rx - 1, ry - 1, 2, 2);
 
     ctx.restore();
   }
 
   /**
-   * Heavy Machine Gun Reticle: Tactical circular ring with 4 cardinal ticks,
-   * bullet spread pips along normal axis, and spread cone boundary lines.
+   * Heavy Machine Gun Reticle: Sweet Aqua Bubble Reticle (Translucent bubble ring,
+   * cardinal tick marks, sweet strawberry gumdrop spread pips).
    */
   private drawHmgCrosshair(
     ctx: CanvasContext2DLike,
@@ -1181,7 +1311,7 @@ export class CanvasRenderer {
     const pip2X = Math.round(rx - nx * spreadDistance);
     const pip2Y = Math.round(ry - ny * spreadDistance);
 
-    ctx.strokeStyle = 'rgba(241, 196, 15, 0.25)';
+    ctx.strokeStyle = 'rgba(103, 232, 249, 0.35)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(mx, my);
@@ -1190,31 +1320,29 @@ export class CanvasRenderer {
     ctx.lineTo(pip2X, pip2Y);
     ctx.stroke();
 
-    // 2. Tactical circular ring
-    ctx.strokeStyle = '#F1C40F';
-    ctx.lineWidth = 1;
+    // 2. Sweet aqua bubble ring
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(rx, ry, ringRadius, 0, Math.PI * 2);
     ctx.stroke();
 
     // 3. 4 Cardinal tick marks extending outward 3px
+    ctx.strokeStyle = '#67E8F9';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(rx, ry - ringRadius - 3);
-    ctx.lineTo(rx, ry - ringRadius);
-    ctx.moveTo(rx, ry + ringRadius);
-    ctx.lineTo(rx, ry + ringRadius + 3);
-    ctx.moveTo(rx - ringRadius - 3, ry);
-    ctx.lineTo(rx - ringRadius, ry);
-    ctx.moveTo(rx + ringRadius, ry);
-    ctx.lineTo(rx + ringRadius + 3, ry);
+    ctx.moveTo(rx, ry - ringRadius - 3); ctx.lineTo(rx, ry - ringRadius);
+    ctx.moveTo(rx, ry + ringRadius); ctx.lineTo(rx, ry + ringRadius + 3);
+    ctx.moveTo(rx - ringRadius - 3, ry); ctx.lineTo(rx - ringRadius, ry);
+    ctx.moveTo(rx + ringRadius, ry); ctx.lineTo(rx + ringRadius + 3, ry);
     ctx.stroke();
 
-    // 4. Bullet spread pips
-    ctx.fillStyle = '#FFAA00';
+    // 4. Bullet spread pips styled as sweet pastel strawberry gumdrops
+    ctx.fillStyle = '#F472B6';
     ctx.fillRect(pip1X - 1, pip1Y - 1, 2, 2);
     ctx.fillRect(pip2X - 1, pip2Y - 1, 2, 2);
 
-    // 5. Center targeting pip
+    // 5. Center sparkling white sugar pip
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(rx - 1, ry - 1, 2, 2);
 
@@ -1222,8 +1350,8 @@ export class CanvasRenderer {
   }
 
   /**
-   * Flame Shot Reticle: Tapered incendiary arc and cone indicator with
-   * swept fireball arcs, flame flicker waves, and hazard diamond.
+   * Flame Shot Reticle: Pulsing Heart Reticle (Tapered peach flame rays,
+   * cotton-candy heat arcs, and central sweet candy heart marker).
    */
   private drawFlameCrosshair(
     ctx: CanvasContext2DLike,
@@ -1240,13 +1368,13 @@ export class CanvasRenderer {
     const halfSpread = (24 * Math.PI) / 180; // ~24 degrees half-angle
     const dFlame = Math.max(12, Math.hypot(rx - mx, ry - my));
 
-    // 1. Radiating incendiary cone rays from muzzle to outer arc endpoints
+    // 1. Radiating peach cone rays from muzzle to outer arc endpoints
     const end1X = mx + dFlame * Math.cos(aimAngleRad - halfSpread);
     const end1Y = my + dFlame * Math.sin(aimAngleRad - halfSpread);
     const end2X = mx + dFlame * Math.cos(aimAngleRad + halfSpread);
     const end2Y = my + dFlame * Math.sin(aimAngleRad + halfSpread);
 
-    ctx.strokeStyle = 'rgba(232, 72, 0, 0.35)';
+    ctx.strokeStyle = 'rgba(251, 113, 133, 0.35)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(mx, my);
@@ -1255,42 +1383,45 @@ export class CanvasRenderer {
     ctx.lineTo(end2X, end2Y);
     ctx.stroke();
 
-    // 2. Swept impact arcs (concentric pressure waves)
-    // Outer arc (Red-orange)
-    ctx.strokeStyle = '#E84800';
+    // 2. Swept impact arcs in cotton candy rainbow gradient
+    // Outer arc (Strawberry rose)
+    ctx.strokeStyle = '#FB7185';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(mx, my, dFlame, aimAngleRad - halfSpread, aimAngleRad + halfSpread);
     ctx.stroke();
 
-    // Mid heat arc (Golden Amber)
+    // Mid heat arc (Soft peach)
     const midD = Math.max(8, dFlame - 6);
-    ctx.strokeStyle = '#FFA010';
+    ctx.strokeStyle = '#FDBA74';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(mx, my, midD, aimAngleRad - halfSpread * 0.8, aimAngleRad + halfSpread * 0.8);
     ctx.stroke();
 
-    // Core heat arc (Bright Yellow)
+    // Core heat arc (Buttercream yellow)
     const coreD = Math.max(4, dFlame - 12);
-    ctx.strokeStyle = '#FFF060';
+    ctx.strokeStyle = '#FEF08A';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(mx, my, coreD, aimAngleRad - halfSpread * 0.6, aimAngleRad + halfSpread * 0.6);
     ctx.stroke();
 
-    // 3. Central incendiary diamond marker at reticle point
-    ctx.fillStyle = '#FFF060';
+    // 3. Central pink candy heart marker at reticle point
+    ctx.fillStyle = '#F472B6';
     ctx.beginPath();
-    ctx.moveTo(rx, ry - 3);
-    ctx.lineTo(rx + 3, ry);
-    ctx.lineTo(rx, ry + 3);
-    ctx.lineTo(rx - 3, ry);
+    ctx.arc(rx - 2, ry - 1, 2.5, 0, Math.PI * 2);
+    ctx.arc(rx + 2, ry - 1, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(rx - 4, ry);
+    ctx.lineTo(rx + 4, ry);
+    ctx.lineTo(rx, ry + 4);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#E84800';
-    ctx.fillRect(rx - 1, ry - 1, 2, 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(rx - 1, ry - 1, 1, 1);
 
     ctx.restore();
   }
@@ -1377,6 +1508,577 @@ export class CanvasRenderer {
 
     if (fx.cameraShake && fx.cameraShake.intensity > 0) {
       ctx.restore();
+    }
+  }
+
+  // ==========================================
+  // PASS 2.8: CUTE BLOSSOM ALTARS
+  // ==========================================
+  private renderCuteAltarsPass(altars: RenderAltarState[], camera: Camera, time: number): void {
+    const ctx = this.virtualCtx;
+
+    for (const altar of altars) {
+      const screen = camera.worldToScreen(altar.x, altar.y);
+
+      ctx.save();
+      // Frosted altar base circle
+      ctx.fillStyle = altar.isBloomed ? 'rgba(181, 234, 215, 0.45)' : 'rgba(255, 218, 193, 0.35)';
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y + 4, 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Golden sugar rim
+      ctx.strokeStyle = '#F4D06F';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y + 4, 30, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Purification progress ring
+      const progress = Math.min(1.0, Math.max(0.0, altar.purificationProgress));
+      if (progress > 0 && !altar.isBloomed) {
+        ctx.strokeStyle = '#67E8F9';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y + 4, 34, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Altar pedestal pillar
+      ctx.fillStyle = '#FFF5EA';
+      ctx.fillRect(screen.x - 12, screen.y - 18, 24, 20);
+      ctx.fillStyle = '#FFB7B2';
+      ctx.fillRect(screen.x - 14, screen.y - 20, 28, 4);
+
+      // Flower petals
+      const petalCount = altar.bloomPetals ?? 6;
+      const petalRadius = altar.isBloomed ? 14 : 7;
+      const petalDist = altar.isBloomed ? 12 : 5;
+      const spin = time * (altar.isBloomed ? 1.2 : 0.4);
+
+      for (let k = 0; k < petalCount; k++) {
+        const angle = spin + (k * Math.PI * 2) / petalCount;
+        const px = screen.x + Math.cos(angle) * petalDist;
+        const py = screen.y - 26 + Math.sin(angle) * petalDist;
+        ctx.fillStyle = altar.isBloomed ? '#FF85A2' : '#FFDAC1';
+        ctx.beginPath();
+        ctx.arc(px, py, petalRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Golden flower center
+      ctx.fillStyle = '#FDE047';
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y - 26, altar.isBloomed ? 9 : 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Specular glint
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(screen.x - 2, screen.y - 29, 3, 3);
+
+      ctx.restore();
+    }
+  }
+
+  // ==========================================
+  // PASS 2.9: CUTE PICKUPS (CANDIES & STARS)
+  // ==========================================
+  private renderCutePickupsPass(pickups: RenderPickupState[], camera: Camera, time: number): void {
+    const ctx = this.virtualCtx;
+
+    for (const p of pickups) {
+      const screen = camera.worldToScreen(p.x, p.y);
+      const bob = Math.sin(time * 6 + p.x * 0.1) * 3;
+      const cy = screen.y + bob;
+
+      ctx.save();
+      if (p.type === 'star') {
+        // Shimmering 5-point Star Crystal
+        ctx.fillStyle = '#FDE047';
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = (i * Math.PI * 2) / 5 - Math.PI / 2 + time * 2;
+          const r1 = 9;
+          const r2 = 4;
+          const sx = screen.x + Math.cos(a) * r1;
+          const sy = cy + Math.sin(a) * r1;
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+          const aMid = a + Math.PI / 5;
+          ctx.lineTo(screen.x + Math.cos(aMid) * r2, cy + Math.sin(aMid) * r2);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(screen.x - 1, cy - 2, 3, 3);
+      } else if (p.type === 'heart') {
+        // Sweet Pulsing Heart
+        ctx.fillStyle = '#FF6584';
+        ctx.beginPath();
+        ctx.arc(screen.x - 3, cy - 2, 4, 0, Math.PI * 2);
+        ctx.arc(screen.x + 3, cy - 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(screen.x - 7, cy);
+        ctx.lineTo(screen.x + 7, cy);
+        ctx.lineTo(screen.x, cy + 7);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // Wrapped Pastel Candy Bonbon
+        ctx.fillStyle = '#FF85A2';
+        ctx.beginPath();
+        ctx.arc(screen.x, cy, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Wrapper twist ends
+        ctx.fillStyle = '#BAE6FD';
+        ctx.beginPath();
+        ctx.moveTo(screen.x - 6, cy);
+        ctx.lineTo(screen.x - 11, cy - 4);
+        ctx.lineTo(screen.x - 11, cy + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(screen.x + 6, cy);
+        ctx.lineTo(screen.x + 11, cy - 4);
+        ctx.lineTo(screen.x + 11, cy + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // White sugar stripe
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(screen.x - 1, cy - 5, 2, 10);
+      }
+      ctx.restore();
+    }
+  }
+
+  // ==========================================
+  // PASS 3.2: CUTE PET COMPANION ("MOCHI")
+  // ==========================================
+  private renderCutePetPass(pet: RenderPetState, camera: Camera, time: number): void {
+    const ctx = this.virtualCtx;
+    const screen = camera.worldToScreen(pet.x, pet.y);
+    const facing = pet.facing;
+
+    ctx.save();
+
+    // 1. Shimmering Bubble Shield
+    if (pet.shieldActive) {
+      const shieldPulse = Math.sin(time * 4) * 2;
+      ctx.strokeStyle = 'rgba(186, 230, 253, 0.75)';
+      ctx.lineWidth = 2;
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.18)';
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y, 22 + shieldPulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Specular highlight on shield
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(screen.x - 6, screen.y - 6, 12, -Math.PI * 0.7, -Math.PI * 0.2);
+      ctx.stroke();
+    }
+
+    // 2. Mochi Bunny Body (Fluffy marshmallow cloud shape)
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    if (typeof (ctx as any).ellipse === 'function') {
+      (ctx as any).ellipse(screen.x, screen.y, 14, 12, 0, 0, Math.PI * 2);
+    } else {
+      ctx.arc(screen.x, screen.y, 13, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    // Soft lavender shadow on bottom
+    ctx.fillStyle = '#EDE9FE';
+    ctx.beginPath();
+    if (typeof (ctx as any).ellipse === 'function') {
+      (ctx as any).ellipse(screen.x, screen.y + 4, 10, 6, 0, 0, Math.PI);
+    } else {
+      ctx.arc(screen.x, screen.y + 4, 7, 0, Math.PI);
+    }
+    ctx.fill();
+
+    // 3. Floppy Ears
+    const earWiggle = pet.state === 'cheer' ? Math.sin(time * 12) * 0.25 : 0;
+    // Ear 1
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    if (typeof (ctx as any).ellipse === 'function') {
+      (ctx as any).ellipse(screen.x - 5 * facing, screen.y - 14, 4, 9, -0.2 + earWiggle, 0, Math.PI * 2);
+    } else {
+      ctx.arc(screen.x - 5 * facing, screen.y - 14, 5, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.fillStyle = '#FFB7B2'; // Pink inner ear
+    ctx.beginPath();
+    if (typeof (ctx as any).ellipse === 'function') {
+      (ctx as any).ellipse(screen.x - 5 * facing, screen.y - 14, 2, 6, -0.2 + earWiggle, 0, Math.PI * 2);
+    } else {
+      ctx.arc(screen.x - 5 * facing, screen.y - 14, 3, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    // Ear 2
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    if (typeof (ctx as any).ellipse === 'function') {
+      (ctx as any).ellipse(screen.x + 3 * facing, screen.y - 13, 4, 8, 0.15 - earWiggle, 0, Math.PI * 2);
+    } else {
+      ctx.arc(screen.x + 3 * facing, screen.y - 13, 4, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.fillStyle = '#FFB7B2';
+    ctx.beginPath();
+    if (typeof (ctx as any).ellipse === 'function') {
+      (ctx as any).ellipse(screen.x + 3 * facing, screen.y - 13, 2, 5, 0.15 - earWiggle, 0, Math.PI * 2);
+    } else {
+      ctx.arc(screen.x + 3 * facing, screen.y - 13, 2, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    // 4. Face: Expressive Anime Eyes & Blushing Cheeks
+    const eyeX = screen.x + 4 * facing;
+    const eyeY = screen.y - 2;
+    ctx.fillStyle = '#1E162B';
+    ctx.fillRect(eyeX - 1, eyeY - 1, 3, 3);
+    ctx.fillStyle = '#FFFFFF'; // Specular catchlight
+    ctx.fillRect(eyeX, eyeY - 1, 1, 1);
+
+    // Rosy blushing cheek
+    ctx.fillStyle = '#FFAAA6';
+    ctx.beginPath();
+    ctx.arc(screen.x + 6 * facing, screen.y + 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pink button nose
+    ctx.fillStyle = '#FF85A2';
+    ctx.fillRect(screen.x + 7 * facing, screen.y, 2, 2);
+
+    // 5. Golden Star Badge on chest
+    ctx.fillStyle = '#FDE047';
+    ctx.fillRect(screen.x - 2, screen.y + 3, 4, 4);
+
+    ctx.restore();
+  }
+
+  // ==========================================
+  // PASS 3.3: CUTE BUBBLES (TRAPPED & FREE)
+  // ==========================================
+  private renderCuteBubblesPass(bubbles: RenderBubbleState[], camera: Camera, time: number): void {
+    const ctx = this.virtualCtx;
+
+    for (const b of bubbles) {
+      const screen = camera.worldToScreen(b.x, b.y);
+      const r = b.radius;
+
+      ctx.save();
+      if (b.isPopping) {
+        // Popping burst ring
+        const pop = Math.min(1.0, Math.max(0.0, b.popProgress ?? 0));
+        const burstRadius = r + pop * 24;
+        const alpha = Math.max(0, 1.0 - pop);
+
+        ctx.strokeStyle = `rgba(251, 207, 232, ${alpha})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, burstRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Radial burst sparkles
+        for (let k = 0; k < 6; k++) {
+          const a = (k * Math.PI) / 3;
+          const dist = pop * 40;
+          ctx.fillStyle = `rgba(253, 224, 71, ${alpha})`;
+          ctx.fillRect(screen.x + Math.cos(a) * dist - 2, screen.y + Math.sin(a) * dist - 2, 4, 4);
+        }
+      } else {
+        // Intact Iridescent Bubble
+        const sway = b.swayAngle ?? 0;
+
+        // Translucent bubble fill
+        ctx.fillStyle = b.color ? `${b.color}55` : 'rgba(186, 230, 253, 0.35)';
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Soft pastel border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Bottom-right iridescent pink sheen
+        ctx.strokeStyle = 'rgba(244, 114, 182, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, r - 2, Math.PI * 0.2, Math.PI * 0.6);
+        ctx.stroke();
+
+        // Top-left curved specular white glint
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, r - 4, -Math.PI * 0.8 + sway, -Math.PI * 0.3 + sway);
+        ctx.stroke();
+
+        // If holding a trapped enemy, draw cute suspended foe!
+        if (b.trappedType) {
+          ctx.save();
+          // Gentle floating bob
+          const enemyBob = Math.sin(time * 5 + screen.x) * 2;
+          ctx.translate(screen.x, screen.y + enemyBob);
+
+          if (b.trappedType.includes('SLIME')) {
+            // Marshmallow slime inside
+            ctx.fillStyle = '#FBCFE8';
+            ctx.beginPath();
+            if (typeof (ctx as any).ellipse === 'function') {
+              (ctx as any).ellipse(0, 0, 11, 9, 0, 0, Math.PI * 2);
+            } else {
+              ctx.arc(0, 0, 9, 0, Math.PI * 2);
+            }
+            ctx.fill();
+            // Funny dizzy spiral eyes
+            if (typeof ctx.fillText === 'function') {
+              (ctx as any).font = '10px monospace';
+              ctx.fillStyle = '#1E162B';
+              ctx.fillText('@_@', -9, 3);
+            }
+          } else if (b.trappedType.includes('BEE')) {
+            ctx.fillStyle = '#FBBF24';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#78350F';
+            ctx.fillRect(-2, -6, 2, 12);
+            if (typeof ctx.fillText === 'function') {
+              (ctx as any).font = '9px monospace';
+              ctx.fillStyle = '#1E162B';
+              ctx.fillText('@_@', -7, 3);
+            }
+          } else if (b.trappedType.includes('DONUT')) {
+            ctx.fillStyle = '#D97706';
+            ctx.beginPath();
+            ctx.arc(0, 0, 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#F472B6';
+            ctx.beginPath();
+            ctx.arc(0, 0, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1E162B';
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (b.trappedType.includes('CUB')) {
+            ctx.fillStyle = '#4ADE80';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            if (typeof ctx.fillText === 'function') {
+              (ctx as any).font = '8px monospace';
+              ctx.fillStyle = '#1E162B';
+              ctx.fillText('@_@', -6, 3);
+            }
+          } else {
+            // General cute trapped foe
+            ctx.fillStyle = '#BAE6FD';
+            ctx.beginPath();
+            ctx.arc(0, 0, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(-3, -3, 6, 2);
+          }
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  // ==========================================
+  // PASS 3.1: LIVING CUTE ENEMIES (M2)
+  // ==========================================
+
+  private renderCuteEnemiesPass(enemies: CuteEnemyState[], camera: Camera, time: number): void {
+    const ctx = this.virtualCtx;
+
+    for (const enemy of enemies) {
+      // Omit bubbled or dead enemies (bubbled enemies are rendered inside floating bubbles)
+      if (!enemy.isAlive || enemy.isBubbled) continue;
+
+      const screen = camera.worldToScreen(enemy.x, enemy.y);
+      const flip = enemy.facing === -1;
+
+      switch (enemy.type) {
+        case 'MARSHMALLOW_SLIME': {
+          const stretch = enemy.squashStretch ?? 1.0;
+          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_marshmallow_slime', screen.x, screen.y, {
+            flipX: flip,
+            scale: stretch,
+          });
+          if (!drawn) {
+            ctx.save();
+            ctx.fillStyle = '#FBCFE8';
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y - 6, 10 * stretch, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+          break;
+        }
+
+        case 'HONEY_BEE': {
+          const wingFlutter = Math.sin(time * 28);
+          ctx.save();
+          ctx.fillStyle = 'rgba(224, 242, 254, 0.75)';
+          ctx.beginPath();
+          if (typeof (ctx as any).ellipse === 'function') {
+            (ctx as any).ellipse(screen.x - 4 * (flip ? -1 : 1), screen.y - 12, 6, Math.abs(wingFlutter) * 7 + 2, 0.2, 0, Math.PI * 2);
+          } else {
+            ctx.arc(screen.x - 4 * (flip ? -1 : 1), screen.y - 12, 6, 0, Math.PI * 2);
+          }
+          ctx.fill();
+          ctx.restore();
+
+          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_honey_bee', screen.x, screen.y, {
+            flipX: flip,
+          });
+          if (!drawn) {
+            ctx.save();
+            ctx.fillStyle = '#FBBF24';
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+          break;
+        }
+
+        case 'DONUT_ROLLER': {
+          const rollAngle = enemy.x / 14;
+          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_donut_roller', screen.x, screen.y, {
+            rotation: rollAngle * (flip ? -1 : 1),
+          });
+          if (!drawn) {
+            ctx.save();
+            ctx.fillStyle = '#D97706';
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y, 11, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+          break;
+        }
+
+        case 'GUMMY_COLOSSUS': {
+          const wobble = 1 + Math.sin(time * 4) * 0.03;
+          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_gummy_colossus', screen.x, screen.y, {
+            flipX: flip,
+            scale: wobble,
+          });
+          if (!drawn) {
+            ctx.save();
+            ctx.fillStyle = '#F43F5E';
+            ctx.fillRect(screen.x - 30, screen.y - 70, 60, 70);
+            ctx.restore();
+          }
+
+          // Render Boss Health Bar Above Head
+          const barWidth = 100;
+          const barHeight = 8;
+          const barX = screen.x - barWidth / 2;
+          const barY = screen.y - 88;
+          const hpRatio = Math.max(0, Math.min(1, enemy.health / (enemy.maxHealth || 250)));
+
+          ctx.save();
+          ctx.fillStyle = 'rgba(30, 22, 43, 0.6)';
+          ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+          ctx.fillStyle = '#4C1D95';
+          ctx.fillRect(barX, barY, barWidth, barHeight);
+          ctx.fillStyle = '#F43F5E';
+          ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
+          ctx.strokeStyle = '#FDE047';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+          ctx.fillStyle = '#FDE047';
+          if (typeof ctx.fillText === 'function') {
+            (ctx as any).font = 'bold 9px monospace';
+            ctx.fillText('👑 GUMMY COLOSSUS', barX, barY - 3);
+          }
+          ctx.restore();
+          break;
+        }
+
+        case 'GUMMY_CUB': {
+          const hopWobble = 1 + Math.sin(time * 8 + enemy.x) * 0.08;
+          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_gummy_cub', screen.x, screen.y, {
+            flipX: flip,
+            scale: hopWobble,
+          });
+          if (!drawn) {
+            ctx.save();
+            ctx.fillStyle = '#4ADE80';
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y - 8, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // ==========================================
+  // PASS 3.4: CUTE PERK VISUALS (ORBITERS & TRAILS)
+  // ==========================================
+  private renderCutePerkVisualsPass(scene: RenderSceneState, camera: Camera, _time: number): void {
+    const ctx = this.virtualCtx;
+
+    // 1. Orbiting Bubbles
+    if (scene.cuteOrbiters && scene.player) {
+      const playerScreen = camera.worldToScreen(scene.player.x, scene.player.y);
+      for (const orb of scene.cuteOrbiters) {
+        const ox = playerScreen.x + Math.cos(orb.angle) * orb.radius;
+        const oy = playerScreen.y - 16 + Math.sin(orb.angle) * orb.radius;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(251, 207, 232, 0.45)';
+        ctx.beginPath();
+        ctx.arc(ox, oy, 11, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Specular glint
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(ox - 4, oy - 4, 3, 3);
+        ctx.restore();
+      }
+    }
+
+    // 2. Sugar Dash Trail
+    if (scene.cuteTrails && scene.cuteTrails.length > 0) {
+      for (const trail of scene.cuteTrails) {
+        const screen = camera.worldToScreen(trail.x, trail.y);
+        const alpha = Math.max(0, 1.0 - trail.age / trail.maxAge);
+        const radius = 3 + (trail.age / trail.maxAge) * 4;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = trail.color;
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
   }
 

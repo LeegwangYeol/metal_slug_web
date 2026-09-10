@@ -1,0 +1,578 @@
+Index: src/render/sprites/ProceduralSpriteFactory.ts
+===================================================================
+--- src/render/sprites/ProceduralSpriteFactory.ts
++++ src/render/sprites/ProceduralSpriteFactory.ts
+@@ -2693,6 +2693,171 @@
+       ctx.fillRect(10, 10, 6, 2);
+       ctx.fillRect(32, 12, 4, 2);
+       ctx.restore();
+     });
++
++    // ==========================================
++    // NOVEL CUTE ENEMIES EXPANSION SPRITES (M2)
++    // ==========================================
++
++    // Cute Marshmallow Slime (28x24, anchor: 14, 20)
++    this.registerExpansionSprite('cute_marshmallow_slime', 28, 24, 14, 20, (ctx) => {
++      // Pillowy marshmallow dome body
++      ctx.fillStyle = '#FBCFE8'; // Pastel strawberry pink
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(14, 13, 11, 8, 0, 0, Math.PI * 2);
++      } else {
++        ctx.arc(14, 13, 9, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Soft white powdered sugar highlight
++      ctx.fillStyle = '#FFF1F2';
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(14, 8, 8, 3, 0, 0, Math.PI * 2);
++      } else {
++        ctx.arc(14, 8, 5, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Cute anime dot eyes
++      ctx.fillStyle = '#1E162B';
++      ctx.fillRect(10, 11, 2, 3);
++      ctx.fillRect(16, 11, 2, 3);
++      // Specular eye catchlight
++      ctx.fillStyle = '#FFFFFF';
++      ctx.fillRect(10, 11, 1, 1);
++      ctx.fillRect(16, 11, 1, 1);
++
++      // Rosy blushing cheeks
++      ctx.fillStyle = '#FDA4AF';
++      ctx.fillRect(8, 14, 3, 2);
++      ctx.fillRect(17, 14, 3, 2);
++
++      // Tiny happy smile
++      ctx.fillStyle = '#BE185D';
++      ctx.fillRect(13, 15, 2, 1);
++    });
++
++    // Cute Honey Bee (28x24, anchor: 14, 12)
++    this.registerExpansionSprite('cute_honey_bee', 28, 24, 14, 12, (ctx) => {
++      // Chubby honey-gold body
++      ctx.fillStyle = '#FBBF24';
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(14, 12, 10, 8, 0, 0, Math.PI * 2);
++      } else {
++        ctx.arc(14, 12, 8, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Chocolate / molasses stripes
++      ctx.fillStyle = '#78350F';
++      ctx.fillRect(11, 5, 3, 14);
++      ctx.fillRect(17, 6, 3, 12);
++
++      // Translucent fluttering wings
++      ctx.fillStyle = 'rgba(224, 242, 254, 0.85)';
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(10, 4, 4, 7, -0.4, 0, Math.PI * 2);
++        (ctx as any).ellipse(16, 4, 4, 7, 0.4, 0, Math.PI * 2);
++      } else {
++        ctx.arc(10, 4, 4, 0, Math.PI * 2);
++        ctx.arc(16, 4, 4, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Antennae with golden pollen balls
++      ctx.fillStyle = '#78350F';
++      ctx.fillRect(20, 4, 1, 4);
++      ctx.fillRect(22, 5, 1, 4);
++      ctx.fillStyle = '#FDE047';
++      ctx.fillRect(19, 3, 3, 2);
++      ctx.fillRect(22, 4, 3, 2);
++
++      // Cute face
++      ctx.fillStyle = '#1E162B';
++      ctx.fillRect(21, 10, 2, 3);
++      ctx.fillStyle = '#FFFFFF';
++      ctx.fillRect(22, 10, 1, 1);
++      ctx.fillStyle = '#F472B6';
++      ctx.fillRect(20, 13, 2, 2);
++    });
++
++    // Cute Donut Roller (28x28, anchor: 14, 14)
++    this.registerExpansionSprite('cute_donut_roller', 28, 28, 14, 14, (ctx) => {
++      // Golden baked pastry ring
++      ctx.fillStyle = '#D97706';
++      ctx.beginPath();
++      ctx.arc(14, 14, 12, 0, Math.PI * 2);
++      ctx.fill();
++
++      // Strawberry frosting coating
++      ctx.fillStyle = '#F472B6';
++      ctx.beginPath();
++      ctx.arc(14, 14, 10, 0, Math.PI * 2);
++      ctx.fill();
++
++      // Donut hole
++      ctx.fillStyle = '#1E162B';
++      ctx.beginPath();
++      ctx.arc(14, 14, 4, 0, Math.PI * 2);
++      ctx.fill();
++
++      // Multi-colored candy sprinkles
++      ctx.fillStyle = '#6EE7B7'; // Mint
++      ctx.fillRect(8, 7, 3, 1);
++      ctx.fillRect(18, 19, 3, 1);
++      ctx.fillStyle = '#FDE047'; // Lemon
++      ctx.fillRect(18, 8, 1, 3);
++      ctx.fillRect(7, 17, 1, 3);
++      ctx.fillStyle = '#DDD6FE'; // Lavender
++      ctx.fillRect(13, 5, 2, 2);
++      ctx.fillRect(14, 21, 2, 2);
++      ctx.fillStyle = '#BAE6FD'; // Sky
++      ctx.fillRect(6, 12, 2, 2);
++      ctx.fillRect(20, 13, 2, 2);
++    });
++
++    // Cute Gummy Colossus Boss (80x90, anchor: 40, 80)
++    this.registerExpansionSprite('cute_gummy_colossus', 80, 90, 40, 80, (ctx) => {
++      ctx.save();
++      ctx.fillStyle = '#F43F5E';
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(40, 52, 26, 28, 0, 0, Math.PI * 2);
++      } else {
++        ctx.arc(40, 52, 26, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Head
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(40, 24, 22, 20, 0, 0, Math.PI * 2);
++      } else {
++        ctx.arc(40, 24, 20, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Rounded Bear Ears
++      ctx.fillStyle = '#BE123C';
++      ctx.beginPath();
++      ctx.arc(22, 10, 8, 0, Math.PI * 2);
++      ctx.arc(58, 10, 8, 0, Math.PI * 2);
++      ctx.fill();
++      ctx.fillStyle = '#FDA4AF'; // Inner ear
++      ctx.beginPath();
++      ctx.arc(22, 10, 4, 0, Math.PI * 2);
++      ctx.arc(58, 10, 4, 0, Math.PI * 2);
++      ctx.fill();
++
++      // Chunky Paws & Feet
++      ctx.fillStyle = '#BE123C';
++      ctx.beginPath();
++      ctx.arc(16, 42, 7, 0, Math.PI * 2);
++      ctx.arc(64, 42, 7, 0, Math.PI * 2);
++      ctx.arc(26, 78, 9, 0, Math.PI * 2);
++      ctx.arc(54, 78, 9, 0, Math.PI * 2);
++      ctx.fill();
++
++      // Paw pads
++      ctx.fillStyle = '#FECDD3';
++      ctx.beginPath();
++      ctx.arc(26, 79, 4, 0, Math.PI * 2);
++      ctx.arc(54, 79, 4, 0, Math.PI * 2);
++      ctx.fill();
++
++      // Gelatinous translucent highlights
++      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(34, 46, 12, 18, -0.3, 0, Math.PI * 2);
++      } else {
++        ctx.arc(34, 46, 12, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Innocent big anime sparkle eyes
++      ctx.fillStyle = '#1E162B';
++      ctx.fillRect(31, 20, 5, 6);
++      ctx.fillRect(45, 20, 5, 6);
++      ctx.fillStyle = '#FFFFFF';
++      ctx.fillRect(32, 21, 2, 2);
++      ctx.fillRect(34, 24, 1, 1);
++      ctx.fillRect(46, 21, 2, 2);
++      ctx.fillRect(48, 24, 1, 1);
++
++      // Gummy muzzle & heart button nose
++      ctx.fillStyle = '#FDA4AF';
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(40, 29, 8, 5, 0, 0, Math.PI * 2);
++      } else {
++        ctx.arc(40, 29, 6, 0, Math.PI * 2);
++      }
++      ctx.fill();
++      ctx.fillStyle = '#9F1239';
++      ctx.fillRect(38, 27, 4, 3);
++
++      // Cheerful rosy cheeks
++      ctx.fillStyle = '#FB7185';
++      ctx.beginPath();
++      ctx.arc(26, 28, 4, 0, Math.PI * 2);
++      ctx.arc(54, 28, 4, 0, Math.PI * 2);
++      ctx.fill();
++      ctx.restore();
++    });
++
++    // Cute Mini Gummy Cub (26x30, anchor: 13, 24)
++    this.registerExpansionSprite('cute_gummy_cub', 26, 30, 13, 24, (ctx) => {
++      ctx.fillStyle = '#4ADE80'; // Emerald pastel lime
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(13, 16, 8, 9, 0, 0, Math.PI * 2);
++      } else {
++        ctx.arc(13, 16, 8, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Head
++      ctx.beginPath();
++      if (typeof (ctx as any).ellipse === 'function') {
++        (ctx as any).ellipse(13, 9, 7, 6, 0, 0, Math.PI * 2);
++      } else {
++        ctx.arc(13, 9, 6, 0, Math.PI * 2);
++      }
++      ctx.fill();
++
++      // Ears
++      ctx.fillStyle = '#22C55E';
++      ctx.beginPath();
++      ctx.arc(7, 4, 3, 0, Math.PI * 2);
++      ctx.arc(19, 4, 3, 0, Math.PI * 2);
++      ctx.fill();
++
++      // Feet
++      ctx.beginPath();
++      ctx.arc(9, 23, 3, 0, Math.PI * 2);
++      ctx.arc(17, 23, 3, 0, Math.PI * 2);
++      ctx.fill();
++
++      // Specular highlight
++      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
++      ctx.fillRect(10, 7, 2, 2);
++
++      // Eyes
++      ctx.fillStyle = '#1E162B';
++      ctx.fillRect(10, 8, 2, 2);
++      ctx.fillRect(15, 8, 2, 2);
++      ctx.fillStyle = '#FFFFFF';
++      ctx.fillRect(10, 8, 1, 1);
++      ctx.fillRect(15, 8, 1, 1);
++
++      // Pink blush
++      ctx.fillStyle = '#F472B6';
++      ctx.fillRect(8, 11, 2, 1);
++      ctx.fillRect(17, 11, 2, 1);
++    });
+   }
+ }
+
+Index: src/render/CanvasRenderer.ts
+===================================================================
+--- src/render/CanvasRenderer.ts
++++ src/render/CanvasRenderer.ts
+@@ -28,6 +28,7 @@
+   RenderPickupState,
+   RenderFeverState,
+   RenderPerkCardState,
++  CuteEnemyState,
+ } from '../core/cute/CuteGameTypes';
+ 
+ export interface LetterboxBounds {
+@@ -183,6 +184,7 @@
+   player?: RenderPlayerState;
+   enemies?: RenderEnemyState[];
+   corpses?: RenderCorpseState[];
+   boss?: RenderBossState;
+   pows?: RenderPowState[];
+   projectiles?: RenderProjectileState[];
+   explosions?: RenderExplosionState[];
+   hud?: RenderHUDState;
+   cinematicFX?: RenderCinematicFXState;
+   cuteBubbles?: RenderBubbleState[];
+   cutePet?: RenderPetState;
+   cuteAltars?: RenderAltarState[];
+   cutePickups?: RenderPickupState[];
++  cuteEnemies?: CuteEnemyState[];
+   cuteOrbiters?: Array<{ angle: number; radius: number }>;
+   cuteTrails?: Array<{ x: number; y: number; age: number; maxAge: number; color: string }>;
+ }
+@@ -308,6 +310,11 @@
+     this.renderEntitiesPass(scene, cam, time);
+ 
++    // Pass 3.1: Cute Living Enemies (Slimes, Bees, Donut Rollers, Gummy Colossus, Cubs)
++    if (scene.cuteEnemies && scene.cuteEnemies.length > 0) {
++      this.renderCuteEnemiesPass(scene.cuteEnemies, cam, time);
++    }
++
+     // Pass 3.2: Cute Pet Companion ("Mochi the Cloud Bunny")
+     if (scene.cutePet) {
+       this.renderCutePetPass(scene.cutePet, cam, time);
+@@ -1820,6 +1827,47 @@
+         // If holding a trapped enemy, draw cute suspended foe!
+         if (b.trappedType) {
+           ctx.save();
+           // Gentle floating bob
+           const enemyBob = Math.sin(time * 5 + screen.x) * 2;
+           ctx.translate(screen.x, screen.y + enemyBob);
+ 
+           if (b.trappedType.includes('SLIME')) {
+             // Marshmallow slime inside
+             ctx.fillStyle = '#FBCFE8';
+             ctx.beginPath();
+             if (typeof (ctx as any).ellipse === 'function') {
+               (ctx as any).ellipse(0, 0, 11, 9, 0, 0, Math.PI * 2);
+             } else {
+               ctx.arc(0, 0, 9, 0, Math.PI * 2);
+             }
+             ctx.fill();
+             // Funny dizzy spiral eyes
+             if (typeof ctx.fillText === 'function') {
+               (ctx as any).font = '10px monospace';
+               ctx.fillStyle = '#1E162B';
+               ctx.fillText('@_@', -9, 3);
+             }
++          } else if (b.trappedType.includes('BEE')) {
++            ctx.fillStyle = '#FBBF24';
++            ctx.beginPath();
++            ctx.arc(0, 0, 8, 0, Math.PI * 2);
++            ctx.fill();
++            ctx.fillStyle = '#78350F';
++            ctx.fillRect(-2, -6, 2, 12);
++            if (typeof ctx.fillText === 'function') {
++              (ctx as any).font = '9px monospace';
++              ctx.fillStyle = '#1E162B';
++              ctx.fillText('@_@', -7, 3);
++            }
++          } else if (b.trappedType.includes('DONUT')) {
++            ctx.fillStyle = '#D97706';
++            ctx.beginPath();
++            ctx.arc(0, 0, 9, 0, Math.PI * 2);
++            ctx.fill();
++            ctx.fillStyle = '#F472B6';
++            ctx.beginPath();
++            ctx.arc(0, 0, 7, 0, Math.PI * 2);
++            ctx.fill();
++            ctx.fillStyle = '#1E162B';
++            ctx.beginPath();
++            ctx.arc(0, 0, 3, 0, Math.PI * 2);
++            ctx.fill();
++          } else if (b.trappedType.includes('CUB')) {
++            ctx.fillStyle = '#4ADE80';
++            ctx.beginPath();
++            ctx.arc(0, 0, 8, 0, Math.PI * 2);
++            ctx.fill();
++            if (typeof ctx.fillText === 'function') {
++              (ctx as any).font = '8px monospace';
++              ctx.fillStyle = '#1E162B';
++              ctx.fillText('@_@', -6, 3);
++            }
+           } else {
+             // General cute trapped foe
+             ctx.fillStyle = '#BAE6FD';
+             ctx.beginPath();
+             ctx.arc(0, 0, 10, 0, Math.PI * 2);
+             ctx.fill();
+             ctx.fillStyle = '#FFFFFF';
+             ctx.fillRect(-3, -3, 6, 2);
+           }
+           ctx.restore();
+         }
+       }
+       ctx.restore();
+     }
+   }
++
++  // ==========================================
++  // PASS 3.1: LIVING CUTE ENEMIES (M2)
++  // ==========================================
++
++  private renderCuteEnemiesPass(enemies: CuteEnemyState[], camera: Camera, time: number): void {
++    const ctx = this.virtualCtx;
++
++    for (const enemy of enemies) {
++      // Omit bubbled or dead enemies (bubbled enemies are rendered inside floating bubbles)
++      if (!enemy.isAlive || enemy.isBubbled) continue;
++
++      const screen = camera.worldToScreen(enemy.x, enemy.y);
++      const flip = enemy.facing === -1;
++
++      switch (enemy.type) {
++        case 'MARSHMALLOW_SLIME': {
++          const stretch = enemy.squashStretch ?? 1.0;
++          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_marshmallow_slime', screen.x, screen.y, {
++            flipX: flip,
++            scale: stretch,
++          });
++          if (!drawn) {
++            ctx.save();
++            ctx.fillStyle = '#FBCFE8';
++            ctx.beginPath();
++            ctx.arc(screen.x, screen.y - 6, 10 * stretch, 0, Math.PI * 2);
++            ctx.fill();
++            ctx.restore();
++          }
++          break;
++        }
++
++        case 'HONEY_BEE': {
++          const wingFlutter = Math.sin(time * 28);
++          ctx.save();
++          ctx.fillStyle = 'rgba(224, 242, 254, 0.75)';
++          ctx.beginPath();
++          if (typeof (ctx as any).ellipse === 'function') {
++            (ctx as any).ellipse(screen.x - 4 * (flip ? -1 : 1), screen.y - 12, 6, Math.abs(wingFlutter) * 7 + 2, 0.2, 0, Math.PI * 2);
++          } else {
++            ctx.arc(screen.x - 4 * (flip ? -1 : 1), screen.y - 12, 6, 0, Math.PI * 2);
++          }
++          ctx.fill();
++          ctx.restore();
++
++          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_honey_bee', screen.x, screen.y, {
++            flipX: flip,
++          });
++          if (!drawn) {
++            ctx.save();
++            ctx.fillStyle = '#FBBF24';
++            ctx.beginPath();
++            ctx.arc(screen.x, screen.y, 10, 0, Math.PI * 2);
++            ctx.fill();
++            ctx.restore();
++          }
++          break;
++        }
++
++        case 'DONUT_ROLLER': {
++          const rollAngle = enemy.x / 14;
++          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_donut_roller', screen.x, screen.y, {
++            rotation: rollAngle * (flip ? -1 : 1),
++          });
++          if (!drawn) {
++            ctx.save();
++            ctx.fillStyle = '#D97706';
++            ctx.beginPath();
++            ctx.arc(screen.x, screen.y, 11, 0, Math.PI * 2);
++            ctx.fill();
++            ctx.restore();
++          }
++          break;
++        }
++
++        case 'GUMMY_COLOSSUS': {
++          const wobble = 1 + Math.sin(time * 4) * 0.03;
++          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_gummy_colossus', screen.x, screen.y, {
++            flipX: flip,
++            scale: wobble,
++          });
++          if (!drawn) {
++            ctx.save();
++            ctx.fillStyle = '#F43F5E';
++            ctx.fillRect(screen.x - 30, screen.y - 70, 60, 70);
++            ctx.restore();
++          }
++
++          // Render Boss Health Bar Above Head
++          const barWidth = 100;
++          const barHeight = 8;
++          const barX = screen.x - barWidth / 2;
++          const barY = screen.y - 88;
++          const hpRatio = Math.max(0, Math.min(1, enemy.health / (enemy.maxHealth || 250)));
++
++          ctx.save();
++          ctx.fillStyle = 'rgba(30, 22, 43, 0.6)';
++          ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
++          ctx.fillStyle = '#4C1D95';
++          ctx.fillRect(barX, barY, barWidth, barHeight);
++          ctx.fillStyle = '#F43F5E';
++          ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
++          ctx.strokeStyle = '#FDE047';
++          ctx.lineWidth = 1.5;
++          ctx.strokeRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
++          ctx.fillStyle = '#FDE047';
++          ctx.font = 'bold 9px monospace';
++          ctx.fillText('👑 GUMMY COLOSSUS', barX, barY - 3);
++          ctx.restore();
++          break;
++        }
++
++        case 'GUMMY_CUB': {
++          const hopWobble = 1 + Math.sin(time * 8 + enemy.x) * 0.08;
++          const drawn = this.spriteFactory.drawSprite(ctx, 'cute_gummy_cub', screen.x, screen.y, {
++            flipX: flip,
++            scale: hopWobble,
++          });
++          if (!drawn) {
++            ctx.save();
++            ctx.fillStyle = '#4ADE80';
++            ctx.beginPath();
++            ctx.arc(screen.x, screen.y - 8, 8, 0, Math.PI * 2);
++            ctx.fill();
++            ctx.restore();
++          }
++          break;
++        }
++      }
++    }
++  }
+
+Index: src/main.ts
+===================================================================
+--- src/main.ts
++++ src/main.ts
+@@ -369,8 +369,11 @@
+-    // Update Player controller with input (handles gameplay, dying, continue countdown, and parachute)
+-    this.player.handleInput(input, dt, this.engine);
++    // In cute_blossom_arena mode, sanitize input so playerController handles movement/jump/aiming
++    // while weapon attack is cleanly delegated to cuteCoordinator bubble blaster (no classic gunfire/ammo consumption)
++    const playerInput = this.gameMode === 'cute_blossom_arena'
++      ? { ...input, shootPressed: false, shootHeld: false, grenadePressed: false }
++      : input;
++    this.player.handleInput(playerInput, dt, this.engine);
+ 
+     // Cute Blossom Arena loop processing
+     if (this.gameMode === 'cute_blossom_arena') {
+       // Consume rogue-lite perk choice from keyboard
+       const perkChoice = this.keyboard.consumePerkChoice();
+@@ -387,7 +390,8 @@
+       };
+ 
+-      // On fire, shoot sweet iridescent bubbles
+-      if (input.shootPressed || (input.shootHeld && this.player.weaponManager.getWeaponState().isAutomatic)) {
++      // On fire, cleanly shoot sweet iridescent bubbles (including rapid fire during Sweet Fever)
++      const wantsFire = input.shootPressed || (input.shootHeld && (this.cuteCoordinator.bubbleManager.isFeverActive || this.player.weaponManager.getWeaponState().isAutomatic));
++      if (wantsFire) {
+         this.cuteCoordinator.onPlayerShoot(playerActor, this.player.aimAngle, this.player.aimDirection);
+       }
+@@ -650,6 +654,7 @@
+       player: playerRenderState,
+       enemies: enemyStates,
++      cuteEnemies: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.getCuteEnemyStates() : undefined,
+       corpses: this.corpseManager.getRenderStates(),
+       boss: bossState,
+
+Index: src/core/cute/CuteEnemyManager.ts
+===================================================================
+--- src/core/cute/CuteEnemyManager.ts
++++ src/core/cute/CuteEnemyManager.ts
+@@ -213,8 +213,8 @@
+         enemy.isAlive = false;
+         this.splitColossusIntoMiniCubs(enemy.x, enemy.y);
+       } else {
+-        enemy.isAlive = false;
+         if (bubbleManager && !enemy.isBubbled) {
+-          // Trap or burst into bubble on defeat
++          // Trap enemy into bubble BEFORE marking isAlive = false
+           this.trapEnemyInBubble(enemy.id, bubbleManager);
+         }
++        enemy.isAlive = false;
+       }

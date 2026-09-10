@@ -224,3 +224,34 @@ Ensure all Vitest and Playwright E2E tests are 100% green after these UI/UX chan
 [USER FEEDBACK UPDATE] The user just added: "Based on the original, it's not cute/charming at all, and it feels very stifling/claustrophobic."
 Please explicitly adjust the visual direction to be more "cute/charming/appealing" (아기자기한 느낌) akin to the original arcade sprites' charm, and ensure the expanded viewport, camera scaling, and level layout completely eliminate the "stifling/claustrophobic" (답답한) feeling. Make the environments and character art pop with better proportions and charm.
 
+## 2026-09-10T05:30:47Z
+
+Use a very large team of agents. Transform the game into a highly charming, overwhelmingly cute shooter that completely breaks away from the traditional Metal Slug formula. The 100-agent team has full creative discretion to invent and implement a novel, fun gameplay loop.
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Overwhelmingly Cute & Charming Art Overhaul
+Completely scrap the gritty, traditional arcade style. Overhaul the visuals, sprites, and environments to be uniquely cute, charming, and appealing. The visual tone must be drastically different from the original game.
+
+### R2. Autonomous Gameplay Reinvention
+Break away from the linear run-and-gun formula. The agent team must brainstorm, design, and implement a completely new and fun approach to the shooter genre. You have 100% creative freedom to redefine the rules, mechanics, and core loop of the game to make it fun.
+
+### R3. Automated Playtesting & Deployment
+Because the core gameplay will change drastically, the team must autonomously write new Playwright E2E tests to play the new game loop and ensure it doesn't crash. Once verified, push to `origin/main` to trigger Vercel.
+
+## Acceptance Criteria
+
+### Verification & Deployment
+- [ ] Visual Proof: Playwright screenshots must clearly demonstrate the drastically new, cute/charming art direction.
+- [ ] Playable Core Loop: A Playwright E2E test successfully plays the newly invented game loop for at least 15 seconds without throwing any JavaScript/engine errors.
+- [ ] 100% Green Tests: Unit tests and E2E tests must be updated and pass cleanly.
+- [ ] Deployment: Git push to `origin/main` is verified and Vercel build succeeds.
+
+## 2026-09-10T05:30:54Z
+
+승인 (User has provided explicit approval to proceed with the autonomous 100-agent reinvention of the game.)
+
+

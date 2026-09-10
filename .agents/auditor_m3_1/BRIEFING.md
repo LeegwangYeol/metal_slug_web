@@ -1,61 +1,66 @@
-# BRIEFING — 2026-09-08T04:55:30Z
+# BRIEFING — 2026-09-10T01:56:55Z
 
 ## Mission
-Forensic integrity audit for Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX).
+Perform strict forensic integrity audit of Milestone 3 changes (Death knockback, 10s continue countdown, parachute respawn, HUD polish, tutorial placard).
 
 ## 🔒 My Identity
 - Archetype: forensic_auditor
 - Roles: critic, specialist, auditor
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m3_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Target: Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX)
+- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Target: Milestone 3
 
 ## 🔒 Key Constraints
 - Audit-only — do NOT modify implementation code
 - Trust NOTHING — verify everything independently
-- Follow ORIGINAL_REQUEST.md ground truth constraints
+- Check for cheating, fake timers, mock shortcuts, hardcoded test strings, or dummy stub methods
+- Verify death knockback arc, 10s continue countdown, tactical parachute respawn, on-screen tutorial placard, and HUD metallic polish
+- Ensure NO existing tests were deleted, commented out, or weakened
+- Run independent builds and tests (tsc, build, vitest)
+- Deliver explicit verdict in handoff.md: CLEAN or INTEGRITY VIOLATION
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T04:42:11Z
+- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Updated: 2026-09-10T01:53:09Z
 
 ## Audit Scope
-- **Work product**: Milestone M3 deliverables (`UltimateManager.ts`, `PlayerController.ts`, `KeyboardController.ts`, `StageManager.ts`, `ProceduralSpriteFactory.ts`, `CanvasRenderer.ts`, `SoundEngine.ts`, `ultimate_move_system.test.ts`)
+- **Work product**: Milestone 3 implementation and tests
 - **Profile loaded**: General Project
 - **Audit type**: forensic integrity check
 
 ## Audit Progress
 - **Phase**: reporting
 - **Checks completed**:
-  - git diff inspection on all 8 deliverables
-  - Source code analysis for cheats, dummy facades, mock bypasses (CLEAN)
-  - 164-key baseline invariant empirical verification (164/164 exact match, 0 leaks across 1,000 runs)
-  - Key mapping non-collision verification (KeyU = ultimate, KeyX = jump strictly preserved)
-  - `npx tsc -b` execution (exit code 0, 0 errors)
-  - `npm run build` execution (exit code 0, built in 12.09s, 41 modules)
-  - `npx vitest run` execution across all 4 M3 suites: 78/78 tests passed
-- **Checks remaining**: none
-- **Findings so far**: CLEAN
+  - Git diff and status across all M3 touched files
+  - Forensic source inspection of PlayerController.ts, PlayerKinematics.ts, PlayerTypes.ts, KeyboardController.ts, CanvasRenderer.ts, HUDOverlay.ts, main.ts, death_respawn_ui.test.ts
+  - Absence of hardcoded test outputs, stubs, fake timers, or test-only bypasses
+  - Verification of no test deletions or weakening
+  - Independent compilation check (`npx tsc --noEmit` -> PASS)
+  - Independent build check (`npm run build` -> PASS)
+  - Independent unit test suite (`npm test` -> 42 files, 596 tests -> PASS)
+- **Checks remaining**: Final handoff generation and parent messaging
+- **Findings so far**: CLEAN (Verdict: CLEAN)
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Stock limit bypass / rapid spam during freeze -> REJECTED (state machine enforces single active move and stock bounds)
-  - Expansion sprite baseline pollution -> REJECTED (expansionKeys set isolates all 41 expansion sprites, default getAllKeys() returns exactly 164)
-  - KeyX jump hijacking by KeyU ultimate -> REJECTED (discrete bindings, no cross-talk verified under 100-tap mashing)
-  - Viewport boundary bleed -> REJECTED (frustum bounds strictly cull off-screen minions at x >= cameraX + 480 and x < cameraX)
-  - Friendly fire damage -> REJECTED (Player, AllyNPC, AllyKiBlast, and PowEntity 100% immune)
-- **Vulnerabilities found**: none in production implementation
-- **Untested angles**: Web Audio API audio buffer rendering in real hardware speakers (safely mocked/guarded in headless mode)
+  - H1: Death knockback arc is a dummy stub or fake timer -> Disproved: uses semi-implicit Euler integration, -260 upward impulse, -80 * facing backward impulse, gravity 720 px/s², ground friction 0.6x, platform collision checks.
+  - H2: Continue countdown uses fake setTimeout or unsimulated shortcut -> Disproved: uses delta-time accumulator, full keybinding handling (Fire/Jump), resets 3 lives and triggers parachute drop-in, expires to DEAD.
+  - H3: Parachute respawn bypasses physics -> Disproved: drops from Y=20 at 60 px/s with sinusoidal canopy sway (Math.sin(time * 3.5)), horizontal steering vx = ±40, mid-air firing/aiming, platform landing resolution, 2.5s flashing invulnerability.
+  - H4: Tutorial placard is hardcoded or unrendered -> Disproved: renders deep navy card with gold beveled borders, rivets, full key grid, auto-dismiss in 5s with 1s fade, KeyH toggle with edge detection.
+  - H5: Pre-existing tests were weakened or deleted -> Disproved: git diff confirms zero test deletions; only dimension updates for 16:9 and dynamic arena widths.
+- **Vulnerabilities found**:
+  - Edge case noted by challenger: if player takes damage while falling during parachute descent after 2.5s invulnerability expires, lives could decrement if not clamped to 0. (Harmless in normal gameplay since player starts with 3 lives).
+- **Untested angles**: None.
 
 ## Loaded Skills
-- None
+- (none loaded)
 
 ## Key Decisions Made
-- Confirmed zero integrity violations across all M3 deliverables
-- Verdict formulated as CLEAN
+- Confirmed Milestone 3 passes all forensic integrity checks without violation.
+- Explicit verdict: CLEAN.
 
 ## Artifact Index
-- DISPATCH.md — record of dispatch instructions
-- BRIEFING.md — persistent situational awareness
-- progress.md — liveness heartbeat
-- handoff.md — forensic audit report
+- DISPATCH.md — Initial task dispatch
+- BRIEFING.md — Working memory and status
+- progress.md — Audit execution log
+- handoff.md — Final audit verdict and report

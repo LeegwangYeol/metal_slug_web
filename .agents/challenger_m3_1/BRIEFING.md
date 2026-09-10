@@ -1,71 +1,71 @@
-# BRIEFING — 2026-09-08T04:56:00Z
+# BRIEFING — 2026-09-10T10:56:30+09:00
 
 ## Mission
-Adversarially challenge and stress-test the Milestone M3 Ultimate Move System & Procedural Sprites / Cinematic FX implementation.
+Adversarially challenge and stress-test M3 Death, Parachute Respawn, and Continue state machines with empirical verification.
 
 ## 🔒 My Identity
-- Archetype: empirical_challenger
+- Archetype: EMPIRICAL CHALLENGER
 - Roles: critic, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m3_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M3_ULTIMATE_FX
+- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Milestone: M3 (UI, Death/Respawn, Continue Countdown & Tutorial Overhaul)
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Run empirical verification code yourself; do NOT trust worker claims
-- Output path discipline: metadata in .agents/challenger_m3_1 only; source/tests in standard project dirs
-- Provide explicit verdict: APPROVE or REQUEST_CHANGES
-- Send results to parent via send_message
+- Empirical verification mandatory — must run tests and oracles directly
+- No assertions accepted on faith; reproduce and test all edge cases
+- Verdict must be explicit: APPROVE or REQUEST_CHANGES
+- Never place source code, tests, or data files in .agents/
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T04:56:00Z
+- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Updated: not yet
 
 ## Review Scope
 - **Files to review**:
-  - `src/core/player/UltimateManager.ts`
-  - `src/input/KeyboardController.ts`
-  - `src/core/engine/StageManager.ts`
-  - `src/render/sprites/ProceduralSpriteFactory.ts`
-  - `src/core/entities/boss/IronNokanaBoss.ts`
-  - `src/core/entities/boss/CrisisEventManager.ts`
-  - `src/core/entities/allies/AllyNPC.ts`
-  - `src/core/entities/allies/AllyKiBlast.ts`
-  - `src/core/entities/pow/PowEntity.ts`
-  - `tests/unit/ultimate_move_system.test.ts`
-  - `tests/unit/adversarial_ultimate_challenge.test.ts`
-- **Interface contracts**: `PROJECT.md`, `COLLABORATION.md`
+  - `src/core/player/PlayerController.ts`
+  - `src/core/player/PlayerKinematics.ts`
+  - `src/core/player/PlayerTypes.ts`
+  - `src/core/physics/PlatformPhysics.ts`
+  - `src/ui/HUDOverlay.ts`
+  - `src/render/CanvasRenderer.ts`
+  - `src/main.ts`
+  - `tests/unit/death_respawn_ui.test.ts`
+  - `tests/unit/adversarial_m3_respawn_continue_challenge.test.ts`
+- **Interface contracts**: `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md`
 - **Review criteria**:
-  1. Viewport boundary edge cases: minion at `cameraX + 479` vs `cameraX + 481`
-  2. Stock limits: 0 stock rejection, rapid double-tap KeyU during freeze/strike
-  3. Friendly safety: Player, Ally NPC, POW hostage at detonation epicenter
-  4. Boss burst damage: 120 damage applied correctly without corrupting boss health phases
+  - Lethal damage immunity & life invariant during DYING & RESPAWNING_PARACHUTE
+  - Continue countdown boundary conditions (0.1s, 5.0s, 9.9s vs 10.0s expiry)
+  - Parachute touchdown resolution on elevated platforms vs ground (no clipping or snapping)
+  - Mid-air parachute steering (vx = ±40) and bullet firing during descent
+  - Test suite cleanliness, 100% pass rate, zero regressions
 
 ## Key Decisions Made
-- Implemented dedicated empirical challenge suite `tests/unit/adversarial_ultimate_challenge.test.ts` (17 tests) covering all 4 attack surfaces.
-- Tested boundary edge cases under static and scrolling camera scenarios.
-- Empirically proved stock limit invariants and rapid input spam rejection across all 4 phases.
-- Verified zero friendly fire at detonation epicenter for Player, Ally NPC, AllyKiBlast, and POW hostage.
-- Verified 120 boss damage across Iron Nokana (all 4 phases + crisis events), Tetsuyuki, and MidBossVehicle without health phase corruption.
-- Full project verification: 34/34 test suites passing (450/450 tests), `npx tsc -b` clean (0 errors), `npm run build` clean (0 errors).
-- Verdict: **APPROVE**.
+- Created comprehensive empirical stress suite: `tests/unit/adversarial_m3_respawn_continue_challenge.test.ts` (18 tests).
+- Discovered vulnerability gap in `PlayerController.takeDamage()` where parachute descent exceeding 2.5s allows mid-air death, stuck `isParachuting = true` flag during death arc and continue countdown, and negative lives.
+- Discovered failing test in `tests/unit/challenger_boss_and_stability.test.ts:369:32` (`expected 87 to be less than 80`).
+- Issued verdict: `REQUEST_CHANGES`.
 
 ## Artifact Index
-- `.agents/challenger_m3_1/DISPATCH.md` — Incoming dispatch record
-- `.agents/challenger_m3_1/BRIEFING.md` — Agent briefing & situational awareness
-- `.agents/challenger_m3_1/progress.md` — Agent heartbeat & progress tracker
-- `.agents/challenger_m3_1/handoff.md` — Final 5-component adversarial audit report
-- `tests/unit/adversarial_ultimate_challenge.test.ts` — 17 empirical adversarial challenge tests
+- `.agents/challenger_m3_1/progress.md` — Liveness & progress heartbeat
+- `.agents/challenger_m3_1/DISPATCH.md` — Dispatch history
+- `.agents/challenger_m3_1/handoff.md` — Final 5-component handoff report
+- `tests/unit/adversarial_m3_respawn_continue_challenge.test.ts` — Empirical test suite (18 passing tests)
 
 ## Attack Surface
 - **Hypotheses tested**:
-  1. Minion at `cameraX + 479` is eliminated; minion at `cameraX + 481` is preserved: CONFIRMED (100% pass).
-  2. Zero stock trigger rejected; rapid double-tap KeyU rejected during freeze/strike: CONFIRMED (100% pass).
-  3. Zero friendly fire at epicenter (Player, Ally NPC, Ki blast, POW): CONFIRMED (100% pass).
-  4. 120 burst damage applied without phase corruption to Iron Nokana, Tetsuyuki, MidBoss: CONFIRMED (100% pass).
-- **Vulnerabilities found**: None in implementation; entity addition flushing behavior discovered and accounted for in tests.
-- **Untested angles**: Visual shader distortion in hardware WebGL (covered by Canvas 2D fallback and M4 Playwright visual tests).
+  - Damage rejection during DYING: Confirmed safe (rejected, no double-kill).
+  - Continue countdown boundaries: Confirmed safe (0.1s, 5.0s, 9.9s continue cleanly; >=10.0s unconditionally dead).
+  - Parachute touchdown resolution: Confirmed safe (lands cleanly on Y=125, Y=175, upper stacked platforms, ground Y=230).
+  - Mid-air steering & firing: Confirmed safe (vx=±40, firing pistol/HMG/grenades, aim UP all work with canopy attached).
+  - Parachute descent damage immunity: VULNERABILITY FOUND. Parachute descent to ground takes 3.5s, but invulnerabilityTimer expires at 2.5s. `takeDamage()` does not guard `RESPAWNING_PARACHUTE`, allowing mid-air death, persistent parachute sprite on corpse, and negative lives (`lives = -1`).
+  - Overall test suite integrity: FAILED TEST in `challenger_boss_and_stability.test.ts`.
+- **Vulnerabilities found**:
+  - `PlayerController.ts`: Missing `RESPAWNING_PARACHUTE` in `takeDamage` guard; missing `isParachuting = false` reset in `takeDamage()` and `startContinueCountdown()`; missing `Math.max(0, ...)` on `lives` decrement.
+  - `tests/unit/challenger_boss_and_stability.test.ts`: Flaky/exceeded entity count assertion (87 < 80).
+- **Untested angles**:
+  - Touchscreen controls overlay bindings for continue screen and help toggle.
 
 ## Loaded Skills
 - None

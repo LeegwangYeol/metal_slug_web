@@ -49,6 +49,7 @@ export class KeyboardController {
   public grenadeJustPressed: boolean = false;
   public ultimateJustPressed: boolean = false;
   public helpJustPressed: boolean = false;
+  public perkChoiceJustPressed: number | null = null;
 
   // Previous button states for edge-detection (Pressed vs Held)
   private prevJump: boolean = false;
@@ -232,12 +233,19 @@ export class KeyboardController {
     this.grenadeJustPressed = false;
     this.ultimateJustPressed = false;
     this.helpJustPressed = false;
+    this.perkChoiceJustPressed = null;
 
     this.prevJump = false;
     this.prevFire = false;
     this.prevGrenade = false;
     this.prevPause = false;
     this.prevUltimate = false;
+  }
+
+  public consumePerkChoice(): number | null {
+    const choice = this.perkChoiceJustPressed;
+    this.perkChoiceJustPressed = null;
+    return choice;
   }
 
   public isPaused(): boolean {
@@ -256,6 +264,17 @@ export class KeyboardController {
   // --- Keyboard Event Handlers ---
 
   private handleKeyDown(e: KeyboardEvent): void {
+    // Number keys for rogue-lite perk selection
+    if (!e.repeat) {
+      if (e.code === 'Digit1' || e.key === '1') {
+        this.perkChoiceJustPressed = 0;
+      } else if (e.code === 'Digit2' || e.key === '2') {
+        this.perkChoiceJustPressed = 1;
+      } else if (e.code === 'Digit3' || e.key === '3') {
+        this.perkChoiceJustPressed = 2;
+      }
+    }
+
     const action = this.resolveAction(e);
     if (!action) return;
 

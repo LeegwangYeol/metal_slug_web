@@ -1,23 +1,32 @@
-## 2026-09-08T04:42:11Z
-
-You are a Forensic Auditor subagent (teamwork_preview_auditor) for Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX).
+## 2026-09-10T01:53:09Z
+You are auditor_m3_1.
 Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m3_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Worker M3 Handoff: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_1/handoff.md
+MANDATORY READING:
+1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_ui_respawn/handoff.md
 
-AUDIT FOCUS:
-Perform thorough forensic integrity audit on all Milestone M3 deliverables:
-1. Run `git diff` and examine all modified files (`UltimateManager.ts`, `PlayerController.ts`, `KeyboardController.ts`, `StageManager.ts`, `ProceduralSpriteFactory.ts`, `CanvasRenderer.ts`, `SoundEngine.ts`, `ultimate_move_system.test.ts`).
-2. Verify ZERO hardcoded test cheats, dummy facades, or mock return bypasses.
-3. Verify that the 164-key baseline invariant is genuine.
-4. Run `npx tsc -b`, `npx vitest run`, and `npm run build`.
-5. Output binary audit verdict: CLEAN or INTEGRITY VIOLATION.
-6. Write full forensic report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m3_1/handoff.md`
-   and call send_message to parent.
+TASK:
+Perform a strict forensic integrity audit of Milestone 3 changes:
+- Inspect git status and git diff across all files touched by Milestone 3:
+  - `src/core/player/PlayerController.ts`
+  - `src/core/player/PlayerKinematics.ts`
+  - `src/core/player/PlayerTypes.ts`
+  - `src/input/KeyboardController.ts`
+  - `src/render/CanvasRenderer.ts`
+  - `src/ui/HUDOverlay.ts`
+  - `src/main.ts`
+  - `tests/unit/death_respawn_ui.test.ts`
+- Audit checks:
+  - Check for cheating, fake timers, mock shortcuts, hardcoded test strings, or dummy stub methods.
+  - Verify that the death knockback arc, 10s continue countdown, tactical parachute respawn, on-screen tutorial placard, and HUD metallic polish are authentically simulated and rendered at runtime.
+  - Ensure NO existing tests were deleted, commented out, or weakened.
+- Run independent builds and tests:
+  - `npx tsc --noEmit`
+  - `npm run build`
+  - `npm test` (`npx vitest run`)
+- Deliver an explicit verdict in your handoff.md: CLEAN or INTEGRITY VIOLATION, with exhaustive evidence chain.
+- When finished, send a message to parent (ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654).

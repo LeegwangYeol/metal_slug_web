@@ -1,126 +1,86 @@
-# Milestone M3 Reviewer Report: Ultimate Move System & Procedural Sprites / Cinematic FX
-
-## Review Summary
-**Verdict**: APPROVE
-
----
+# Handoff Report — reviewer_m3_2 (Milestone 3 UI, HUD & Tutorial Review)
 
 ## 1. Observation
-
-1. **`ProceduralSpriteFactory.ts` Baseline 164-Key Invariant**:
-   - Location: `src/render/sprites/ProceduralSpriteFactory.ts:405-411`
-   - Verified via runtime execution (`npx tsx -e ...`):
-     - `getAllKeys()` (default call): exactly **164** keys.
-     - `getAllKeys(true, false)` (polish included): **178** keys (164 + 14 polish keys).
-     - `getAllKeys(false, true)` (expansion included): **205** keys (164 + 41 expansion keys).
-     - `getAllKeys(true, true)` (both included): **219** keys.
-   - Verified category audit breakdown in `tests/unit/adversarial_sprites_crosshairs.test.ts:162-200`:
-     - `player`: 67
-     - `rebel`: 21
-     - `pow`: 9
-     - `ironTechnical`: 7
-     - `tetsuyuki`: 8
-     - `projectile`: 13
-     - `casings`: 4
-     - `explosions`: 18
-     - `hud`: 17
-     - **Total**: 164.
-   - Isolation mechanism:
-     - `expansionKeys: Set<string>` at line 399.
-     - `registerExpansionSprite` (lines 417-427) registers sprites directly into `this.expansionKeys`.
-     - `getAllKeys` filters out `this.expansionKeys` unless `includeExpansion === true`.
-
-2. **`CanvasRenderer.ts` Cinematic FX Passes**:
-   - Location: `src/render/CanvasRenderer.ts:117-140`, `246-249`, `1030-1113`
-   - Non-breaking architecture:
-     - Guard: `if (scene.cinematicFX) { this.renderCinematicFXPass(scene.cinematicFX, cam, time); }` (line 247). When `cinematicFX` is undefined or null, pass is completely bypassed.
-     - Transform safety: Camera shake translational jitter `ctx.save()` matches `ctx.restore()` strictly when `fx.cameraShake.intensity > 0` (lines 1040, 1111).
-     - Sprite fallback: Tactical bomber and ground shadow render passes check `this.spriteFactory.hasSprite(...)`, falling back gracefully to solid rectangle geometry if sprites are missing.
-     - Shockwaves: Each shockwave loop uses local `ctx.save()` / `ctx.restore()` with clamped alpha `Math.max(0, Math.min(1, alpha))` and radius clamping `Math.max(1, wave.radius)`.
-     - Screen flash: Clamps alpha [0.0, 1.0], fills virtual resolution (480x270), safely restores context.
-     - Layering: Placed at Pass 4.5 prior to Pass 5 HUD overlay (`renderHudPass`), ensuring high-priority retro arcade HUD indicators remain legible.
-
-3. **`SoundEngine.ts` Headless Environment Audio Safety**:
-   - Location: `src/audio/SoundEngine.ts:315-319`, `963-1145`
-   - Universal guard in all procedural synthesis routines (`playUltimateSiren`, `playFlyoverRoar`, `playApocalypticBlast`):
-     `if (!this.canPlaySFX() || !this.ctx || !this.sfxGain) return;`
-   - `canPlaySFX()` returns false if `!this.ctx || !this.sfxGain || this.isMutedState`.
-   - In Node.js / headless environments without DOM `window`, `this.ctx` and `this.sfxGain` initialize as `null`.
-   - Headless unit execution confirmed: `expect(() => sound.playUltimateSiren()).not.toThrow()`, etc., executed with zero uncaught exceptions.
-
-4. **Dedicated Key Mapping & Kinematics Preservation**:
-   - Location: `src/input/KeyboardController.ts:81-85`, `94-96`
-   - `KeyU` / `'u'` binds to action `'ultimate'`.
-   - `KeyX` / `'x'` strictly remains bound to action `'jump'`, with zero cross-talk.
-   - `PlayerInputSnapshot` includes edge-triggered `ultimatePressed?: boolean`.
-
-5. **Empirical Build & Vitest Verification**:
-   - `npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts tests/unit/adversarial_controls_jump.test.ts`:
-     - Output: `Test Files 2 passed (2)`, `Tests 38 passed (38)` (17 crosshair/sprite tests + 21 jump kinematics tests).
-   - `npm run build`:
-     - Output: `tsc -b && vite build` exited with code 0 (41 modules transformed, production build successful in 1.67s).
-   - `tests/unit/ultimate_move_system.test.ts`:
-     - Output: `Test Files 1 passed (1)`, `Tests 28 passed (28)`.
-   - `tests/unit/adversarial_ultimate_challenge.test.ts`:
-     - Output: `Test Files 1 passed (1)`, `Tests 17 passed (17)`.
-
----
+- **Mandatory Files Inspected**:
+  - `/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md`: Directives for 16:9 HD screen, terrain overhaul, death/continue/respawn loop, and explicit user aesthetic feedback: *"cute/charming/appealing"* (`아기자기한 느낌`).
+  - `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md`: M3 milestone deliverables and Claude collaboration guidelines.
+  - `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md`: M3 death/respawn contracts, continue countdown (10s timer, 9..0 digits), tutorial placard, HUD polish.
+  - `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_ui_respawn/handoff.md`: Worker deliverables and verification evidence.
+- **Source Code Verification**:
+  1. `src/ui/HUDOverlay.ts`:
+     - **Tutorial Placard (`renderTutorialPlacard`, lines 490-561)**:
+       - 460x175 beveled navy placard centered at `cardX = (width - 460)/2`, `cardY = 36`.
+       - Double beveled metallic borders: antique gold `#D4AF37` (2px) and bronze `#6B5B3E` (1px) with `#FFA010` corner rivets.
+       - Title `'★ MISSION CONTROLS & TACTICS ★'` (`#FFD700`, scale 1.4).
+       - Full 2-column keybinding grid:
+         - `MOVE / AIM: WASD / ARROWS`
+         - `FIRE / MELEE: J / Z`
+         - `JUMP: K / X / SPACE`
+         - `GRENADE: L / C`
+         - `ULTIMATE: U`
+         - `HELP TOGGLE: H`
+       - Subtitle tip: `'Press [H] to toggle tutorial • Auto-dismiss in 5s'`.
+       - Rendered with `ctx.globalAlpha = Math.max(0, Math.min(1, alpha))` for smooth fade transitions.
+     - **Arcade Continue Countdown (`renderContinueCountdown`, lines 563-654)**:
+       - Semi-transparent backdrop `rgba(8, 10, 20, 0.82)` with centered 460x260 gold/red neon beveled box.
+       - Title `'CONTINUE'` (`#FFD700`, scale 3.2).
+       - Giant countdown digit (9..0) at scale 5.0, flashing `#FFFFFF` / `#FF2222` at 8Hz when `digitVal <= 3`.
+       - Distressed chibi Marco portrait: blonde hair, headband, cute blushed face, comic bandage on cheek (`#F5E6CC` + `#D9534F`), blue tear drop (`#5DADE2`), dizzy 'x' eyes, and two rotating animated yellow stars (`#FFEB3B`) orbiting overhead.
+       - Prompt: `'PRESS FIRE [J/Z] OR JUMP [K/X] TO CONTINUE'` with 4Hz flashing (`#FFFFFF` / `#FFCC00`).
+     - **HUD Visual Polish**:
+       - `renderMetallicFrame` (lines 170-187): Full-width 24px brushed metallic header with gold highlight line (`#D4AF37`), bronze bezel (`#6B5B3E`), and metallic corner rivets.
+       - `renderLives` (lines 189-223): Cute mini Marco soldier portrait with animated blinking eye (`blink = Math.floor(time * 3) % 8 === 0`), fluttering headband ribbon tail (`flutter = Math.floor(time * 8) % 2 === 0 ? 1 : 0`), rosy blush (`#FF9999`), red vest, and gold digit counter.
+       - `renderGrenades` (lines 255-272): Animated sizzling grenade fuse spark rapidly cycling `#FFFFFF` / `#FFFF00` / `#FF4400` at 16Hz.
+       - `renderUltimateStock` (lines 274-303): `[U]` meter with sinusoidal pulsating ready glow (`rgba(255, 170, 16, ${0.7 + Math.sin(time * 6) * 0.3})`), gold badge text, and cyan `'xN'` stock readout.
+     - **Bitmap Font & Special Glyphs (lines 43-93)**:
+       - Complete 5-row pixel font table including `'★'`, `'*'`, `'['`, `']'`, `'/'`, with drop-shadow pass and fallback to `' '`.
+  2. `src/input/KeyboardController.ts`:
+     - Line 101: `codeMap['KeyH'] = 'help'`.
+     - Lines 318-320: Case-insensitive fallback for `h` and `?` keys mapped to `help`.
+     - Lines 179, 186, 211: Edge-triggered latching via `helpJustPressed` and consumption in `getSnapshot()`.
+  3. `src/main.ts`:
+     - Lines 102-116: Tutorial state management: `showTutorial = true`, `tutorialTimer = 5.0`, `tutorialAlpha = 1.0`. `toggleTutorial()` inverts visibility and pins timer to `999999` to keep user-opened help visible.
+     - Lines 338-352: `KeyH` toggle handling in `step()`, 5.0s countdown with smooth linear 1.0s fade (`if (tutorialTimer < 1.0) tutorialAlpha = tutorialTimer`), and auto-dismissal at 0.
+     - Lines 568-589: HUD state compilation passing `isContinueActive`, `continueCountdown`, `showTutorial`, `tutorialAlpha`, `ultimateStock`.
+  4. `src/core/player/PlayerController.ts`:
+     - Lines 849-867: `takeDamage()` transitions to `DYING` upon lethal damage with knockback impulse (`vy = -260, vx = facing * -80`), 1.2s death timer, and 2.0s invulnerability.
+     - Lines 628-637: On death timer expiration: if `lives > 0` transitions to `RESPAWNING_PARACHUTE`; if `lives <= 0` transitions to `CONTINUE_COUNTDOWN`.
+     - Lines 648-658: 10.0s continue countdown. On expiry without input, transitions to `DEAD` and emits `sfx_game_over`.
+     - Lines 214-219: Pressing Fire (`shootPressed`) or Jump (`jumpPressed`) during continue countdown invokes `continueGame()`, resetting `lives = 3`, restoring full health and default equipment, and triggering tactical parachute re-entry.
+- **Build & Test Verification Commands and Output**:
+  - `npx tsc --noEmit`: Exited with code 0 (0 compilation errors).
+  - `npm run build`: Exited with code 0 (`✓ 45 modules transformed. dist/assets/index-CU0vrFOV.js 280.18 kB │ gzip: 70.76 kB │ built in 315ms`).
+  - `npm test` (`npx vitest run`): Exited with code 0.
+    `Test Files  41 passed (41)`
+    `Tests  578 passed (578)`
+    Including 19/19 dedicated tests in `tests/unit/death_respawn_ui.test.ts`.
+  - `npx playwright test`: Exited with code 0.
+    `29 passed (22.0s)` in chromium across all E2E test suites.
+- **Integrity Inspection**:
+  - No hardcoded test conditions or mocked facades found in source files.
+  - Procedural trigonometric math used for animations (`Math.sin`, `Math.floor`).
+  - Genuine event handling and edge-triggered latches in input controller.
+  - Real kinematics and collision checks in player death and respawn.
 
 ## 2. Logic Chain
-
-1. *Premise*: Acceptance criteria require that the default call to `ProceduralSpriteFactory.getInstance().getAllKeys()` must return exactly 164 keys so that baseline tests asserting 164 keys never fail.
-2. *Observation*: Line 405-411 of `ProceduralSpriteFactory.ts` filters keys using `this.expansionKeys` and `this.polishKeys`. Runtime execution confirms `getAllKeys().length === 164`.
-3. *Deduction*: Baseline sprite key invariant is strictly preserved without regression.
-4. *Premise*: Acceptance criteria require that `CanvasRenderer` cinematic FX passes must be non-breaking and safely handle camera shake, shockwaves, bomber flyovers, and full-screen alpha overlays.
-5. *Observation*: All context modifications within `renderCinematicFXPass` are enclosed in matched `ctx.save()` and `ctx.restore()` calls, values are clamped to safe ranges, and sprite draw calls have fallback branches.
-6. *Deduction*: The rendering pipeline will not crash or corrupt the graphics context under any game state or missing sprite condition.
-7. *Premise*: Audio synthesis must not crash in headless testing environments where the Web Audio API is unavailable.
-8. *Observation*: Every expansion audio synthesis routine checks `!this.canPlaySFX() || !this.ctx || !this.sfxGain` before accessing audio graph nodes.
-9. *Deduction*: Procedural audio synthesis is 100% headless-safe.
-10. *Premise*: Controls must allocate `KeyU` to ultimate without colliding with existing controls (`KeyX` jump, `KeyC` grenade).
-11. *Observation*: `KeyboardController.ts` maps `KeyU` to `ultimate`, while `KeyX` remains mapped to `jump`. The full adversarial suite `adversarial_controls_jump.test.ts` passed 21/21 tests.
-12. *Conclusion*: Milestone M3 satisfies all functional, architectural, and presentation requirements.
-
----
+1. *Tutorial UX*: Players need immediate clarity on controls upon launching an arcade web game. The tutorial placard automatically provides this at boot, auto-fades over 1.0s after 4.0s without sudden popping, and allows manual on/off recall via `KeyH`. The implementation in `main.ts` and `HUDOverlay.ts` fulfills this contract precisely.
+2. *Continue Loop*: In authentic arcade machines, life depletion does not abruptly boot the player to a static game over; it initiates an urgent 10-second countdown allowing coin insert or button press to resume. The implementation in `PlayerController.ts` lines 163-185, 214-219 and `HUDOverlay.ts` lines 563-654 reproduces this with genuine state transitions, countdown clamping, and re-entry via tactical parachute drop.
+3. *Aesthetic Directives*: The user explicitly requested an "아기자기한 느낌" (cute, charming, appealing) aesthetic. The mini Marco lives portrait with eye blinks, fluttering headband ribbon, rosy pink blush, distressed chibi Marco with bandage and orbiting dizzy stars, sizzling fuse sparks, and gold-trimmed metallic headers directly satisfy this requirement.
+4. *Test Verification*: Clean TypeScript compilation (0 errors), successful production bundling (315ms), 100% green Vitest suite (41 files, 578 tests), and 100% green Playwright E2E suite (29 tests) prove the implementation is stable, regression-free, and production-ready.
 
 ## 3. Caveats
-
-- Playwright browser E2E verification capturing actual visual screenshots of the bomber flyover and apocalyptic shockwave is scheduled for Milestone M4 (`M4_E2E_VERIFY`). Canvas rendering in M3 was verified via mock 2D contexts, mathematical transformation checks, and unit test suites.
-- Audio synthesis in Web Audio API requires user gesture activation in modern browsers; in headless Node.js tests, audio calls safely no-op.
-
----
+- Touch-screen controls in `TouchVirtualPad.ts` do not currently provide a dedicated on-screen button for `KeyH` tutorial toggle, although tapping Fire/Jump correctly continues the countdown and normal gameplay works seamlessly.
+- No other caveats; all requirements and acceptance criteria are fully met.
 
 ## 4. Conclusion
-
-Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX) is **APPROVED**.
-- Baseline 164 sprite key invariant: **PASS (164/164)**
-- Non-breaking cinematic rendering: **PASS**
-- Headless Web Audio API safety: **PASS**
-- Key mapping and jump mechanics preservation: **PASS**
-- TypeScript build & unit tests: **PASS (Exit 0)**
-- Integrity violations: **NONE DETECTED**
-
----
+**VERDICT: APPROVE**
+The Milestone 3 UI, HUD, and Tutorial overlay overhaul is completely implemented, rigorously tested, fully adhering to the user's aesthetic directive, and free of any integrity violations.
 
 ## 5. Verification Method
-
-To independently verify all findings:
-```bash
-# 1. Verify strict 164 sprite key invariant
-npx tsx -e "import { ProceduralSpriteFactory } from './src/render/sprites/ProceduralSpriteFactory'; console.log('Sprite Keys:', ProceduralSpriteFactory.getInstance().getAllKeys().length);"
-
-# 2. Run targeted adversarial suites
-npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts tests/unit/adversarial_controls_jump.test.ts
-
-# 3. Run M3 ultimate move system unit suite
-npx vitest run tests/unit/ultimate_move_system.test.ts tests/unit/adversarial_ultimate_challenge.test.ts
-
-# 4. Production TypeScript build
-npm run build
-```
-
-Invalidation conditions:
-- `getAllKeys()` returning anything other than 164.
-- `KeyX` triggering ultimate move or failing jump kinematics.
-- Any crash in `SoundEngine` under headless execution.
-- Build failure under `npm run build`.
+To independently verify this evaluation, execute:
+1. `npx tsc --noEmit` — confirm 0 TypeScript compiler errors.
+2. `npm run build` — confirm clean production Vite build.
+3. `npx vitest run tests/unit/death_respawn_ui.test.ts` — verify the 19 dedicated death, respawn, continue, and UI unit tests.
+4. `npm test` — verify the complete 578-test Vitest suite across all 41 test files.
+5. `npx playwright test` — verify all 29 browser E2E tests pass.
+6. Inspect `src/ui/HUDOverlay.ts` (lines 170-303, 490-654) and `src/main.ts` (lines 102-116, 338-352).

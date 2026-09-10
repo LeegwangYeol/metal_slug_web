@@ -173,7 +173,9 @@ test.describe('Full Metal Slug - Game Initialization & Engine Benchmark Suite', 
       game.step(1 / 60);
 
       const entities = engine.getAllEntities();
-      const hasBullet = entities.some((e: any) => e.type === 'PROJECTILE');
+      const hasBullet =
+        entities.some((e: any) => e.type === 'PROJECTILE') ||
+        (game.cuteCoordinator?.bubbleManager?.bubbles?.length ?? 0) > 0;
       const platformCount = engine.getPlatforms().length;
 
       return {

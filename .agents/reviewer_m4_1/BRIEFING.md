@@ -1,55 +1,57 @@
-# BRIEFING — 2026-09-08T05:57:00Z
+# BRIEFING — 2026-09-10T02:11:30Z
 
 ## Mission
-Independent quality and adversarial review for Milestone M4 (Playwright E2E Integration & Visual Proof Screenshots).
+Review Milestone 4 Playwright E2E visual verification test suite and screenshot artifacts for correctness, determinism, integrity, and test pass status.
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_reviewer
+- Archetype: reviewer-critic
 - Roles: reviewer, critic
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m4_1
-- Original parent: 05969896-3516-4d88-a516-8ffeaafab39c
-- Milestone: M4 (Playwright E2E Integration & Visual Proof Screenshots)
+- Original parent: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Milestone: Milestone 4
 - Instance: 1 of 1
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Actively check for integrity violations: hardcoded results, dummy/facade implementations, shortcuts, fabricated verification outputs, self-certifying work
-- Strictly evidence-based review with independent command verification
-- Must verify visual screenshots in `artifacts/expansion/` (> 5,000 bytes, valid PNG)
+- Check for integrity violations actively (hardcoded results, facades, shortcuts, fake verification)
+- Verify Playwright E2E tests, deterministic control, 960x540 viewport, PNG structure, and full test suite passes
 
 ## Current Parent
-- Conversation ID: 05969896-3516-4d88-a516-8ffeaafab39c
-- Updated: 2026-09-08T05:57:00Z
+- Conversation ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
+- Updated: 2026-09-10T02:11:30Z
 
 ## Review Scope
-- **Files to review**: `tests/e2e/ultimate_and_crisis_expansion.spec.ts`, `src/main.ts`, `artifacts/expansion/*.png`
-- **Interface contracts**: `/Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md`
-- **Review criteria**: Correctness, integrity, visual proof, test execution, adversarial edge cases
+- **Files to review**: `tests/e2e/ui_overhaul_artifacts.spec.ts`, `artifacts/ui_overhaul/*`
+- **Interface contracts**: `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md`, `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md`, `/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md`
+- **Review criteria**: Correctness, determinism, Playwright configuration, PNG artifact validity, test suite clean pass, absence of cheats/integrity violations
 
 ## Review Checklist
 - **Items reviewed**:
-  - `src/main.ts` (lines 45-56, 245-250, 988-1012): Verified clean window exposure of `__EXPANSION__`
-  - `tests/e2e/ultimate_and_crisis_expansion.spec.ts`: All 12 tests across 5 scenarios verified
-  - `artifacts/expansion/*.png`: All 8 artifacts verified (> 5,000 bytes, valid PNG, 960x540)
-  - Full build & test suite: `npm run build` (0 errors), `npx vitest run` (34/34 files, 453/453 tests), `npx playwright test` (29/29 tests)
+  - `tests/e2e/ui_overhaul_artifacts.spec.ts`
+  - `artifacts/ui_overhaul/screen_terrain.png` (33,944 bytes, 960x540 PNG)
+  - `artifacts/ui_overhaul/respawn_tutorial.png` (39,933 bytes, 960x540 PNG)
+  - `artifacts/ui_overhaul/continue_countdown.png` (27,862 bytes, 960x540 PNG)
+  - Full TypeScript validation (`npx tsc --noEmit` -> 0 errors)
+  - Production build (`npm run build` -> Clean build in 332ms)
+  - M4 Playwright test (`npx playwright test tests/e2e/ui_overhaul_artifacts.spec.ts` -> 4/4 passed in 1.3s)
+  - Full Playwright suite (`npx playwright test` -> 33/33 passed in 15.1s across 6 spec files)
+  - Full Vitest suite (`npm test` -> 596/596 passed in 42 files)
 - **Verdict**: APPROVE
-- **Unverified claims**: 0 unverified claims remaining
+- **Unverified claims**: None. All claims verified independently through direct tool execution and inspection.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Detonation minion wipe vs ally/pow immunity: Confirmed 0 friendly fire
-  - Frustum boundary preservation: Confirmed off-screen minions survive
-  - Boss HP clamping & phase transitions: Confirmed authentic damage threshold clamping
-  - Adversarial mutation robustness: Confirmed unit tests fail when detonation logic is bypassed
-  - Visual proof authenticity: Confirmed real rendered frames, not dummy solids or mocks
-- **Vulnerabilities found**:
-  - Minor flakiness risk in `beforeEach` with hardcoded 10s timeout if a stale Vite preview server lingers on port 4173. Non-blocking; resolved on clean port.
-- **Untested angles**: None within M4 scope.
+  - Determinism under RAF loop: Verified `game.stop()` halts loop, manual `game.step(1/60)` gives deterministic state.
+  - Viewport letterboxing / scaling distortion: Verified `test.use({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 })` and explicit canvas style dimensions enforce 1:1 pixel rendering.
+  - Image integrity / fake dummy files: Verified binary headers, IHDR chunk dimensions (960x540), and live generation via canvas locator screenshots.
+- **Vulnerabilities found**: None. Implementation is rock solid and genuine.
+- **Untested angles**: None relevant to M4 visual verification.
 
 ## Key Decisions Made
-- Confirmed zero integrity violations across M4 implementation.
-- Issued verdict: APPROVE.
+- Confirmed full visual proof and mathematical verification. Issued APPROVE verdict.
 
 ## Artifact Index
-- handoff.md — Final reviewer report and verdict
-- progress.md — Liveness and progress tracking
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m4_1/DISPATCH.md` — Inbound task log
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m4_1/BRIEFING.md` — Situational awareness
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m4_1/progress.md` — Liveness & heartbeat
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m4_1/handoff.md` — Final review report

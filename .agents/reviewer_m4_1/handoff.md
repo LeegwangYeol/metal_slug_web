@@ -1,160 +1,135 @@
-# Reviewer & Adversarial Critic Report: Milestone M4 (Playwright E2E Integration & Visual Proof Screenshots)
+# Handoff Report — reviewer_m4_1
 
-**Agent**: `teamwork_preview_reviewer` (`reviewer_m4_1`)  
-**Target Milestone**: M4 (Playwright E2E Integration & Visual Proof Screenshots)  
-**Date**: 2026-09-08  
-**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m4_1`  
-**Verdict**: **APPROVE**  
+## Review Summary
+**Verdict**: APPROVE
 
 ---
 
 ## 1. Observation
 
-### 1.1 Source Code and Architecture Inspection
-- **File**: `src/main.ts`
-  - Lines 45–56: Cleanly imports expansion entities (`IronNokanaBoss`, `CrisisEventManager`, `AllyNPC`, `AllyManager`, `ItemPickupEntity`, `ArtilleryTargetReticle`, `ArtilleryShellHazard`, `FallingDebrisHazard`, `GroundFlameHazard`, `AllyKiBlast`).
-  - Line 248: Attaches `cameraX` to engine during `step(dt)`.
-  - Lines 988–1010: Exposes game instance and expansion classes under `window.__EXPANSION__`, `window.__GAME__`, `window.__ENGINE__`, and `window.__AUDIO_CTX__` during `bootstrap()`.
-  - No dummy or facade code is present. No test mock overrides are embedded into game production classes.
+### Assigned Scope & Deliverables
+Review Milestone 4 Playwright E2E visual verification test suite and screenshot artifacts:
+- File under review: `tests/e2e/ui_overhaul_artifacts.spec.ts` (237 lines).
+- Visual artifacts: `artifacts/ui_overhaul/screen_terrain.png`, `artifacts/ui_overhaul/respawn_tutorial.png`, and `artifacts/ui_overhaul/continue_countdown.png`.
 
-### 1.2 Playwright E2E Test Suite Inspection
-- **File**: `tests/e2e/ultimate_and_crisis_expansion.spec.ts` (877 lines, 12 test specs across 5 scenarios):
-  - **Scenario 1: Ultimate Move Execution & Minion Elimination**:
-    * Test 1.1 (lines 66–167): Dispatches genuine browser keyboard event `page.keyboard.press('KeyU')`. Waits for and asserts all 4 cinematic phases in order:
-      - `FREEZE`: `stock` decremented to 0, `isFrozen === true`, golden screen flash alpha > 0.
-      - `STRIKE_PASS`: `flyoverProgress >= 0`, tactical bomber entity and ground shadow rendered.
-      - `DETONATION`: `detonationExecuted === true`, shockwave count >= 2, screen shake intensity > 0.
-      - `RECOVERY` / `IDLE`: returns to normal gameplay loop with simulation un-frozen.
-    * Test 1.2 (lines 169–320): Places 3 on-screen minions (`test_minion_1`, `2`, `3`), 1 off-screen minion (`test_minion_offscreen`), plus `AllyNPC` and `PowEntity` inside viewport. Triggers `KeyU`, waits for detonation. Asserts:
-      - 100% on-screen minions eliminated (`isAlive === false`, `health <= 0`).
-      - Off-screen minion survives intact (`isAlive === true`, `health > 0`).
-      - Zero friendly fire: Player, Ally, and POW hostage remain undamaged.
-  - **Scenario 2: Crisis Boss Encounter & Multi-Phase Mechanics**:
-    * Test 2.1 (lines 326–356): Simulates player arrival at Section 1 Mid-Boss trigger (`X = 740`). Asserts `mid_boss_1` spawns with 320 HP, stage state transitions to `MID_BOSS_BATTLE`, and camera bounds lock to `[720, 1200]`.
-    * Test 2.2 (lines 358–446): Verifies Iron Nokana crisis triggers:
-      - 75% HP: Artillery mortar shell hazards spawned (`hazardShellCount >= 4`).
-      - 50% HP: Arena platform `boss_arena_left` collapsed and removed from both `StageManager` and `GameEngine`, camera bounds contracted (`minX = 1880`).
-      - 25% HP: Rage Overdrive state activated (`isRaging === true`, speed multiplier 1.5).
-    * Test 2.3 (lines 448–481): Deals 120 burst damage to Iron Nokana Boss via Ultimate Move. Verifies health is clamped to 300 HP at Phase 1 transition threshold and boss advances to `PHASE_2_FLAME_SWEEP`.
-  - **Scenario 3: Autonomous Ally Support & Diverse Weapon Pickups**:
-    * Test 3.1 (lines 487–557): Verifies autonomous `AllyNPC` (Hyakutaro) follows player (`velocity.x > 0`), autonomously scans targets, and fires `AllyKiBlast` (`ALLY_PROJECTILE`), reducing enemy health from 10.0 to 6.5.
-    * Test 3.2 (lines 559–623): Verifies item pickups correctly configure player state:
-      - `WEAPON_SHOTGUN`: 30 ammo, active weapon `SHOTGUN`.
-      - `WEAPON_LASER`: 200 ammo, active weapon `LASER_GUN`.
-      - `WEAPON_ROCKET`: 30 ammo, active weapon `ROCKET_LAUNCHER`.
-      - `SHIELD`: 2 absorption buffer charges on `player.shieldCharges`.
-      - `MEDKIT`: Restores player HP to max (1.0) and awards bonus life.
-  - **Scenario 4: Visual Proof Screenshot Captures**:
-    * Tests 4.1–4.4 (lines 629–850): Advances canvas frames deterministically and writes dual screenshot filenames for canonical coverage.
-  - **Scenario 5: Visual Proof Artifact Audit**:
-    * Test 5.1 (lines 856–874): Verifies presence and file size (> 5,000 bytes) for all 8 required visual proof artifacts.
+### Codebase Inspection (`tests/e2e/ui_overhaul_artifacts.spec.ts`)
+- Line 14–17: Playwright viewport configuration:
+  ```ts
+  test.use({
+    viewport: { width: 960, height: 540 },
+    deviceScaleFactor: 1,
+  });
+  ```
+- Line 23–48: `setupDeterministicGame(page)` navigates to `'/'`, waits for `#game-canvas` and global `window.__GAME__` subsystems (`engine`, `player`, `renderer`, `stageManager`), locks canvas style dimensions to `960px` x `540px`, and halts the asynchronous `requestAnimationFrame` loop via `game.stop()`.
+- Line 50–120 (Test 1): Sets camera `(0, 0)`, equips HMG (200 rounds), positions player on `bridge_1` at `(460, 140)`, initializes static obstacles and POWs, triggers wave 1 patrol soldier at `(650, 192)`, steps 5 deterministic frames (`game.step(1/60)`), renders, and screenshots `#game-canvas` to `artifacts/ui_overhaul/screen_terrain.png`. Asserts file existence and size > 10,240 bytes.
+- Line 122–161 (Test 2): Sets camera `(0, 0)`, activates tutorial placard (`showTutorial = true`, `tutorialAlpha = 1.0`, `tutorialTimer = 999999`), places player into tactical parachute respawn (`startParachuteRespawn(140, 80)`), steps 3 deterministic frames, renders, and screenshots `#game-canvas` to `artifacts/ui_overhaul/respawn_tutorial.png`. Asserts file existence and size > 10,240 bytes.
+- Line 163–196 (Test 3): Sets camera `(0, 0)`, triggers continue countdown (`startContinueCountdown()`, `continueTimer = 9.0`, `lives = 0`), renders, and screenshots `#game-canvas` to `artifacts/ui_overhaul/continue_countdown.png`. Asserts file existence and size > 10,240 bytes.
+- Line 198–235 (Test 4): Validates all 3 artifacts for:
+  - File existence
+  - File size > 10,240 bytes
+  - Standard PNG magic bytes `0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A`
+  - IHDR chunk presence at byte offset 12..16
+  - IHDR width `readUInt32BE(16)` === 960
+  - IHDR height `readUInt32BE(20)` === 540
 
-### 1.3 Visual Proof Artifact Verification
-Inspected using `file artifacts/expansion/*.png` and `ls -l`:
-1. `artifacts/expansion/ultimate_strike_pass.png`: PNG 960x540, 21,448 bytes (> 5KB)
-2. `artifacts/expansion/screenshot_ultimate_strike_bomber.png`: PNG 960x540, 21,448 bytes (> 5KB)
-3. `artifacts/expansion/ultimate_detonation_flash.png`: PNG 960x540, 40,862 bytes (> 5KB)
-4. `artifacts/expansion/screenshot_ultimate_detonation_blast.png`: PNG 960x540, 40,862 bytes (> 5KB)
-5. `artifacts/expansion/crisis_boss_encounter.png`: PNG 960x540, 49,439 bytes (> 5KB)
-6. `artifacts/expansion/screenshot_boss_nokana_crisis.png`: PNG 960x540, 49,439 bytes (> 5KB)
-7. `artifacts/expansion/ally_pow_rescue.png`: PNG 960x540, 22,909 bytes (> 5KB)
-8. `artifacts/expansion/screenshot_ally_and_weapons.png`: PNG 960x540, 22,909 bytes (> 5KB)
+### Artifact Visual & Binary Inspection
+- Direct inspection of files in `artifacts/ui_overhaul/`:
+  - `artifacts/ui_overhaul/screen_terrain.png`: 33,944 bytes, dimensions 960x540. Shows 16:9 panoramic view, multi-tier platforms (stilt docks, concrete bunker, suspension bridge, scaffolding, high watchtower with ladder, dune redoubts), destructible sandbags/crates/barrels, parallax layers (azure ocean, beach dunes, mountains, clouds), and arcade HUD (1UP score, cute animated Marco portrait, weapon badge, ammo, sparkling grenade fuse, POW count, [U] ultimate gauge).
+  - `artifacts/ui_overhaul/respawn_tutorial.png`: 39,933 bytes, dimensions 960x540. Shows gold-beveled tutorial card with controls grid (`WASD/ARROWS`, `J/Z`, `K/X/SPACE`, `L/C`, `U`, `H`), and tactical parachute descent with canopy, suspension cords, and invulnerability flashing.
+  - `artifacts/ui_overhaul/continue_countdown.png`: 27,862 bytes, dimensions 960x540. Shows classic arcade CONTINUE overlay with giant golden digit `9`, coin prompt, distressed chibi Marco with bandaged cheek and orbiting dizzy stars.
 
-All 8 files are genuine in-engine canvas captures rendered at 960x540 with authentic pixel art assets (tactical bomber with shadow, expanding concentric shockwave rings with apocalyptic flash, Iron Nokana enraged with flame nozzle and artillery targeting reticle, autonomous Hyakutaro firing blue ki blast alongside saluting POW and shotgun item crate).
-
-### 1.4 Independent Command Execution Results
-1. **TypeScript Build (`npm run build`)**:
-   - Exit code: 0
-   - Output: Clean compilation, 44 modules transformed, 0 TypeScript errors.
-2. **Milestone M4 Playwright Test (`npx playwright test tests/e2e/ultimate_and_crisis_expansion.spec.ts`)**:
-   - Exit code: 0
-   - Output: `12 passed (9.3s)`
-3. **Full Playwright Test Suite (`npx playwright test`)**:
-   - Exit code: 0
-   - Output: `29 passed (21.2s)` across all 5 test files (`death_animations_screenshots.spec.ts`, `game_initialization.spec.ts`, `gameplay_controls.spec.ts`, `ultimate_and_crisis_expansion.spec.ts`, `visual_verification.spec.ts`).
-4. **Full Vitest Test Suite (`npx vitest run`)**:
-   - Exit code: 0
-   - Output: `Test Files 34 passed (34)`, `Tests 453 passed (453)`.
+### Verification Commands & Direct Outputs
+1. `npx tsc --noEmit`:
+   - Exited with code 0 (zero errors).
+2. `npm run build`:
+   - Exited with code 0 (`✓ built in 332ms`, `dist/index.html` 1.36 kB, `dist/assets/index-DMH27slv.js` 280.29 kB).
+3. `npx playwright test tests/e2e/ui_overhaul_artifacts.spec.ts`:
+   - Exited with code 0:
+     ```
+     Running 4 tests using 1 worker
+     [Artifact 1] screen_terrain.png captured: 33886 bytes
+       ✓ 1 [chromium] › tests/e2e/ui_overhaul_artifacts.spec.ts:50:3 (319ms)
+     [Artifact 2] respawn_tutorial.png captured: 39859 bytes
+       ✓ 2 [chromium] › tests/e2e/ui_overhaul_artifacts.spec.ts:122:3 (177ms)
+     [Artifact 3] continue_countdown.png captured: 27862 bytes
+       ✓ 3 [chromium] › tests/e2e/ui_overhaul_artifacts.spec.ts:163:3 (170ms)
+     [Verified] screen_terrain.png: 33886 bytes, 960x540 PNG
+     [Verified] respawn_tutorial.png: 39859 bytes, 960x540 PNG
+     [Verified] continue_countdown.png: 27862 bytes, 960x540 PNG
+       ✓ 4 [chromium] › tests/e2e/ui_overhaul_artifacts.spec.ts:198:3 (3ms)
+     4 passed (1.3s)
+     ```
+4. `npx playwright test`:
+   - Exited with code 0: All 33 tests passed in 15.1s across all 6 spec files:
+     - `death_animations_screenshots.spec.ts`: 3 passed
+     - `game_initialization.spec.ts`: 3 passed
+     - `gameplay_controls.spec.ts`: 5 passed
+     - `ui_overhaul_artifacts.spec.ts`: 4 passed
+     - `ultimate_and_crisis_expansion.spec.ts`: 12 passed
+     - `visual_verification.spec.ts`: 6 passed
+5. `npm test` (`npx vitest run`):
+   - Exited with code 0: 42 test files passed, 596 tests passed (100% green).
 
 ---
 
 ## 2. Logic Chain
 
-1. **Integrity and Legitimacy Assessment**:
-   - The review actively verified whether any hardcoded test results, facade logic, or test bypasses existed.
-   - During concurrent challenger stress testing, when `isMinion` in `UltimateManager.ts` was mutated to `false`, 12 tests across `ultimate_move_system.test.ts` and `adversarial_ultimate_challenge.test.ts` immediately failed. This proves that the tests actively assert genuine simulation outcomes rather than hardcoded returns.
-   - When the genuine implementation is restored, 100% of the 453 tests pass.
-   - The Playwright tests run against a real Chromium browser instance, mounting the DOM, initializing canvas, and executing browser-level inputs (`page.keyboard.press('KeyU')`).
-
-2. **Coverage Completeness**:
-   - The test suite covers all four acceptance requirements from `ORIGINAL_REQUEST.md` (2026-09-03T16:13:55Z):
-     * KeyU ultimate move with screen clearing and boss burst damage.
-     * Autonomous ally NPC following and attacking with Ki blasts.
-     * Dynamic crisis events altering the combat arena at 75%, 50%, 25% HP checkpoints.
-     * Visual proof screenshots capturing all new mechanics.
-
-3. **Visual Proof Legitimacy**:
-   - Visual artifacts were directly rendered via canvas blitting and captured by Playwright's locator screenshot engine.
-   - The resulting PNG files are high-fidelity, non-trivial images (21KB to 49KB) showing authentic sprites, environmental hazards, and particle FX.
+1. **Deterministic Execution**:
+   - The test harness stops the real-time `requestAnimationFrame` loop via `game.stop()`.
+   - Physics and entity states are advanced with exact `game.step(1/60)` iterations before invoking `game.render()`.
+   - This eliminates nondeterministic race conditions between RAF ticks and headless browser screenshot capture.
+2. **Aspect Ratio & Resolution Fidelity**:
+   - Playwright context is configured with `viewport: { width: 960, height: 540 }, deviceScaleFactor: 1`.
+   - Canvas element styling is set to `960px` x `540px`, matching the internal framebuffer dimensions (`CanvasRenderer.VIRTUAL_WIDTH = 960`, `CanvasRenderer.VIRTUAL_HEIGHT = 540`).
+   - The resulting screenshots are pixel-perfect 960x540 PNGs with no letterboxing, cropping, or high-DPI scaling artifacts.
+3. **Integrity & Authenticity Audit**:
+   - Checked for integrity violations:
+     - No hardcoded test outputs or mock bypasses.
+     - No dummy or facade implementations: screenshots are rendered live from the real browser canvas by Playwright's `canvas.screenshot({ path })`.
+     - File timestamps confirmed live regeneration upon test execution.
+     - Binary validation in Test 4 independently parses PNG signature and IHDR dimensions directly from disk.
+4. **Regression-Free Test Suite**:
+   - Running the full suite demonstrates that adding `tests/e2e/ui_overhaul_artifacts.spec.ts` introduced zero regressions across existing E2E specs (initialization, controls, death animations, ultimate expansion) or Vitest unit tests (596 tests green).
 
 ---
 
 ## 3. Caveats
-
-1. **Port 4173 Lifecycle**:
-   - In `playwright.config.ts`, `webServer.reuseExistingServer: !process.env.CI` is enabled.
-   - If an old or stale background process remains listening on port 4173 from a prior session, initial page loads can experience latency. With a clean port, all 12 tests complete in 9.3s and the full 29-test suite completes in 21.2s.
-   - Recommendation for CI/orchestration: ensure any existing server on port 4173 is cleanly killed before running test suites.
+- No caveats. The implementation strictly adheres to the assigned scope, uses genuine headless browser execution, and produces verifiable artifacts.
 
 ---
 
 ## 4. Conclusion
-
-**Verdict: APPROVE**
-
-The work submitted for Milestone M4 (Playwright E2E Integration & Visual Proof Screenshots) meets all technical and visual requirements:
-- Zero integrity violations.
-- Legitimate and robust Playwright E2E tests verifying Ultimate Move progression, 100% minion elimination, zero friendly fire, Mid-Boss vehicle encounter, Iron Nokana 4-phase crisis triggers, autonomous Ally NPC combat, and diverse weapon pickups.
-- All 8 visual proof screenshot artifacts exist, are valid 960x540 PNGs, and exceed the 5,000-byte threshold.
-- 100% passing build and test suites:
-  * `npm run build`: 0 errors
-  * `npx vitest run`: 34/34 suites, 453/453 tests passed
-  * `npx playwright test tests/e2e/ultimate_and_crisis_expansion.spec.ts`: 12/12 passed
-  * `npx playwright test`: 29/29 tests passed
+- The Milestone 4 visual verification test suite and screenshot artifacts fully satisfy all requirements:
+  - `tests/e2e/ui_overhaul_artifacts.spec.ts` is robust, deterministic, and well-structured.
+  - All three visual proof artifacts (`screen_terrain.png`, `respawn_tutorial.png`, `continue_countdown.png`) exist, exceed the 10KB threshold, and conform to the 960x540 PNG format.
+  - All builds and tests pass cleanly (`tsc`, `npm run build`, Vitest, Playwright).
+- **Verdict**: **APPROVE**.
 
 ---
 
 ## 5. Verification Method
-
-To independently verify this evaluation:
-
-1. **TypeScript Production Compilation**:
+To independently reproduce and verify this review:
+1. Check TypeScript compilation:
+   ```bash
+   npx tsc --noEmit
+   ```
+2. Check production build:
    ```bash
    npm run build
    ```
-   *Expected*: Exit code 0, 0 errors, bundle emitted in `dist/`.
-
-2. **Milestone M4 E2E Test Suite**:
+3. Run the M4 Playwright visual verification suite:
    ```bash
-   npx playwright test tests/e2e/ultimate_and_crisis_expansion.spec.ts
+   npx playwright test tests/e2e/ui_overhaul_artifacts.spec.ts
    ```
-   *Expected*: 12 passed.
-
-3. **Complete E2E Suite**:
+4. Run the full Playwright suite:
    ```bash
    npx playwright test
    ```
-   *Expected*: 29 passed across 5 test suites.
-
-4. **Unit Test Suite**:
+5. Run the Vitest unit test suite:
    ```bash
-   npx vitest run
+   npm test
    ```
-   *Expected*: 34 passed (34/34 suites, 453/453 tests).
-
-5. **Visual Proof Artifact Inspection**:
+6. Check artifact sizes and dimensions:
    ```bash
-   file artifacts/expansion/*.png
-   ls -lh artifacts/expansion/*.png
+   ls -la artifacts/ui_overhaul/
    ```
-   *Expected*: 8 files, 960x540 PNG, all > 5,000 bytes.

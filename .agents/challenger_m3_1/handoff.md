@@ -1,136 +1,198 @@
-# Empirical Challenger Audit Report: Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX)
+# Handoff Report — challenger_m3_1 (Milestone 3 Adversarial Challenge)
 
-## Verdict: APPROVE
+**VERDICT**: ❌ **REQUEST_CHANGES**
 
 ---
 
 ## 1. Observation
-- **Direct Observations of Implementation**:
-  - `src/core/player/UltimateManager.ts`:
-    - Implements the 4-phase cinematic state machine: `FREEZE` (0.5s), `STRIKE_PASS` (0.6s), `DETONATION` (0.4s), `RECOVERY` (0.3s) returning to `IDLE` (lines 50-68, 153-202).
-    - Stock management: `initialStock = 1`, `maxStock = 3`. `canTrigger()` strictly enforces `!this.isActive && this.stock > 0` (lines 95-97, 104-106).
-    - Friendly safety filter (lines 223-237):
-      ```ts
-      if (
-        ent.id === 'player' ||
-        ent.type === 'PLAYER' ||
-        ent instanceof PlayerController ||
-        ent.type === 'ALLY_NPC' ||
-        ent.type === 'ALLY_PROJECTILE' ||
-        ent instanceof AllyNPC ||
-        ent instanceof AllyKiBlast ||
-        ent.type === 'POW' ||
-        ent instanceof PowEntity ||
-        ent.type === 'ITEM_PICKUP'
-      ) {
-        continue;
-      }
-      ```
-    - Viewport boundary intersection filter (lines 239-242):
-      ```ts
-      if (!BoundingBox.intersects(ent.bounds, viewport)) {
-        continue;
-      }
-      ```
-    - Hostile projectile removal (lines 245-259): `ENEMY_BULLET`, `ENEMY_GRENADE`, `CANNON_SHELL`, `ARTILLERY_SHELL`, `HOMING_MISSILE` set `isAlive = false` and removed from engine.
-    - Boss burst damage (lines 262-280): Deals `this.bossDamage` (120 HP) to `IronNokanaBoss`, `TetsuyukiBoss`, `MidBossVehicle`, or any entity with `type.includes('BOSS')`.
-    - Minion screen-clearing (lines 283-300): Deals 999 lethal explosion damage, setting `health = 0` and `isAlive = false`.
-  - `src/input/KeyboardController.ts`:
-    - Line 60: `KeyU` / `'u'` mapped to `ultimate`.
-    - Line 56: `KeyX` / `'x'` strictly preserved for `jump`.
-  - `src/render/sprites/ProceduralSpriteFactory.ts`:
-    - 41 expansion sprites isolated in `expansionKeys: Set<string>`.
-    - `getAllKeys(false, false)` returns exactly 164 keys, preserving the baseline invariant.
 
-- **Empirical Challenge Results**:
-  - Implemented and executed dedicated adversarial test suite `tests/unit/adversarial_ultimate_challenge.test.ts` (17 tests):
-    1. *Viewport Boundary Edge Cases*:
-       - Minion at `cameraX + 479` (`x = 479`, width 24, bounds `[479, 503]`): `479 < 480` -> intersects viewport, eliminated (`isAlive === false`, `health === 0`).
-       - Minion at `cameraX + 481` (`x = 481`, width 24, bounds `[481, 505]`): `481 < 480` is FALSE -> outside viewport, strictly preserved (`isAlive === true`, `health === maxHealth`).
-       - Minion at `cameraX + 480` (exact boundary): preserved (`isAlive === true`).
-       - Scrolling camera test at `cameraX = 250`: minion at `cameraX + 479 = 729` eliminated; minion at `cameraX + 481 = 731` strictly preserved.
-       - Left boundary edge test at `cameraX = 200`: minion at `cameraX - 23` eliminated (overlaps left edge); minion at `cameraX - 25` strictly preserved (outside left edge).
-    2. *Stock Limits & Spam / Double-Tap Rejection*:
-       - Activation with 0 stock rejected immediately (`canTrigger() === false`, `trigger()` returns `false`, `stock === 0`, `phase === IDLE`, zero events emitted).
-       - `PlayerController.handleInput` ignores `ultimatePressed` when stock is 0.
-       - Rapid double-tap KeyU during `FREEZE` phase rejected: stock remains 2, zero duplicate freeze events, 10 consecutive spams rejected.
-       - Rapid KeyU during `STRIKE_PASS`, `DETONATION`, and `RECOVERY` phases strictly rejected without decrementing stock or resetting state.
-    3. *Friendly Safety at Detonation Epicenter*:
-       - Player at epicenter `(240, 135)` with 1 HP and 2 shield charges takes 0 damage (`health === 1.0`, `shieldCharges === 2`, `isAlive === true`).
-       - Ally NPC (`AllyNPC`, Hyakutaro Ichimonji) at epicenter takes 0 damage (`isAlive === true`).
-       - Ally projectile (`AllyKiBlast`) at epicenter is preserved (`isAlive === true`).
-       - POW Hostage (`PowEntity`, tied up) at epicenter takes 0 damage (`isAlive === true`, state remains `TIED_UP`).
-       - POW Hostage (`PowEntity`, freed) at epicenter takes 0 damage (`isAlive === true`).
-       - Hostile minions, enemy bullets, and artillery shells at the exact same epicenter are 100% destroyed and removed from engine.
-    4. *Boss Burst Damage & Phase Integrity*:
-       - `IronNokanaBoss` (Max HP 400, Gate 1 at 300 HP): 120 damage applied; health clamped to 300 HP (75% gate), cleanly triggering `PHASE_2_FLAME_SWEEP`.
-       - Multi-strike sequence through all 4 phases: Strike 1 (400 -> 300 HP, Phase 2), Strike 2 (300 -> 200 HP, Phase 3), Strike 3 (200 -> 100 HP, Phase 4 Rage), Strike 4 (100 -> 0 HP, `DEATH_EXPLODING`).
-       - `CrisisEventManager` coordinates seamlessly: 75% artillery bombardment triggers at 300 HP without prematurely firing 50% terrain collapse or 25% rage overdrive.
-       - `TetsuyukiBoss` absorbs 120 burst damage correctly: 400 -> 280 -> 260 Phase 2.
-       - `MidBossVehicle` absorbs 120 burst damage with Gate 1 preservation: 400 -> 280 -> 240 Gate 1 transition.
-       - Simultaneous detonation: clears 100% of minions (`minionsCleared === 3`) while dealing exactly 120 burst damage to the boss (`bossesHit === 1`, `bossDamageDealt === 120`).
+### Obs 1.1: Vulnerability Gap in `PlayerController.takeDamage()` during `RESPAWNING_PARACHUTE`
+In `src/core/player/PlayerController.ts`:
+- Line 82: `public static readonly PARACHUTE_DESCENT_SPEED: number = 60.0;`
+- Lines 140–158 (`startParachuteRespawn`):
+  ```typescript
+  public startParachuteRespawn(spawnX?: number, spawnY: number = 20): void {
+    this.health = this.maxHealth;
+    this.actionState = PlayerActionState.RESPAWNING_PARACHUTE;
+    if (spawnX !== undefined) {
+      this.position.x = spawnX;
+    }
+    this.position.y = spawnY;
+    this.velocity.x = 0;
+    this.velocity.y = PlayerController.PARACHUTE_DESCENT_SPEED;
+    this.isGrounded = false;
+    this.isParachuting = true;
+    this.parachuteTime = 0;
+    this.parachuteSwayAngle = 0;
+    this.invulnerabilityTimer = 2.5; // 2.5s invulnerability flashing
+    this.posture = PlayerPosture.AIRBORNE;
+    this.isAlive = true;
+    this.isContinueActive = false;
+    this.continueTimer = 0;
+  }
+  ```
+- Lines 662–665 (`update`):
+  ```typescript
+  if (this.actionState === PlayerActionState.RESPAWNING_PARACHUTE) {
+    if (this.invulnerabilityTimer > 0) {
+      this.invulnerabilityTimer = Math.max(0, this.invulnerabilityTimer - dt);
+    }
+  ```
+- Lines 825–834 (`takeDamage`):
+  ```typescript
+  takeDamage(amount: number = 1.0, engine?: GameEngine): void {
+    if (
+      this.invulnerabilityTimer > 0 ||
+      !this.isAlive ||
+      this.actionState === PlayerActionState.DYING ||
+      this.actionState === PlayerActionState.DEAD ||
+      this.actionState === PlayerActionState.CONTINUE_COUNTDOWN
+    ) {
+      return;
+    }
+  ```
+  Notice: `PlayerActionState.RESPAWNING_PARACHUTE` is **omitted** from the `takeDamage()` state guard.
+- When dropping from `Y = 20` to standard ground level `Y = 230`, distance is $210\text{ px}$.
+  At $\text{vy} = 60\text{ px/s}$, descent duration is $\frac{210}{60} = 3.5\text{ seconds}$.
+- At $t \ge 2.5\text{s}$, `invulnerabilityTimer` reaches `0` while the player is still at $Y \approx 170\text{ px}$ (in mid-air descending on parachute).
+- If damaged at $t \ge 2.5\text{s}$ during descent:
+  - `takeDamage` executes: `this.lives--` (lines 851), `this.actionState = PlayerActionState.DYING` (line 852).
+  - `this.isParachuting` is **never reset to false** in `takeDamage()`.
+  - In `src/render/CanvasRenderer.ts` line 793:
+    ```typescript
+    if (p.isParachuting || p.state === 'parachute') {
+    ```
+    The parachute canopy and cords continue to be rendered over the player's dying corpse during the knockback arc.
+  - If `lives` was 0 before taking damage in `RESPAWNING_PARACHUTE`, `this.lives--` decrements `lives` to `-1` (violating the non-negative lives invariant).
 
-- **Project-Wide Build and Test Telemetry**:
-  - `npx vitest run tests/unit/adversarial_ultimate_challenge.test.ts`:
-    `✓ tests/unit/adversarial_ultimate_challenge.test.ts (17 tests) 67ms` (100% pass)
-  - `npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts`:
-    `✓ tests/unit/adversarial_sprites_crosshairs.test.ts (17 tests) 71ms` (100% pass, exactly 164 baseline keys verified)
-  - `npx vitest run tests/unit/adversarial_controls_jump.test.ts`:
-    `✓ tests/unit/adversarial_controls_jump.test.ts (21 tests) 338ms` (100% pass, KeyX jump intact)
-  - Full project test suite (`npx vitest run`):
-    `Test Files  34 passed (34)`
-    `Tests  450 passed (450)`
-    `Duration  3.18s`
-  - TypeScript typecheck (`npx tsc -b`): exited with code 0 (zero errors).
-  - Production build (`npm run build`): built in 292ms, exited with code 0 (zero errors).
+### Obs 1.2: Empirical Reproduction of Defect via Vitest
+Executed `npx vitest run tests/unit/adversarial_m3_respawn_continue_challenge.test.ts`:
+- Test `EMPIRICAL 1F (DEFECT REPRODUCTION)` confirmed:
+  ```typescript
+  const p1 = new PlayerController();
+  p1.lives = 2;
+  p1.startParachuteRespawn(100, 20);
+  p1.invulnerabilityTimer = 0; // Expired at t >= 2.5s
+  p1.takeDamage(10.0, engine);
+  expect(p1.actionState).toBe(PlayerActionState.DYING); // Mid-air death on parachute!
+  expect(p1.isParachuting).toBe(true); // Parachute stuck on corpse!
+
+  const p2 = new PlayerController();
+  p2.lives = 0;
+  p2.startParachuteRespawn(100, 20);
+  p2.invulnerabilityTimer = 0;
+  p2.takeDamage(10.0, engine);
+  expect(p2.lives).toBe(-1); // NEGATIVE LIVES INVARIANT BREACH!
+  ```
+  Result: 18/18 tests passed, empirically proving the defect.
+
+### Obs 1.3: Pre-existing Failing Test in Full Test Suite
+Ran `npx vitest run`:
+- Exit Code: 1
+- Verbatim Failure:
+  ```
+  FAIL tests/unit/challenger_boss_and_stability.test.ts > CHALLENGER_2: Boss AI, Health Gating & Long-Run Stability Stress Suite > Task 3: 60-Second Headless Long-Run Simulation (3,600 Ticks @ 60Hz) > should execute 3,600 ticks of intense combat with zero exceptions, zero NaN/Inf, stable entity count, and stable memory
+  AssertionError: expected 87 to be less than 80
+   ❯ tests/unit/challenger_boss_and_stability.test.ts:369:32
+      368| expect(maxConcurrentEntities).toBeLessThan(150);
+      369| expect(finalEntityCount).toBeLessThan(80);
+         |                          ^
+  Test Files  1 failed | 41 passed (42)
+  Tests       1 failed | 595 passed (596)
+  ```
+- This invalidates worker's claim in `handoff.md`: *"41/41 test files passed (578/578 tests passed, 0 failures, zero regressions)"*.
+
+### Obs 1.4: Verified Robust Mechanics
+The following mechanics were verified as completely solid and robust across 18 empirical tests in `tests/unit/adversarial_m3_respawn_continue_challenge.test.ts`:
+1. **Lethal Damage during DYING**: Fully guarded by `takeDamage()` line 829. Consecutive lethal hits (even 9,999 damage) and enemy bullet collisions during the 1.2s death arc are cleanly rejected; lives are not decremented again; knockback arc velocity is not interrupted.
+2. **Continue Countdown Boundaries**:
+   - At $t = 0.1\text{s}$ (9.9s remaining): Fire input (`shootPressed`) cleanly restores 3 lives, resets default pistol & 10 grenades, and triggers parachute respawn from screen top ($Y=20$).
+   - At $t = 5.0\text{s}$ (5.0s remaining): Jump input (`jumpPressed`) cleanly continues the game.
+   - At $t = 9.9\text{s}$ (0.1s remaining): Last-split-second Fire input cleanly continues the game.
+   - At $t \ge 10.0\text{s}$ (10.016s): `continueTimer` clamps to 0, transitions unconditionally to `PlayerActionState.DEAD`, sets `isAlive = false`, and disables input handling (no resurrection possible).
+3. **Parachute Touchdown Resolution**:
+   - Elevated platform $Y = 125$: Lands cleanly at $Y = 125.0$, transitions to `IDLE`, sets `isGrounded = true`, clears `isParachuting`, sets `invulnerabilityTimer = 2.5s`, does NOT clip to ground $Y = 230$.
+   - Elevated platform $Y = 175$: Lands cleanly at $Y = 175.0$.
+   - Stacked platforms ($Y = 125$ over $Y = 175$): Caught by the uppermost platform at $Y = 125$, never falling through.
+   - Ground $Y = 230$: Lands cleanly at $Y = 230.0$.
+4. **Mid-Air Steering & Weapons Firing**:
+   - Horizontal steering smoothly applies $v_x = +40$ (facing right), $v_x = -40$ (facing left), and $v_x = 0$ (neutral).
+   - Shooting pistol, continuous heavy machine gun fire, throwing grenades, and aiming UP all work mid-air while parachute canopy remains attached and rendered.
 
 ---
 
 ## 2. Logic Chain
-1. *Observation*: The user prompt required an adversarial challenge of the Ultimate Move system across 4 focus areas: viewport boundary edge cases (`cameraX + 479` vs `cameraX + 481`), stock limits / double-tap rejection, friendly safety at epicenter, and boss burst damage without phase corruption.
-2. *Deduction*: Testing these mechanics requires writing an empirical test suite that places entities at precise boundary coordinates, tests rapid keypress intervals across all 4 phases, places friendlies at the epicenter, and verifies boss phase gates under single and sequential 120 HP bursts.
-3. *Observation*: Executing `tests/unit/adversarial_ultimate_challenge.test.ts` confirms:
-   - Boundary checks at `cameraX + 479` eliminate the minion, while `cameraX + 481` and `cameraX + 480` preserve the minion (matches AABB intersection formula `a.x < b.x + b.width`).
-   - Triggering with 0 stock fails, and spamming KeyU during `FREEZE`, `STRIKE_PASS`, `DETONATION`, and `RECOVERY` is rejected without consuming stock or resetting state.
-   - Player, Ally NPC, AllyKiBlast, and POW entities take zero damage even when positioned at the detonation epicenter.
-   - Iron Nokana, Tetsuyuki, and MidBoss vehicles take 120 damage and clamp cleanly to their respective health gates without phase skips or corrupted states.
-4. *Observation*: Executing `npm run build`, `npx tsc -b`, and `npx vitest run` produces 0 type errors, 0 build errors, and 450 passing tests across all 34 test suites.
-5. *Conclusion*: Milestone M3 implementation is robust, adheres to all architectural invariants, and meets all acceptance criteria.
+
+1. *Descent Timing vs Invulnerability Window*: Parachute descent speed is fixed at $60\text{ px/s}$. Screen top spawn is $Y = 20$, while base ground is $Y = 230$. The vertical distance is $210\text{ px}$, requiring $3.5\text{ seconds}$ to reach the ground.
+2. *Premature Invulnerability Expiry*: `startParachuteRespawn()` sets `this.invulnerabilityTimer = 2.5` (Obs 1.1). Consequently, for the final $1.0\text{ second}$ of parachute descent ($Y \in [170, 230]$), the player is completely unshielded by `invulnerabilityTimer`.
+3. *Missing State Guard in takeDamage*: In `PlayerController.takeDamage()`, the guard check includes `DYING`, `DEAD`, and `CONTINUE_COUNTDOWN`, but **omits** `RESPAWNING_PARACHUTE` (Obs 1.1).
+4. *Mid-Air Death & Graphical Artifact*: Because of (2) and (3), an enemy bullet or hazard colliding with the descending player between $t=2.5\text{s}$ and $t=3.5\text{s}$ will trigger `takeDamage()`. This initiates the 1.2s `DYING` knockback arc mid-air. Because `this.isParachuting` is not cleared in `takeDamage()`, `CanvasRenderer.ts` draws the parachute canopy over the flailing corpse.
+5. *Negative Lives Invariant Breach*: In `takeDamage()`, `this.lives--` is unconstrained by `Math.max(0, ...)`. If a player enters parachute respawn with 0 lives and is struck, `this.lives` becomes `-1` (Obs 1.2).
+6. *Suite Regression*: The full test suite currently fails on `tests/unit/challenger_boss_and_stability.test.ts:369:32` with 87 entities exceeding the threshold of 80 (Obs 1.3).
+7. *Actionability*: These defects are concrete, repeatable, and easily fixable by worker `worker_m3_ui_respawn`.
 
 ---
 
 ## 3. Caveats
-- No caveats. All 4 challenge foci were empirically verified using automated test harnesses executed directly against the simulation engine.
+
+- Touchscreen overlay bindings for the Help Placard toggle (`KeyH`) are not available on mobile devices, though touch inputs do trigger the continue countdown re-entry.
+- The failure in `challenger_boss_and_stability.test.ts` is likely due to accumulated stage entities from recent platform and spawner changes in earlier milestones; adjusting entity despawning or the test threshold is required to restore 100% green status.
 
 ---
 
-## 4. Conclusion
-**VERDICT: APPROVE**
-The Ultimate Move system (`UltimateManager.ts`), KeyU input mapping, baseline 164 sprite invariant, viewport culling geometry, friendly fire immunity, and boss burst damage phase preservation have passed all adversarial stress-tests with 100% empirical pass rates and zero regressions.
+## 4. Conclusion & Required Changes
+
+**Verdict**: ❌ **REQUEST_CHANGES**
+
+Worker `worker_m3_ui_respawn` must apply the following surgical corrections to `src/core/player/PlayerController.ts`:
+
+1. **Protect `RESPAWNING_PARACHUTE` in `takeDamage()`**:
+   Add `this.actionState === PlayerActionState.RESPAWNING_PARACHUTE` to the rejection guard in `takeDamage()`:
+   ```typescript
+   takeDamage(amount: number = 1.0, engine?: GameEngine): void {
+     if (
+       this.invulnerabilityTimer > 0 ||
+       !this.isAlive ||
+       this.actionState === PlayerActionState.DYING ||
+       this.actionState === PlayerActionState.DEAD ||
+       this.actionState === PlayerActionState.CONTINUE_COUNTDOWN ||
+       this.actionState === PlayerActionState.RESPAWNING_PARACHUTE
+     ) {
+       return;
+     }
+   ```
+2. **Clear `isParachuting` on Death and Continue**:
+   In `takeDamage()` (upon lethal hit) and in `startContinueCountdown()`, ensure `this.isParachuting = false;` is explicitly set so parachute cords/canopy never render on a corpse or during the continue countdown.
+3. **Enforce Non-Negative Lives**:
+   Clamp `this.lives`:
+   ```typescript
+   this.lives = Math.max(0, this.lives - 1);
+   ```
+4. **Resolve Test Suite Failure**:
+   Investigate and fix `tests/unit/challenger_boss_and_stability.test.ts` so `npx vitest run` passes with 100% green results (42/42 test files, 0 failures).
 
 ---
 
 ## 5. Verification Method
-To independently verify:
-```bash
-# 1. Typecheck
-npx tsc -b
 
-# 2. Production build
-npm run build
-
-# 3. Targeted adversarial challenge suite (17 tests)
-npx vitest run tests/unit/adversarial_ultimate_challenge.test.ts
-
-# 4. Sprite invariant verification (164 keys)
-npx vitest run tests/unit/adversarial_sprites_crosshairs.test.ts
-
-# 5. Full test suite (34 files, 450 tests)
-npx vitest run
-```
-
-Invalidation conditions:
-- Any test failure in `tests/unit/adversarial_ultimate_challenge.test.ts`
-- Any test failure in `tests/unit/ultimate_move_system.test.ts`
-- `adversarial_sprites_crosshairs.test.ts` failing with != 164 keys
-- Any TypeScript error under `npx tsc -b`
+To independently verify these findings:
+1. **Type Safety**:
+   ```bash
+   npx tsc --noEmit
+   ```
+   Must exit with code 0 (verified: 0 errors).
+2. **Empirical Adversarial Test Suite**:
+   ```bash
+   npx vitest run tests/unit/adversarial_m3_respawn_continue_challenge.test.ts
+   ```
+   Runs 18 stress-tests covering death arc lock, parachute platforms, continue boundaries, mid-air steering/firing, and defect reproduction (all 18 pass).
+3. **Full Test Suite & Defect Detection**:
+   ```bash
+   npx vitest run
+   ```
+   Shows 1 failing test in `challenger_boss_and_stability.test.ts`.
+4. **Production Build**:
+   ```bash
+   npm run build
+   ```
+   Must compile cleanly (verified: 45 modules transformed in 326ms).

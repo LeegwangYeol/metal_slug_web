@@ -56,12 +56,14 @@ import {
   GroundFlameHazard,
 } from './core/entities/boss/EnvironmentalHazard';
 import { AllyKiBlast } from './core/entities/allies/AllyKiBlast';
+import { CuteArenaCoordinator } from './core/cute/CuteArenaCoordinator';
 
 export type { RenderPlayerState, Vector2D };
 
 export interface GameOptions {
   spawnMode?: 'classic' | 'diverse';
   includeObstacles?: boolean;
+  gameMode?: 'cute_blossom_arena' | 'classic';
 }
 
 export class FullMetalSlugGame {
@@ -76,6 +78,9 @@ export class FullMetalSlugGame {
   public readonly keyboard: KeyboardController;
   public readonly touchPad: TouchVirtualPad;
   public readonly hudOverlay: HUDOverlay;
+  public readonly gameMode: 'cute_blossom_arena' | 'classic';
+  public readonly cuteCoordinator: CuteArenaCoordinator;
+  public activeCuteBanner?: string;
 
   private canvas: HTMLCanvasElement | null = null;
   private isRunning: boolean = false;
@@ -116,6 +121,19 @@ export class FullMetalSlugGame {
   }
 
   constructor(container?: HTMLElement, options: GameOptions = {}) {
+    this.gameMode = options.gameMode ?? 'cute_blossom_arena';
+    this.cuteCoordinator = new CuteArenaCoordinator();
+
+    if (this.gameMode === 'cute_blossom_arena') {
+      this.cuteCoordinator.onBannerAnnounce = (text: string) => {
+        this.activeCuteBanner = text;
+        this.bossWarningTimer = 2.0;
+      };
+      this.cuteCoordinator.onScoreChanged = (_totalScore: number, points: number) => {
+        this.player.score += points;
+      };
+    }
+
     // 1. Simulation Core
     this.engine = new GameEngine();
     this.stageManager = new StageManager(this.engine);
@@ -127,7 +145,7 @@ export class FullMetalSlugGame {
     this.camera = new Camera({
       viewportWidth: CanvasRenderer.VIRTUAL_WIDTH,
       viewportHeight: CanvasRenderer.VIRTUAL_HEIGHT,
-      forwardLock: true,
+      forwardLock: this.gameMode === 'classic',
     });
     this.parallax = new ParallaxBackground();
     this.renderer = new CanvasRenderer({
@@ -308,6 +326,13 @@ export class FullMetalSlugGame {
   }
 
   /**
+   * Alias for step() for backwards compatibility with automated test harnesses.
+   */
+  public update(dt: number = FullMetalSlugGame.FIXED_TIMESTEP): void {
+    this.step(dt);
+  }
+
+  /**
    * Discrete simulation step for fixed timestep updates or automated unit tests.
    */
   public step(dt: number = FullMetalSlugGame.FIXED_TIMESTEP): void {
@@ -351,8 +376,58 @@ export class FullMetalSlugGame {
       }
     }
 
-    // Update Player controller with input (handles gameplay, dying, continue countdown, and parachute)
-    this.player.handleInput(input, dt, this.engine);
+    // In cute_blossom_arena mode, sanitize input so playerController handles movement/jump/aiming
+    // while weapon attack is cleanly delegated to cuteCoordinator bubble blaster (no classic gunfire/ammo consumption)
+    const playerInput = this.gameMode === 'cute_blossom_arena'
+      ? { ...input, shootPressed: false, shootHeld: false, grenadePressed: false }
+      : input;
+    this.player.handleInput(playerInput, dt, this.engine);
+
+    // Cute Blossom Arena loop processing
+    if (this.gameMode === 'cute_blossom_arena') {
+      // Consume rogue-lite perk choice from keyboard
+      const perkChoice = this.keyboard.consumePerkChoice();
+      if (perkChoice !== null && this.cuteCoordinator.perks.isModalActive) {
+        this.cuteCoordinator.choosePerk(perkChoice);
+      }
+
+      const playerActor = {
+        x: this.player.position.x,
+        y: this.player.position.y,
+        facing: this.player.facing,
+        isAlive: this.player.isAlive,
+        lives: this.player.lives,
+        takeDamage: (dmg: number) => this.player.takeDamage(dmg, this.engine),
+      };
+
+      // On fire, cleanly shoot sweet iridescent bubbles (including rapid fire during Sweet Fever)
+      const wantsFire = input.shootPressed || (input.shootHeld && (this.cuteCoordinator.bubbleManager.isFeverActive || this.player.weaponManager.getWeaponState().isAutomatic));
+      if (wantsFire) {
+        this.cuteCoordinator.onPlayerShoot(playerActor, this.player.aimAngle, this.player.aimDirection);
+      }
+
+      // Update cute coordinator (bubbles, pet companion, altars, perks, enemies)
+      this.cuteCoordinator.update(dt, playerActor);
+
+      // Check classic weapon projectiles hitting trapped bubbles
+      const engineEntities = this.engine.getAllEntities();
+      for (const ent of engineEntities) {
+        if (ent.type === 'PROJECTILE' && ent.isAlive) {
+          const p = ent as any;
+          for (const b of this.cuteCoordinator.bubbleManager.bubbles) {
+            if (b.isAlive && b.state === 'TRAPPED') {
+              const dx = p.position.x - b.x;
+              const dy = p.position.y - b.y;
+              if (dx * dx + dy * dy <= (b.radius + 12) * (b.radius + 12)) {
+                p.isAlive = false;
+                this.cuteCoordinator.bubbleManager.popBubble(b.id, this.player.position.x, this.player.position.y);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
 
     // 2. Stage Progression & Camera Trigger Evaluation
     this.stageManager.update(this.camera.x, this.player.position.x);
@@ -360,6 +435,9 @@ export class FullMetalSlugGame {
     // Sync camera bounds with stage manager
     const stageBounds = this.stageManager.getCameraBounds();
     this.camera.bounds = { ...stageBounds };
+    if (this.gameMode === 'cute_blossom_arena') {
+      this.camera.forwardLock = false;
+    }
 
     // 3. Advance Headless Physics Simulation (Entities & Collisions)
     this.engine.tick(dt);
@@ -586,6 +664,15 @@ export class FullMetalSlugGame {
       continueCountdown: this.player.continueTimer,
       showTutorial: this.showTutorial,
       tutorialAlpha: this.tutorialAlpha,
+      cuteFever: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.getRenderFever() : undefined,
+      cutePerks: this.gameMode === 'cute_blossom_arena' ? {
+        active: this.cuteCoordinator.perks.isModalActive,
+        cards: this.cuteCoordinator.getRenderPerkCards(),
+        selectedIndex: this.cuteCoordinator.perks.selectedCardIndex,
+      } : undefined,
+      cuteAltars: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.getRenderAltars() : undefined,
+      cuteLoopState: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.state : undefined,
+      bannerText: this.activeCuteBanner,
     };
 
     return {
@@ -595,6 +682,7 @@ export class FullMetalSlugGame {
       obstacles: obstacleStates,
       player: playerRenderState,
       enemies: enemyStates,
+      cuteEnemies: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.getCuteEnemyStates() : undefined,
       corpses: this.corpseManager.getRenderStates(),
       boss: bossState,
       pows: powStates,
@@ -602,6 +690,12 @@ export class FullMetalSlugGame {
       explosions: this.activeExplosions,
       hud: hudState,
       cinematicFX: this.player.ultimateManager?.getCinematicState(),
+      cuteBubbles: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.getRenderBubbles() : undefined,
+      cutePet: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.getRenderPet() : undefined,
+      cuteAltars: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.getRenderAltars() : undefined,
+      cutePickups: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.getRenderPickups() : undefined,
+      cuteOrbiters: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.orbitingBubbles : undefined,
+      cuteTrails: this.gameMode === 'cute_blossom_arena' ? this.cuteCoordinator.sugarTrails : undefined,
     };
   }
 
@@ -1103,7 +1197,7 @@ function bootstrap(): FullMetalSlugGame | null {
   const container = document.getElementById('game-container');
   if (!container) return null;
 
-  const game = new FullMetalSlugGame(container, { spawnMode: 'diverse' });
+  const game = new FullMetalSlugGame(container, { spawnMode: 'diverse', gameMode: 'cute_blossom_arena' });
 
   // Expose for Playwright E2E and debug automation
   if (typeof window !== 'undefined') {
@@ -1111,6 +1205,14 @@ function bootstrap(): FullMetalSlugGame | null {
     (window as any).__ENGINE__ = game.engine;
     (window as any).__AUDIO_CTX__ = game.soundEngine.ctx;
     (window as any).__CORPSE_MANAGER__ = game.corpseManager;
+    (window as any).__CUTE__ = {
+      coordinator: game.cuteCoordinator,
+      bubbleManager: game.cuteCoordinator.bubbleManager,
+      pet: game.cuteCoordinator.pet,
+      altars: game.cuteCoordinator.altars,
+      perks: game.cuteCoordinator.perks,
+      enemyManager: game.cuteCoordinator.enemyManager,
+    };
     (window as any).__EXPANSION__ = {
       IronNokanaBoss,
       CrisisEventManager,

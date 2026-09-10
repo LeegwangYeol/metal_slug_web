@@ -58,7 +58,7 @@ Decoupled multi-tier simulation, rendering, and UI architecture:
 | M2 | Level Design & Terrain System Overhaul | 24 platforms, 5 zones, destructible obstacles, paratrooper landing, drop-through fix | M1 | DONE |
 | M3 | Death, Respawn Flow & Tutorial UI | Death arc, 10s continue countdown, parachute respawn, tutorial placard, HUD ultimate gauge | M1 | DONE |
 | M4 | E2E Visual Verification & Test Hardening | Playwright screenshots in artifacts/ui_overhaul/, 100% green tests | M2, M3 | DONE |
-| M5 | Autonomous Git Push & Vercel Verification | Commit, push to origin/main, check Vercel build status & logs | M4 | IN_PROGRESS |
+| M5 | Autonomous Git Push & Vercel Verification | Commit, push to origin/main, check Vercel build status & logs | M4 | DONE |
 
 ---
 

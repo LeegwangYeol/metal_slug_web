@@ -1,0 +1,181 @@
+--- a/src/core/cute/BubbleManager.ts
++++ b/src/core/cute/BubbleManager.ts
+@@ -100,3 +100,3 @@
+-  public popBubble(bubbleId: string): boolean {
++  public popBubble(bubbleId: string, _originX?: number, _originY?: number): boolean {
+     const bubble = this.bubbles.find((b) => b.id === bubbleId && b.isAlive && b.state !== 'POPPING');
+@@ -240,4 +240,8 @@
+     for (let i = this.bubbles.length - 1; i >= 0; i--) {
+       const bubble = this.bubbles[i];
+-      bubble.update(dt);
++      if (bubble.isAlive && bubble.state === 'TRAPPED' && bubble.age >= bubble.lifespan) {
++        this.popBubble(bubble.id, playerPos?.x, playerPos?.y);
++      } else {
++        bubble.update(dt);
++      }
+       if (!bubble.isAlive) {
+--- a/src/core/cute/CuteArenaCoordinator.ts
++++ b/src/core/cute/CuteArenaCoordinator.ts
+@@ -177,2 +177,3 @@
+   public choosePerk(index: number): boolean {
++    if (!Number.isFinite(index)) return false;
+     const card = this.perks.selectCard(index);
+@@ -248,2 +249,4 @@
+       takeDamage?: (dmg: number) => void;
++      position?: { x: number; y: number };
++      bounds?: { x: number; y: number; width: number; height: number };
+     }
+@@ -319,2 +322,40 @@
++    // 3. Collision: Player Touching or Jumping on Trapped Bubbles
++    const px = player.position?.x ?? player.x;
++    const py = player.position?.y ?? player.y;
++    if (player.isAlive) {
++      const playerRadiusX = 18;
++      const playerRadiusY = 24;
++      const playerCenterY = py - 20;
++
++      for (const b of this.bubbleManager.bubbles) {
++        if (!b.isAlive || b.state !== 'TRAPPED') continue;
++
++        const dx = Math.abs(px - b.x);
++        const dy = Math.abs(playerCenterY - b.y);
++
++        if (dx <= b.radius + playerRadiusX && dy <= b.radius + playerRadiusY) {
++          this.bubbleManager.popBubble(b.id, px, py);
++        }
++      }
++    }
++
++    // 4. Collision: Player Bubble Projectiles Popping Trapped Bubbles
++    for (const proj of this.bubbleManager.bubbles) {
++      if (!proj.isAlive || proj.state !== 'FREE_PROJECTILE') continue;
++
++      for (const trapped of this.bubbleManager.bubbles) {
++        if (!trapped.isAlive || trapped.state !== 'TRAPPED' || trapped.id === proj.id) continue;
++
++        const dx = proj.x - trapped.x;
++        const dy = proj.y - trapped.y;
++        const hitDist = proj.radius + trapped.radius;
++        if (dx * dx + dy * dy <= hitDist * hitDist) {
++          proj.isAlive = false;
++          this.bubbleManager.popBubble(trapped.id, px, py);
++          break;
++        }
++      }
++    }
++
+     // 3. Collision: Player Bubble Projectiles with Living Unbubbled Cute Enemies
+--- a/src/core/cute/PetCompanion.ts
++++ b/src/core/cute/PetCompanion.ts
+@@ -75,9 +75,15 @@
+   ): void {
+-    this.time += dt;
++    // Sanitize dt against NaN, Infinity, non-positive numbers
++    if (!Number.isFinite(dt) || dt <= 0) {
++      return;
++    }
++    const safeDt = Math.min(dt, 0.5); // Clamp extreme lag spikes
++
++    this.time += safeDt;
+ 
+     if (this.actionTimer > 0) {
+-      this.actionTimer -= dt;
++      this.actionTimer -= safeDt;
+       if (this.actionTimer <= 0) {
+         this.state = 'hover';
+       }
+@@ -93,3 +99,4 @@
+-    let remainingDt = dt;
+-    while (remainingDt > 0) {
++    let remainingDt = safeDt;
++    let maxSubsteps = 30; // Guard against infinite loop
++    while (remainingDt > 0 && maxSubsteps-- > 0) {
+       const stepDt = Math.min(remainingDt, 1 / 60);
+@@ -117,2 +124,3 @@
+     let isFetching = false;
++    const toCollect: string[] = [];
+ 
+@@ -136,3 +144,3 @@
+         if (dist < 22) {
+-          bubbleManager.collectPickup(pickup.id);
++          toCollect.push(pickup.id);
+         }
+@@ -140,2 +148,6 @@
+     }
++
++    for (const pickupId of toCollect) {
++      bubbleManager.collectPickup(pickupId);
++    }
+ 
+@@ -150,3 +162,3 @@
+     for (let i = this.activeHeartBolts.length - 1; i >= 0; i--) {
+       const bolt = this.activeHeartBolts[i];
+-      bolt.age += dt;
++      bolt.age += safeDt;
+ 
+@@ -159,5 +171,5 @@
+-        bolt.vx += (dx / dist) * 1200 * dt;
+-        bolt.vy += (dy / dist) * 1200 * dt;
+-        const currentSpeed = Math.sqrt(bolt.vx * bolt.vx + bolt.vy * bolt.vy);
++        bolt.vx += (dx / dist) * 1200 * safeDt;
++        bolt.vy += (dy / dist) * 1200 * safeDt;
++        const currentSpeed = Math.sqrt(bolt.vx * bolt.vx + bolt.vy * bolt.vy) || 1;
+         bolt.vx = (bolt.vx / currentSpeed) * speed;
+         bolt.vy = (bolt.vy / currentSpeed) * speed;
+@@ -166,2 +178,2 @@
+-      bolt.x += bolt.vx * dt;
+-      bolt.y += bolt.vy * dt;
++      bolt.x += bolt.vx * safeDt;
++      bolt.y += bolt.vy * safeDt;
+--- a/src/core/cute/SweetPerkManager.ts
++++ b/src/core/cute/SweetPerkManager.ts
+@@ -104,3 +104,10 @@
+-    if (!this.isModalActive || index < 0 || index >= this.availableCards.length) {
++    if (
++      !this.isModalActive ||
++      typeof index !== 'number' ||
++      !Number.isFinite(index) ||
++      !Number.isInteger(index) ||
++      index < 0 ||
++      index >= this.availableCards.length
++    ) {
+       return null;
+     }
+@@ -108,2 +115,5 @@
+     const card = this.availableCards[index];
++    if (!card) {
++      return null;
++    }
+     const currentLevel = this.acquiredPerks.get(card.id) ?? 0;
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -128,3 +128,6 @@
+       this.cuteCoordinator.onBannerAnnounce = (text: string) => {
+         this.activeCuteBanner = text;
+         this.bossWarningTimer = 2.0;
+       };
++      this.cuteCoordinator.onScoreChanged = (_totalScore: number, points: number) => {
++        this.player.score += points;
++      };
+     }
+@@ -395,2 +398,18 @@
+       this.cuteCoordinator.update(dt, playerActor);
++
++      // Check classic weapon projectiles hitting trapped bubbles
++      const engineEntities = this.engine.getAllEntities();
++      for (const ent of engineEntities) {
++        if (ent.type === 'PROJECTILE' && ent.isAlive) {
++          const p = ent as any;
++          for (const b of this.cuteCoordinator.bubbleManager.bubbles) {
++            if (b.isAlive && b.state === 'TRAPPED') {
++              const dx = p.position.x - b.x;
++              const dy = p.position.y - b.y;
++              if (dx * dx + dy * dy <= (b.radius + 12) * (b.radius + 12)) {
++                p.isAlive = false;
++                this.cuteCoordinator.bubbleManager.popBubble(b.id, this.player.position.x, this.player.position.y);
++                break;
++              }
++            }
++          }
++        }
++      }

@@ -1,23 +1,23 @@
-## 2026-09-08T04:42:08Z
+## 2026-09-10T01:53:08Z
 
-You are a Challenger subagent (teamwork_preview_challenger) for Milestone M3 (Ultimate Move System & Procedural Sprites / Cinematic FX).
+You are challenger_m3_1.
 Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m3_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+Your parent conversation ID is: dc4b76ec-2c8d-41af-8152-fb6d5ed83654
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- Worker M3 Handoff: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_1/handoff.md
+MANDATORY READING:
+1. /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+2. /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+3. /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+4. /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_ui_respawn/handoff.md
 
-CHALLENGE FOCUS:
-Adversarially challenge the Ultimate Move mechanics:
-1. Challenge viewport boundary edge cases: minion at `cameraX + 479` (eliminated) vs `cameraX + 481` (strictly preserved).
-2. Challenge stock limits: attempt activation with 0 stock (rejected), rapid double-tap KeyU during freeze/strike (no duplicate execution).
-3. Challenge friendly safety: Player, Ally NPC, POW hostage at detonation epicenter (zero damage).
-4. Challenge Boss burst damage: 120 damage applied correctly without corrupting boss health phases.
-5. Provide explicit verdict: APPROVE or REQUEST_CHANGES.
-6. Write your report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m3_1/handoff.md`
-   and call send_message to parent.
+TASK:
+Adversarially challenge and stress-test the Milestone 3 Death, Parachute Respawn, and Continue state machines:
+- Test edge cases and invariants:
+  - What happens if the player takes lethal damage while in DYING or RESPAWNING_PARACHUTE state? (Ensure invulnerability and state machine integrity prevent negative lives or broken states).
+  - Test the Continue countdown boundary conditions: Test continuing at t=0.1s, t=5.0s, and t=9.9s. Test expiry at t >= 10.0s transitioning unconditionally to DEAD.
+  - Test parachute touchdown resolution on elevated platforms (e.g. Y=125, Y=175) vs ground (Y=230): Assert proper landing contact without clipping through or snapping to ground.
+  - Test mid-air parachute steering and weapons firing: Assert player can steer horizontally (vx = ±40) and fire bullets during descent while parachute canopy remains attached.
+- Write and execute empirical stress-test script(s) or tests.
+- Run `npm test` and verification commands.
+- Deliver an explicit verdict in your handoff.md: APPROVE or REQUEST_CHANGES, detailing empirical findings and edge-case results.
+- When finished, send a message to parent (ID: dc4b76ec-2c8d-41af-8152-fb6d5ed83654).
