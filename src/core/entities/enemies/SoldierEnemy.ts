@@ -643,11 +643,31 @@ export class SoldierEnemy implements EnemyEntity {
     this.position.x = anchorX + amplitude * Math.sin(freq * this.parachuteTime + phase);
     this.velocity.x = amplitude * freq * Math.cos(freq * this.parachuteTime + phase);
     this.velocity.y = descentSpeed;
-    this.position.y += this.velocity.y * dt;
 
-    // Touchdown check: feet reach ground (y + height >= targetGroundY)
-    if (this.position.y + this.height >= targetGroundY) {
-      this.position.y = targetGroundY - this.height;
+    const prevFootY = this.position.y + this.height;
+    this.position.y += this.velocity.y * dt;
+    const currFootY = this.position.y + this.height;
+
+    // Platform touchdown check: query PlatformPhysics.resolveGroundContact against platforms if available
+    let landedGroundY: number | null = null;
+    if (engine && engine.getPlatforms().length > 0) {
+      const contact = PlatformPhysics.resolveGroundContact(
+        this.position.x + this.width / 2,
+        prevFootY,
+        currFootY,
+        this.velocity.y,
+        this.width / 2,
+        engine.getPlatforms()
+      );
+      if (contact.isGrounded) {
+        landedGroundY = contact.groundY;
+      }
+    }
+
+    // Touchdown check: feet reach elevated platform or fallback targetGroundY
+    if (landedGroundY !== null || currFootY >= targetGroundY) {
+      const finalGroundY = landedGroundY !== null ? landedGroundY : targetGroundY;
+      this.position.y = finalGroundY - this.height;
       this.velocity.x = 0;
       this.velocity.y = 0;
       this.isGrounded = true;

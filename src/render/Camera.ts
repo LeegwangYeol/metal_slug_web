@@ -9,8 +9,8 @@ import { AABB, BoundingBox } from '../core/physics/AABB';
 import { CameraBounds } from '../core/engine/StageManager';
 
 export interface CameraOptions {
-  viewportWidth?: number;  // default 480
-  viewportHeight?: number; // default 270
+  viewportWidth?: number;  // default 960
+  viewportHeight?: number; // default 540
   forwardLock?: boolean;   // default true
   bounds?: CameraBounds;
   smoothSpeed?: number;    // lerp factor for smooth tracking (0 = instant, >0 = smooth)
@@ -37,7 +37,7 @@ export class Camera {
     minX: 0,
     maxX: 2000,
     minY: 0,
-    maxY: 270,
+    maxY: 540,
   };
 
   // Deadzone margins relative to viewport
@@ -57,8 +57,8 @@ export class Camera {
   public smoothSpeed: number = 0;
 
   constructor(options: CameraOptions = {}) {
-    this.viewportWidth = options.viewportWidth ?? 480;
-    this.viewportHeight = options.viewportHeight ?? 270;
+    this.viewportWidth = options.viewportWidth ?? 960;
+    this.viewportHeight = options.viewportHeight ?? 540;
     this.forwardLock = options.forwardLock ?? true;
     this.smoothSpeed = options.smoothSpeed ?? 0;
 
@@ -66,9 +66,9 @@ export class Camera {
       this.bounds = { ...options.bounds };
     }
 
-    // Default deadzone: target stays between 35% and 45% horizontally, 30% and 70% vertically
+    // Default deadzone: target stays between 35% and 44% horizontally (>528px forward reaction view on 960w), 30% and 70% vertically
     this.deadzoneLeft = Math.floor(this.viewportWidth * 0.35);
-    this.deadzoneRight = Math.floor(this.viewportWidth * 0.45);
+    this.deadzoneRight = this.viewportWidth >= 960 ? Math.floor(this.viewportWidth * 0.44) : Math.floor(this.viewportWidth * 0.45);
     this.deadzoneTop = Math.floor(this.viewportHeight * 0.30);
     this.deadzoneBottom = Math.floor(this.viewportHeight * 0.70);
   }

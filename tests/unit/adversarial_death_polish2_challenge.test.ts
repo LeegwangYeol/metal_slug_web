@@ -308,8 +308,8 @@ describe('Adversarial Challenge: Varied Death Animations & Decoupled Corpse Simu
 
       // Verify damage application
       expect(player.lives).toBe(2); // Lost 1 life
-      expect(player.health).toBe(player.maxHealth); // Respawned with full health
-      expect(player.invulnerabilityTimer).toBe(2.0); // 2 seconds of respawn invulnerability
+      expect(player.actionState).toBe('DYING'); // Transitions to 1.2s dying knockback arc
+      expect(player.invulnerabilityTimer).toBe(2.0); // 2 seconds of invulnerability
       expect(enemyBullet.isAlive).toBe(false); // Bullet destroyed
     });
 

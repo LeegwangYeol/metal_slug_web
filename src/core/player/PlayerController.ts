@@ -1,6 +1,6 @@
 import { Vector2D, vec2 } from '../math/Vector2D';
 import { AABB, BoundingBox } from '../physics/AABB';
-import { PlatformPhysics } from '../physics/Platform';
+import { PlatformPhysics, Platform } from '../physics/Platform';
 import { GameEngine, GameEntity } from '../engine/GameEngine';
 import {
   PlayerKinematics,
@@ -68,6 +68,7 @@ export class PlayerController implements GameEntity {
   private isDroppingThrough: boolean = false;
   private dropThroughTimer: number = 0;
   private ignoredPlatformId: string | null = null;
+  private activePlatform: Platform | null = null;
 
   // Jump Enhancements: Coyote Time, Jump Buffering, Single-shot Jump Cut
   public coyoteTimer: number = 0; // remaining coyote time in seconds
@@ -76,6 +77,18 @@ export class PlayerController implements GameEntity {
 
   // Invulnerability after hit / respawn
   public invulnerabilityTimer: number = 0;
+
+  // Authentic Death & Parachute Respawn & Continue Countdown (M3)
+  public static readonly DEATH_DURATION: number = 1.2; // 1.2s knockback arc
+  public static readonly CONTINUE_DURATION: number = 10.0; // 10s arcade continue countdown
+  public static readonly PARACHUTE_DESCENT_SPEED: number = 60.0; // 60 px/s smooth descent
+
+  public deathTimer: number = 0;
+  public continueTimer: number = 0;
+  public isContinueActive: boolean = false;
+  public isParachuting: boolean = false;
+  public parachuteTime: number = 0;
+  public parachuteSwayAngle: number = 0;
 
   // Weapons & Inventory
   public readonly weaponManager: WeaponManager;
@@ -121,6 +134,56 @@ export class PlayerController implements GameEntity {
     return this.ultimateManager.trigger(engine, this);
   }
 
+  /**
+   * Drops the player in from the top of the screen on a tactical parachute canopy.
+   */
+  public startParachuteRespawn(spawnX?: number, spawnY: number = 20): void {
+    this.health = this.maxHealth;
+    this.actionState = PlayerActionState.RESPAWNING_PARACHUTE;
+    if (spawnX !== undefined) {
+      this.position.x = spawnX;
+    }
+    this.position.y = spawnY;
+    this.velocity.x = 0;
+    this.velocity.y = PlayerController.PARACHUTE_DESCENT_SPEED;
+    this.isGrounded = false;
+    this.isParachuting = true;
+    this.parachuteTime = 0;
+    this.parachuteSwayAngle = 0;
+    this.invulnerabilityTimer = 2.5; // 2.5s invulnerability flashing
+    this.posture = PlayerPosture.AIRBORNE;
+    this.isAlive = true;
+    this.isContinueActive = false;
+    this.continueTimer = 0;
+  }
+
+  /**
+   * Enters the classic arcade 10-second continue countdown state.
+   */
+  public startContinueCountdown(): void {
+    this.actionState = PlayerActionState.CONTINUE_COUNTDOWN;
+    this.continueTimer = PlayerController.CONTINUE_DURATION;
+    this.isContinueActive = true;
+    this.isParachuting = false;
+    this.velocity.x = 0;
+    this.velocity.y = 0;
+    this.isAlive = true;
+  }
+
+  /**
+   * Resets lives to 3 upon pressing continue key and triggers tactical parachute re-entry.
+   */
+  public continueGame(engine?: GameEngine): void {
+    this.lives = 3;
+    this.health = this.maxHealth;
+    this.weaponManager.acquireWeapon('PISTOL', Infinity, engine);
+    this.weaponManager.setGrenadeCount(10);
+    this.isContinueActive = false;
+    this.continueTimer = 0;
+    this.startParachuteRespawn(this.position.x, 20);
+    engine?.eventBus.emit('play_sound', { sound: 'sfx_continue_accepted' });
+  }
+
   getPlayerState(): PlayerState {
     return {
       position: { x: this.position.x, y: this.position.y },
@@ -142,7 +205,52 @@ export class PlayerController implements GameEntity {
    * Main input handling and kinematic update step.
    */
   handleInput(input: PlayerInputSnapshot, dt: number, engine: GameEngine): void {
-    if (!this.isAlive) return;
+    if (!this.isAlive || this.actionState === PlayerActionState.DEAD) return;
+
+    // Lock input during dying knockback arc
+    if (this.actionState === PlayerActionState.DYING) {
+      return;
+    }
+
+    // Continue countdown: pressing Fire or Jump continues the game!
+    if (this.actionState === PlayerActionState.CONTINUE_COUNTDOWN) {
+      if (input.shootPressed || input.jumpPressed) {
+        this.continueGame(engine);
+      }
+      return;
+    }
+
+    // Parachute descent: player can gently steer left or right while airborne and shoot
+    if (this.actionState === PlayerActionState.RESPAWNING_PARACHUTE) {
+      if (input.left && !input.right) {
+        this.velocity.x = -40;
+        this.facing = -1;
+      } else if (input.right && !input.left) {
+        this.velocity.x = 40;
+        this.facing = 1;
+      } else {
+        this.velocity.x = 0;
+      }
+
+      const inputForward = (this.facing === 1 && input.right) || (this.facing === -1 && input.left);
+      const aimResult = PlayerKinematics.calculateAim(
+        input.up,
+        input.down,
+        inputForward,
+        this.facing,
+        false
+      );
+      this.aimDirection = aimResult.aimVector;
+      this.aimAngle = aimResult.angleName;
+
+      if (input.shootPressed || (input.shootHeld && this.weaponManager.getWeaponState().isAutomatic)) {
+        this.executeAttackDecision(input, engine);
+      }
+      if (input.grenadePressed) {
+        this.throwGrenade(engine);
+      }
+      return;
+    }
 
     const timestep = dt > 0 ? dt : GameEngine.DEFAULT_TIMESTEP;
 
@@ -198,7 +306,7 @@ export class PlayerController implements GameEntity {
 
     // 5. Process Semi-Solid Platform Drop-Through
     if (this.isGrounded && input.down && input.jumpPressed) {
-      this.initiateDropThrough();
+      this.initiateDropThrough(engine);
       return;
     }
 
@@ -443,7 +551,29 @@ export class PlayerController implements GameEntity {
     }
   }
 
-  private initiateDropThrough(): void {
+  public initiateDropThrough(engine?: GameEngine): void {
+    let currentPlat: Platform | undefined | null = null;
+    const footX = this.position.x;
+    const footY = this.position.y;
+    const halfWidth = PlayerKinematics.STANDING_WIDTH / 2;
+
+    if (engine) {
+      const platforms = engine.getPlatforms();
+      currentPlat = platforms.find(
+        (p) =>
+          Math.abs(p.bounds.y - footY) <= 4.0 &&
+          footX + halfWidth > p.bounds.x &&
+          footX - halfWidth < p.bounds.x + p.bounds.width
+      );
+    }
+    if (!currentPlat && this.activePlatform) {
+      currentPlat = this.activePlatform;
+    }
+
+    if (currentPlat) {
+      this.ignoredPlatformId = currentPlat.id;
+    }
+
     this.isDroppingThrough = true;
     this.dropThroughTimer = PlayerKinematics.DROP_THROUGH_FRAMES * GameEngine.DEFAULT_TIMESTEP;
     this.velocity.y = PlayerKinematics.DROP_THROUGH_IMPULSE;
@@ -453,10 +583,142 @@ export class PlayerController implements GameEntity {
   }
 
   update(dt: number, engine: GameEngine): void {
-    if (!this.isAlive) return;
+    if (!this.isAlive && this.actionState !== PlayerActionState.CONTINUE_COUNTDOWN) return;
 
     // Advance Ultimate Move state machine
     this.ultimateManager.update(dt, engine, (engine as any).cameraX);
+
+    // 1. DYING Knockback Arc (1.2s authentic player defeat arc)
+    if (this.actionState === PlayerActionState.DYING) {
+      this.deathTimer = Math.max(0, this.deathTimer - dt);
+
+      // Integrate knockback arc with gravity
+      this.velocity.y += PlayerKinematics.GRAVITY * dt;
+      this.position.x += this.velocity.x * dt;
+      this.position.y += this.velocity.y * dt;
+
+      // Ground landing collision during death
+      const platforms = engine?.getPlatforms ? engine.getPlatforms() : [];
+      let landed = false;
+      if (platforms && platforms.length > 0) {
+        const halfWidth = PlayerKinematics.STANDING_WIDTH / 2;
+        const contact = PlatformPhysics.resolveGroundContact(
+          this.position.x,
+          this.position.y - this.velocity.y * dt,
+          this.position.y,
+          this.velocity.y,
+          halfWidth,
+          platforms,
+          null
+        );
+        if (contact.isGrounded) {
+          this.position.y = contact.groundY;
+          this.velocity.y = 0;
+          this.velocity.x *= 0.6; // Ground friction on sprawl
+          this.isGrounded = true;
+          landed = true;
+        }
+      }
+      if (!landed && this.position.y >= 230) {
+        this.position.y = 230;
+        this.velocity.y = 0;
+        this.velocity.x *= 0.6;
+        this.isGrounded = true;
+      }
+
+      // Transition on death arc duration completion (1.2s)
+      if (this.deathTimer <= 0) {
+        if (this.lives > 0) {
+          // Player still has remaining lives -> tactical parachute respawn
+          this.startParachuteRespawn(this.position.x, 20);
+        } else {
+          // Last life depleted -> enter arcade continue countdown
+          this.startContinueCountdown();
+        }
+      }
+
+      this.bounds = PlayerKinematics.getBoundingBox(
+        this.position.x,
+        this.position.y,
+        this.posture
+      );
+      return;
+    }
+
+    // 2. CONTINUE COUNTDOWN (10s timer)
+    if (this.actionState === PlayerActionState.CONTINUE_COUNTDOWN) {
+      this.continueTimer = Math.max(0, this.continueTimer - dt);
+      if (this.continueTimer <= 0) {
+        // 10s timer expired without input -> final GAME_OVER
+        this.actionState = PlayerActionState.DEAD;
+        this.isAlive = false;
+        this.isContinueActive = false;
+        engine?.eventBus.emit('play_sound', { sound: 'sfx_game_over' });
+      }
+      return;
+    }
+
+    // 3. TACTICAL PARACHUTE RESPAWN DESCENT (vy = 60 px/s with sway)
+    if (this.actionState === PlayerActionState.RESPAWNING_PARACHUTE) {
+      if (this.invulnerabilityTimer > 0) {
+        this.invulnerabilityTimer = Math.max(0, this.invulnerabilityTimer - dt);
+      }
+      this.parachuteTime += dt;
+      this.parachuteSwayAngle = Math.sin(this.parachuteTime * 3.5) * 0.16;
+      this.velocity.y = PlayerController.PARACHUTE_DESCENT_SPEED; // 60 px/s
+
+      const prevY = this.position.y;
+      const swayOffset = Math.sin(this.parachuteTime * 3.5) * 15;
+      this.position.x += (this.velocity.x + swayOffset) * dt;
+      this.position.y += this.velocity.y * dt;
+
+      // Platform / Ground contact resolution
+      const platforms = engine?.getPlatforms ? engine.getPlatforms() : [];
+      let grounded = false;
+      let targetY = 230;
+
+      if (platforms && platforms.length > 0) {
+        const halfWidth = PlayerKinematics.STANDING_WIDTH / 2;
+        const contact = PlatformPhysics.resolveGroundContact(
+          this.position.x,
+          prevY,
+          this.position.y,
+          this.velocity.y,
+          halfWidth,
+          platforms,
+          null
+        );
+        if (contact.isGrounded) {
+          grounded = true;
+          targetY = contact.groundY;
+        }
+      }
+
+      if (!grounded && this.position.y >= 230) {
+        grounded = true;
+        targetY = 230;
+      }
+
+      if (grounded) {
+        this.position.y = targetY;
+        this.velocity.y = 0;
+        this.velocity.x = 0;
+        this.isGrounded = true;
+        this.isParachuting = false;
+        this.actionState = PlayerActionState.IDLE;
+        this.posture = PlayerPosture.STANDING;
+        this.invulnerabilityTimer = 2.5; // 2.5s invulnerability upon landing
+        this.coyoteTimer = PlayerKinematics.COYOTE_FRAMES * dt;
+        engine?.eventBus.emit('play_sound', { sound: 'sfx_player_land' });
+      }
+
+      this.bounds = PlayerKinematics.getBoundingBox(
+        this.position.x,
+        this.position.y,
+        this.posture
+      );
+      return;
+    }
 
     if (this.isAttackingMelee) {
       this.updateMeleeAttack(dt, engine);
@@ -530,8 +792,11 @@ export class PlayerController implements GameEntity {
         this.isGrounded = true;
         this.coyoteTimer = PlayerKinematics.COYOTE_FRAMES * dt;
         this.jumpCutApplied = false;
-        if (contact.platform && this.isDroppingThrough) {
-          this.ignoredPlatformId = contact.platform.id;
+        this.activePlatform = contact.platform;
+
+        if (this.isDroppingThrough) {
+          this.isDroppingThrough = false;
+          this.ignoredPlatformId = null;
         }
 
         if (this.actionState === PlayerActionState.FALLING || this.actionState === PlayerActionState.JUMPING) {
@@ -546,6 +811,7 @@ export class PlayerController implements GameEntity {
         }
       } else {
         this.isGrounded = false;
+        this.activePlatform = null;
       }
     }
 
@@ -558,7 +824,16 @@ export class PlayerController implements GameEntity {
   }
 
   takeDamage(amount: number = 1.0, engine?: GameEngine): void {
-    if (this.invulnerabilityTimer > 0 || !this.isAlive) return;
+    if (
+      this.invulnerabilityTimer > 0 ||
+      !this.isAlive ||
+      this.actionState === PlayerActionState.DYING ||
+      this.actionState === PlayerActionState.DEAD ||
+      this.actionState === PlayerActionState.CONTINUE_COUNTDOWN ||
+      this.actionState === PlayerActionState.RESPAWNING_PARACHUTE
+    ) {
+      return;
+    }
 
     // Shield 2-hit damage absorption buffer
     if (this.shieldCharges > 0) {
@@ -574,19 +849,20 @@ export class PlayerController implements GameEntity {
 
     this.health -= amount;
     if (this.health <= 0) {
-      this.lives--;
-      if (this.lives <= 0) {
-        this.isAlive = false;
-        this.actionState = PlayerActionState.DEAD;
-      } else {
-        // Respawn with full health and 2s invulnerability
-        this.health = this.maxHealth;
-        this.invulnerabilityTimer = 2.0;
-        this.actionState = PlayerActionState.IDLE;
-        this.coyoteTimer = PlayerKinematics.COYOTE_FRAMES * GameEngine.DEFAULT_TIMESTEP;
-        this.jumpBufferTimer = 0;
-        this.jumpCutApplied = false;
-      }
+      this.health = 0;
+      this.lives = Math.max(0, this.lives - 1);
+      this.actionState = PlayerActionState.DYING;
+      this.isParachuting = false;
+      this.deathTimer = PlayerController.DEATH_DURATION;
+      this.velocity.y = -260; // Knockback arc upward impulse
+      this.velocity.x = this.facing * -80; // Knockback arc backward recoil
+      this.isGrounded = false;
+      this.isDroppingThrough = false;
+      this.ignoredPlatformId = null;
+      this.posture = PlayerPosture.AIRBORNE;
+      this.isAttackingMelee = false;
+      this.invulnerabilityTimer = 2.0; // Invulnerable during death sequence
+      engine?.eventBus.emit('play_sound', { sound: 'sfx_player_death' });
     } else {
       this.invulnerabilityTimer = 1.0;
       this.actionState = PlayerActionState.HIT_STUN;
@@ -638,6 +914,18 @@ export class PlayerController implements GameEntity {
         }
       }
     }
+  }
+
+  public getIgnoredPlatformId(): string | null {
+    return this.ignoredPlatformId;
+  }
+
+  public getIsDroppingThrough(): boolean {
+    return this.isDroppingThrough;
+  }
+
+  public getActivePlatform(): Platform | null {
+    return this.activePlatform;
   }
 }
 

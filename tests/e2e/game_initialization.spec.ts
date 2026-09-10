@@ -26,7 +26,7 @@ test.describe('Full Metal Slug - Game Initialization & Engine Benchmark Suite', 
     const container = page.locator('#game-container');
     await expect(container).toBeVisible();
 
-    // 3. Verify Canvas element exists with correct virtual dimensions (480x270)
+    // 3. Verify Canvas element exists with correct virtual dimensions (960x540)
     const canvas = container.locator('canvas#game-canvas');
     await expect(canvas).toBeVisible();
 
@@ -37,8 +37,8 @@ test.describe('Full Metal Slug - Game Initialization & Engine Benchmark Suite', 
       clientHeight: el.clientHeight,
     }));
 
-    expect(canvasDimensions.width).toBe(480);
-    expect(canvasDimensions.height).toBe(270);
+    expect(canvasDimensions.width).toBe(960);
+    expect(canvasDimensions.height).toBe(540);
     expect(canvasDimensions.clientWidth).toBeGreaterThan(0);
     expect(canvasDimensions.clientHeight).toBeGreaterThan(0);
 

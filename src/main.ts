@@ -29,6 +29,7 @@ import {
   RenderProjectileState,
   RenderExplosionState,
   RenderHUDState,
+  RenderObstacleState,
 } from './render/CanvasRenderer';
 import { SoundEngine } from './audio/SoundEngine';
 import { KeyboardController } from './input/KeyboardController';
@@ -38,6 +39,7 @@ import { SoldierEnemy } from './core/entities/enemies/SoldierEnemy';
 import { MidBossVehicle } from './core/entities/enemies/MidBossVehicle';
 import { TetsuyukiBoss } from './core/entities/boss/TetsuyukiBoss';
 import { PowEntity, PowState } from './core/entities/pow/PowEntity';
+import { DestructibleObstacle } from './core/entities/obstacles/DestructibleObstacle';
 import { ItemDropType } from './core/weapons/WeaponTypes';
 import { vec2 } from './core/math/Vector2D';
 import type { Vector2D } from './core/math/Vector2D';
@@ -59,6 +61,7 @@ export type { RenderPlayerState, Vector2D };
 
 export interface GameOptions {
   spawnMode?: 'classic' | 'diverse';
+  includeObstacles?: boolean;
 }
 
 export class FullMetalSlugGame {
@@ -94,6 +97,23 @@ export class FullMetalSlugGame {
 
   // Last input snapshot for renderer animation & crosshair state
   private lastInputSnapshot: PlayerInputSnapshot | null = null;
+
+  // On-Screen Tutorial & Controls State (M3)
+  public showTutorial: boolean = true;
+  public tutorialTimer: number = 5.0; // 5.0s auto-dismiss
+  public tutorialAlpha: number = 1.0;
+
+  /**
+   * Toggles tutorial placard visibility manually.
+   */
+  public toggleTutorial(): boolean {
+    this.showTutorial = !this.showTutorial;
+    this.tutorialAlpha = this.showTutorial ? 1.0 : 0.0;
+    if (this.showTutorial) {
+      this.tutorialTimer = 999999; // Pin open when manually toggled
+    }
+    return this.showTutorial;
+  }
 
   constructor(container?: HTMLElement, options: GameOptions = {}) {
     // 1. Simulation Core
@@ -132,6 +152,9 @@ export class FullMetalSlugGame {
 
     // Pre-place POW hostages statically at stage load time ahead of player
     this.initStaticPows();
+    if (options.includeObstacles ?? (options.spawnMode === 'diverse')) {
+      this.initStaticObstacles();
+    }
 
     // 7. Mount to DOM if container provided
     if (container) {
@@ -161,6 +184,44 @@ export class FullMetalSlugGame {
     }
 
     // Flush initial additions (player & static POWs) into engine registry so they are immediately accessible
+    const eng = this.engine as any;
+    if (eng.entitiesToAdd && eng.entitiesToAdd.length > 0) {
+      for (const entity of eng.entitiesToAdd) {
+        eng.entities.set(entity.id, entity);
+        eng.spatialGrid.insert(entity);
+      }
+      eng.entitiesToAdd = [];
+    }
+  }
+
+  /**
+   * Pre-places tactical destructible cover and hazards statically at stage load time:
+   * sandbag barricades, supply crates, and red explosive fuel barrels.
+   */
+  public initStaticObstacles(): void {
+    const staticObstacles = [
+      // Zone 1: Beachhead Stilt Docks
+      new DestructibleObstacle('sandbag_1', 'SANDBAG_BARRICADE', vec2(260, 216), 28, 14, { health: 15 }),
+      new DestructibleObstacle('crate_1', 'SUPPLY_CRATE', vec2(150, 157), 18, 18, { health: 8, dropItem: ItemDropType.WEAPON_HMG }),
+      // Zone 2: Dune Redoubt & High Watchtower
+      new DestructibleObstacle('sandbag_2', 'SANDBAG_BARRICADE', vec2(630, 208), 28, 14, { health: 20 }),
+      new DestructibleObstacle('barrel_1', 'EXPLOSIVE_BARREL', vec2(730, 204), 16, 18, { health: 10, blastRadius: 54, blastDamage: 10 }),
+      new DestructibleObstacle('sandbag_3', 'SANDBAG_BARRICADE', vec2(840, 161), 24, 14, { health: 15 }),
+      // Zone 3: River Basin & Mid-Boss Arena
+      new DestructibleObstacle('sandbag_mb_left', 'SANDBAG_BARRICADE', vec2(1005, 216), 24, 14, { health: 20 }),
+      new DestructibleObstacle('sandbag_mb_right', 'SANDBAG_BARRICADE', vec2(1430, 216), 24, 14, { health: 20 }),
+      // Zone 4: Trench Gorge & Suspension Bridges
+      new DestructibleObstacle('barrel_2', 'EXPLOSIVE_BARREL', vec2(1520, 216), 16, 18, { health: 10, blastRadius: 54, blastDamage: 10 }),
+      new DestructibleObstacle('crate_2', 'SUPPLY_CRATE', vec2(1750, 157), 18, 18, { health: 8, dropItem: ItemDropType.WEAPON_FLAME }),
+      // Zone 5: Tetsuyuki Citadel Arena
+      new DestructibleObstacle('sandbag_citadel_1', 'SANDBAG_BARRICADE', vec2(1840, 216), 24, 14, { health: 25 }),
+      new DestructibleObstacle('sandbag_citadel_2', 'SANDBAG_BARRICADE', vec2(2190, 216), 24, 14, { health: 25 }),
+    ];
+
+    for (const obs of staticObstacles) {
+      this.engine.addEntity(obs);
+    }
+
     const eng = this.engine as any;
     if (eng.entitiesToAdd && eng.entitiesToAdd.length > 0) {
       for (const entity of eng.entitiesToAdd) {
@@ -268,11 +329,29 @@ export class FullMetalSlugGame {
       shootHeld: kbSnap.shootHeld || touchSnap.shootHeld,
       grenadePressed: kbSnap.grenadePressed || touchSnap.grenadePressed,
       ultimatePressed: kbSnap.ultimatePressed,
+      helpPressed: kbSnap.helpPressed,
     };
 
     this.lastInputSnapshot = input;
 
-    // Update Player controller with input
+    // Process Tutorial Toggle from Keyboard (KeyH)
+    if (input.helpPressed || this.keyboard.helpJustPressed) {
+      this.toggleTutorial();
+    }
+
+    // Auto-dismiss tutorial after 5.0 seconds with smooth 1.0s fade
+    if (this.showTutorial && this.tutorialTimer < 900000) {
+      this.tutorialTimer = Math.max(0, this.tutorialTimer - dt);
+      if (this.tutorialTimer < 1.0) {
+        this.tutorialAlpha = Math.max(0, this.tutorialTimer);
+      }
+      if (this.tutorialTimer <= 0) {
+        this.showTutorial = false;
+        this.tutorialAlpha = 0;
+      }
+    }
+
+    // Update Player controller with input (handles gameplay, dying, continue countdown, and parachute)
     this.player.handleInput(input, dt, this.engine);
 
     // 2. Stage Progression & Camera Trigger Evaluation
@@ -329,11 +408,18 @@ export class FullMetalSlugGame {
     const entities = this.engine.getAllEntities();
 
     // 1. Compile Player Render State
+    let playerAnimFrame: number | undefined = undefined;
+    if (this.player.actionState === PlayerActionState.DYING) {
+      const progress = Math.min(1.0, Math.max(0, 1.0 - (this.player.deathTimer / PlayerController.DEATH_DURATION)));
+      playerAnimFrame = Math.min(3, Math.floor(progress * 4));
+    }
+
     const playerRenderState: RenderPlayerState = {
       x: this.player.position.x,
       y: this.player.position.y,
       facing: this.player.facing,
       state: this.resolvePlayerRenderState(),
+      animFrame: playerAnimFrame,
       isMelee: this.player.isAttackingMelee,
       aimAngle: this.player.aimAngle,
       aimDirection: this.player.aimDirection,
@@ -341,10 +427,14 @@ export class FullMetalSlugGame {
       isFiring: this.lastInputSnapshot
         ? this.lastInputSnapshot.shootPressed || (this.lastInputSnapshot.shootHeld && this.player.weaponManager.getWeaponState().isAutomatic)
         : false,
+      isParachuting: this.player.isParachuting || this.player.actionState === PlayerActionState.RESPAWNING_PARACHUTE,
+      parachuteSwayAngle: this.player.parachuteSwayAngle,
+      invulnerabilityTimer: this.player.invulnerabilityTimer,
     };
 
-    // 2. Compile Living Enemies & Mid-Boss
+    // 2. Compile Living Enemies, Obstacles, POWs & Boss
     const enemyStates: RenderEnemyState[] = [];
+    const obstacleStates: RenderObstacleState[] = [];
     let bossState: RenderBossState | undefined = undefined;
     const powStates: RenderPowState[] = [];
     const projectileStates: RenderProjectileState[] = [];
@@ -444,6 +534,18 @@ export class FullMetalSlugGame {
           x: ent.position.x,
           y: ent.position.y,
         });
+      } else if (ent.type.startsWith('OBSTACLE_')) {
+        const obs = ent as DestructibleObstacle;
+        obstacleStates.push({
+          id: obs.id,
+          obstacleType: obs.obstacleType,
+          x: obs.bounds.x,
+          y: obs.bounds.y,
+          width: obs.bounds.width,
+          height: obs.bounds.height,
+          health: obs.health,
+          maxHealth: obs.maxHealth,
+        });
       }
     }
 
@@ -476,14 +578,21 @@ export class FullMetalSlugGame {
       showBossWarning: this.bossWarningTimer > 0,
       bossWarningTimer: this.bossWarningTimer,
       isPaused,
-      isGameOver: !this.player.isAlive && this.player.lives <= 0,
+      isGameOver: (!this.player.isAlive && !this.player.isContinueActive) || this.player.actionState === PlayerActionState.DEAD,
       isStageClear: this.isStageClear,
+      ultimateStock: this.player.ultimateManager ? this.player.ultimateManager.stock : 0,
+      maxUltimateStock: this.player.ultimateManager ? this.player.ultimateManager.maxStock : 3,
+      isContinueActive: this.player.isContinueActive,
+      continueCountdown: this.player.continueTimer,
+      showTutorial: this.showTutorial,
+      tutorialAlpha: this.tutorialAlpha,
     };
 
     return {
       time: this.elapsedTime,
       camera: this.camera,
       platforms: this.stageManager.getPlatforms(),
+      obstacles: obstacleStates,
       player: playerRenderState,
       enemies: enemyStates,
       corpses: this.corpseManager.getRenderStates(),
@@ -497,9 +606,12 @@ export class FullMetalSlugGame {
   }
 
 
-  private resolvePlayerRenderState(): 'idle' | 'run' | 'jump' | 'crouch' | 'aim' | 'knife' | 'fire' | 'death' {
-    if (!this.player.isAlive || this.player.actionState === PlayerActionState.DEAD) {
+  private resolvePlayerRenderState(): 'idle' | 'run' | 'jump' | 'crouch' | 'aim' | 'knife' | 'fire' | 'death' | 'parachute' {
+    if (!this.player.isAlive || this.player.actionState === PlayerActionState.DEAD || this.player.actionState === PlayerActionState.DYING) {
       return 'death';
+    }
+    if (this.player.actionState === PlayerActionState.RESPAWNING_PARACHUTE || this.player.isParachuting) {
+      return 'parachute';
     }
     if (this.player.isAttackingMelee) {
       return 'knife';
@@ -710,39 +822,47 @@ export class FullMetalSlugGame {
   // =========================================================================
 
   public buildStage1Data(options: GameOptions = {}): StageData {
-    const STAGE_WIDTH = 2400;
-    const STAGE_HEIGHT = 270;
+    const STAGE_WIDTH = 3600;
+    const STAGE_HEIGHT = 540;
 
-    // 1. Platforms (Continuous Ground Terrain, Elevated Wooden Bridges, Steel Bunkers)
+    // 1. Platforms (27 Multi-Tier Platforms Across 5 Micro-Zones)
     const platforms: Platform[] = [
-      // Main Ground Terrain (x: 0 to 2400 at Y: 230)
-      { id: 'ground_main', type: 'SOLID', bounds: createAABB(0, 230, STAGE_WIDTH, 40) },
+      // ZONE 1: Beachhead Landing & Stilt Docks (0..500)
+      { id: 'ground_main', type: 'SOLID', bounds: createAABB(0, 230, 500, 40) },
+      { id: 'dock_1', type: 'SEMI_SOLID', bounds: createAABB(110, 175, 120, 10) },
+      { id: 'dock_high_perch', type: 'SEMI_SOLID', bounds: createAABB(140, 120, 70, 10) },
+      { id: 'bunker_1', type: 'SOLID', bounds: createAABB(240, 160, 95, 16) },
+      { id: 'bridge_1', type: 'SEMI_SOLID', bounds: createAABB(420, 140, 140, 10) },
 
-      // Section 1: Elevated Wooden Pier / Dock 1
-      { id: 'dock_1', type: 'SEMI_SOLID', bounds: createAABB(140, 175, 120, 10) },
+      // ZONE 2: Dune Redoubt & High Watchtower (500..1000)
+      { id: 'ground_zone2_ridge', type: 'SOLID', bounds: createAABB(500, 230, 260, 40) },
+      { id: 'ground_zone2_slope', type: 'SOLID', bounds: createAABB(760, 230, 240, 40) },
+      { id: 'scaffold_tier1', type: 'SEMI_SOLID', bounds: createAABB(520, 170, 100, 10) },
+      { id: 'watchtower_alpha', type: 'SEMI_SOLID', bounds: createAABB(660, 125, 90, 12) },
+      { id: 'dune_redoubt_platform', type: 'SEMI_SOLID', bounds: createAABB(770, 175, 110, 14) },
+      { id: 'dune_terrace', type: 'SEMI_SOLID', bounds: createAABB(890, 150, 90, 10) },
 
-      // Section 1: Concrete Bunker Platform 1
-      { id: 'bunker_1', type: 'SOLID', bounds: createAABB(300, 160, 90, 16) },
+      // ZONE 3: River Basin & Mid-Boss Arena (1000..1450)
+      { id: 'ground_midboss_floor', type: 'SOLID', bounds: createAABB(1000, 230, 450, 40) },
+      { id: 'midboss_dock_left', type: 'SEMI_SOLID', bounds: createAABB(1020, 170, 110, 12) },
+      { id: 'midboss_dock_right', type: 'SEMI_SOLID', bounds: createAABB(1320, 170, 110, 12) },
+      { id: 'midboss_catwalk', type: 'SEMI_SOLID', bounds: createAABB(1160, 115, 120, 10) },
+      { id: 'midboss_crane_left', type: 'SEMI_SOLID', bounds: createAABB(1080, 85, 70, 10) },
 
-      // Section 1: Elevated Wood Bridge
-      { id: 'bridge_1', type: 'SEMI_SOLID', bounds: createAABB(440, 140, 160, 10) },
+      // ZONE 4: Trench Gorge & Suspension Bridges (1450..1800)
+      { id: 'ground_trench_dip', type: 'SOLID', bounds: createAABB(1450, 230, 210, 40) },
+      { id: 'ground_fortress_approach', type: 'SOLID', bounds: createAABB(1660, 230, 140, 40) },
+      { id: 'bridge_2', type: 'SEMI_SOLID', bounds: createAABB(1440, 160, 140, 10) },
+      { id: 'tower_platform', type: 'SEMI_SOLID', bounds: createAABB(1600, 125, 90, 12) },
+      { id: 'bunker_2', type: 'SEMI_SOLID', bounds: createAABB(1690, 175, 110, 14) },
+      { id: 'ravine_scaffold', type: 'SEMI_SOLID', bounds: createAABB(1520, 195, 80, 10) },
 
-      // Section 1: Mid-Boss Redoubt Platforms
-      { id: 'midboss_dock_left', type: 'SEMI_SOLID', bounds: createAABB(760, 170, 110, 12) },
-      { id: 'midboss_dock_right', type: 'SEMI_SOLID', bounds: createAABB(1040, 170, 110, 12) },
-
-      // Section 2: Elevated Wooden Bridge 2
-      { id: 'bridge_2', type: 'SEMI_SOLID', bounds: createAABB(1320, 165, 140, 10) },
-
-      // Section 2: High Watchtower Platform
-      { id: 'tower_platform', type: 'SEMI_SOLID', bounds: createAABB(1540, 130, 100, 12) },
-
-      // Section 2: Reinforced Defense Bunker
-      { id: 'bunker_2', type: 'SOLID', bounds: createAABB(1680, 175, 120, 14) },
-
-      // Section 2: Boss Arena Elevated Platforms
+      // ZONE 5: Tetsuyuki Citadel Arena (1800..3600)
+      { id: 'ground_citadel_floor', type: 'SOLID', bounds: createAABB(1800, 230, 1800, 40) },
       { id: 'boss_arena_left', type: 'SEMI_SOLID', bounds: createAABB(1860, 170, 100, 12) },
       { id: 'boss_arena_right', type: 'SEMI_SOLID', bounds: createAABB(2080, 170, 100, 12) },
+      { id: 'boss_arena_high_crane', type: 'SEMI_SOLID', bounds: createAABB(1970, 110, 80, 10) },
+      { id: 'boss_arena_rampart', type: 'SEMI_SOLID', bounds: createAABB(2200, 140, 90, 10) },
     ];
 
     // 2. Scripted Triggers: Patrol Waves, Mid-Boss & Boss (POWs pre-placed statically)
@@ -753,8 +873,8 @@ export class FullMetalSlugGame {
         triggerX: 180,
         triggered: false,
         spawnAction: (eng: GameEngine, cameraX: number = 0) => {
-          // Out-of-bounds right spawn: cameraX + 520px (staggered +40px)
-          const spawnBaseX = cameraX + 520;
+          // Out-of-bounds right spawn: cameraX + 1000px (>960 viewport, staggered +40px)
+          const spawnBaseX = cameraX + Math.max(1000, CanvasRenderer.VIRTUAL_WIDTH + 40);
           // Rebel Rifleman (smooth ingress vx = -110, y = 192 so feet align to ground at Y = 230)
           eng.addEntity(new SoldierEnemy('rebel_rifle_1', 'SOLDIER_RIFLE', vec2(spawnBaseX, 192), { cameraX }));
           // Rebel Knife Charger (staggered by +40px, y = 192)
@@ -768,8 +888,8 @@ export class FullMetalSlugGame {
         triggerX: 420,
         triggered: false,
         spawnAction: (eng: GameEngine, cameraX: number = 0) => {
-          // Out-of-bounds right spawn: cameraX + 520px (staggered +40px)
-          const spawnBaseX = cameraX + 520;
+          // Out-of-bounds right spawn: cameraX + 1000px (>960 viewport, staggered +40px)
+          const spawnBaseX = cameraX + Math.max(1000, CanvasRenderer.VIRTUAL_WIDTH + 40);
           // Shield Trooper on ground (y = 192)
           eng.addEntity(new SoldierEnemy('rebel_shield_1', 'SOLDIER_SHIELD', vec2(spawnBaseX, 192), { cameraX }));
           // Grenade Thrower (y = 192)
@@ -779,23 +899,23 @@ export class FullMetalSlugGame {
         },
       },
 
-      // Trigger Mid-Boss: Rebel Iron Technical Battle at Section 1
+      // Trigger Mid-Boss: Rebel Iron Technical Battle at Section 1 (Expanded 1100px Arena)
       {
         id: 'trigger_mid_boss',
         triggerX: 740,
         triggered: false,
-        lockCameraBounds: { minX: 720, maxX: 1200, minY: 0, maxY: 270 },
+        lockCameraBounds: { minX: 720, maxX: 1820, minY: 0, maxY: 540 },
         spawnAction: (eng: GameEngine, cameraX: number = 0) => {
           this.stageManager.setState(StageState.MID_BOSS_BATTLE);
-          // Rebel Iron Technical Armored Vehicle
+          // Rebel Iron Technical Armored Vehicle (expanded patrol range to 1650 for 1100px arena)
           const midBoss = new MidBossVehicle('mid_boss_1', vec2(1050, 162), {
             customHp: 320,
             patrolMinX: 800,
-            patrolMaxX: 1150,
+            patrolMaxX: 1650,
           });
           eng.addEntity(midBoss);
-          // Infantry support entering out-of-bounds (y = 192, x >= 1220)
-          const spawnBaseX = Math.max(cameraX + 520, 1220);
+          // Infantry support entering out-of-bounds (y = 192, x >= 1840)
+          const spawnBaseX = Math.max(cameraX + CanvasRenderer.VIRTUAL_WIDTH + 40, 1840);
           eng.addEntity(new SoldierEnemy('rebel_mb_support', 'SOLDIER_RIFLE', vec2(spawnBaseX, 192), { cameraX }));
         },
         isCompleted: (eng: GameEngine) => {
@@ -812,8 +932,8 @@ export class FullMetalSlugGame {
         spawnAction: (eng: GameEngine, cameraX: number = 0) => {
           this.stageManager.setState(StageState.SECTION_2_ADVANCE);
 
-          // Out-of-bounds right spawn: cameraX + 520px (staggered +40px)
-          const spawnBaseX = cameraX + 520;
+          // Out-of-bounds right spawn: cameraX + 1000px (>960 viewport, staggered +40px)
+          const spawnBaseX = cameraX + Math.max(1000, CanvasRenderer.VIRTUAL_WIDTH + 40);
           // Fast Knife Charger (y = 192)
           eng.addEntity(new SoldierEnemy('rebel_knife_2', 'SOLDIER_KNIFE', vec2(spawnBaseX, 192), { cameraX }));
           // Shield Trooper (y = 192)
@@ -823,12 +943,12 @@ export class FullMetalSlugGame {
         },
       },
 
-      // Trigger End-Boss: Tetsuyuki War Fortress Showdown
+      // Trigger End-Boss: Tetsuyuki War Fortress Showdown (Expanded 1100px Arena)
       {
         id: 'trigger_end_boss',
         triggerX: 1780,
         triggered: false,
-        lockCameraBounds: { minX: 1800, maxX: 2280, minY: 0, maxY: 270 },
+        lockCameraBounds: { minX: 1800, maxX: 2900, minY: 0, maxY: 540 },
         spawnAction: (eng: GameEngine) => {
           this.stageManager.setState(StageState.BOSS_BATTLE);
           // Trigger Flashing Warning Banner
@@ -1005,6 +1125,7 @@ function bootstrap(): FullMetalSlugGame | null {
       GroundFlameHazard,
       PowEntity,
       PowState,
+      DestructibleObstacle,
       vec2,
     };
   }

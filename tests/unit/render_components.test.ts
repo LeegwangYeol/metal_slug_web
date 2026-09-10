@@ -233,12 +233,23 @@ describe('Camera Suite', () => {
     expect(camera.isVisible(insideBox)).toBe(true);
     expect(camera.isVisible(outsideBox)).toBe(false);
   });
+
+  it('should initialize with widescreen 960x540 dimensions by default and >528px forward reaction view', () => {
+    const camera = new Camera();
+    expect(camera.viewportWidth).toBe(960);
+    expect(camera.viewportHeight).toBe(540);
+    const forwardReactionView = camera.viewportWidth - camera.deadzoneRight;
+    expect(forwardReactionView).toBeGreaterThanOrEqual(528);
+  });
 });
 
 describe('ParallaxBackground Suite', () => {
   it('should instantiate and render all 4 parallax layers without error', () => {
     const parallax = new ParallaxBackground();
-    const dest = createCanvasBuffer(480, 270);
+    expect(ParallaxBackground.VIEWPORT_WIDTH).toBe(960);
+    expect(ParallaxBackground.VIEWPORT_HEIGHT).toBe(540);
+
+    const dest = createCanvasBuffer(960, 540);
     const ctx = dest.getContext('2d');
     expect(ctx).not.toBeNull();
 
@@ -252,23 +263,28 @@ describe('ParallaxBackground Suite', () => {
 
 describe('CanvasRenderer Suite', () => {
   it('should calculate crisp letterbox scaling accurately', () => {
-    // 1:1 exact
-    const lb1 = CanvasRenderer.calculateLetterbox(480, 270);
+    // 1:1 exact (960 x 540)
+    const lb1 = CanvasRenderer.calculateLetterbox(960, 540);
     expect(lb1.scale).toBe(1);
     expect(lb1.offsetX).toBe(0);
     expect(lb1.offsetY).toBe(0);
+    expect(lb1.width).toBe(960);
+    expect(lb1.height).toBe(540);
 
-    // 2x integer scale (960 x 540)
-    const lb2 = CanvasRenderer.calculateLetterbox(960, 540);
+    // 2x integer scale Full HD (1920 x 1080)
+    const lb2 = CanvasRenderer.calculateLetterbox(1920, 1080);
     expect(lb2.scale).toBe(2);
-    expect(lb2.width).toBe(960);
-    expect(lb2.height).toBe(540);
+    expect(lb2.width).toBe(1920);
+    expect(lb2.height).toBe(1080);
+    expect(lb2.offsetX).toBe(0);
+    expect(lb2.offsetY).toBe(0);
 
-    // Ultrawide pillarbox (1200 x 540)
-    const lb3 = CanvasRenderer.calculateLetterbox(1200, 540);
+    // Ultrawide pillarbox (2400 x 1080)
+    const lb3 = CanvasRenderer.calculateLetterbox(2400, 1080);
     expect(lb3.scale).toBe(2);
-    expect(lb3.width).toBe(960);
-    expect(lb3.offsetX).toBe(120); // (1200 - 960) / 2 = 120
+    expect(lb3.width).toBe(1920);
+    expect(lb3.height).toBe(1080);
+    expect(lb3.offsetX).toBe(240); // (2400 - 1920) / 2 = 240
     expect(lb3.offsetY).toBe(0);
   });
 

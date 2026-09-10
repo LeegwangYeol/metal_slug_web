@@ -7,6 +7,7 @@
 import { PALETTES, hexToRgba } from './Palette';
 
 export interface CanvasContext2DLike {
+  canvas?: { width: number; height: number };
   fillStyle: string | CanvasGradient | CanvasPattern;
   strokeStyle: string | CanvasGradient | CanvasPattern;
   lineWidth: number;
@@ -65,6 +66,7 @@ function createMockCanvasBuffer(width: number, height: number): CanvasBuffer {
   const pixelData = new Uint8Array(width * height * 4);
 
   const mockCtx: CanvasContext2DLike = {
+    canvas: { width, height },
     fillStyle: '#000000',
     strokeStyle: '#000000',
     lineWidth: 1,
@@ -707,25 +709,29 @@ export class ProceduralSpriteFactory {
       ctx.fillStyle = '#FF5533';
       ctx.fillRect(12, headY + 3, 11, 1);
 
-      // Fluttering Ribbon Tails (2 trailing silk ribbons with sine flutter)
+      // Fluttering Ribbon Tails (2 trailing silk ribbons with dynamic sine flutter & golden tips)
       const rY = headY + 3 + flut;
       // Top ribbon tail
-      ctx.fillStyle = P[1]; ctx.fillRect(6, rY, 6, 3);
-      ctx.fillStyle = P[4]; ctx.fillRect(7, rY + 1, 5, 1);
-      ctx.fillStyle = P[5]; ctx.fillRect(4, rY + 1, 3, 2);
+      ctx.fillStyle = P[1]; ctx.fillRect(5, rY - 1, 7, 4);
+      ctx.fillStyle = P[4]; ctx.fillRect(6, rY, 6, 2);
+      ctx.fillStyle = '#FF5533'; ctx.fillRect(6, rY, 4, 1);
+      ctx.fillStyle = P[2]; ctx.fillRect(4, rY, 2, 2); // Golden fringe
       // Bottom ribbon tail
-      ctx.fillStyle = P[1]; ctx.fillRect(4, rY + 2 + flut * 0.5, 6, 3);
-      ctx.fillStyle = P[4]; ctx.fillRect(5, rY + 3 + flut * 0.5, 5, 1);
-      ctx.fillStyle = P[5]; ctx.fillRect(2, rY + 3 + flut * 0.5, 3, 2);
+      ctx.fillStyle = P[1]; ctx.fillRect(3, rY + 2 + flut * 0.7, 7, 4);
+      ctx.fillStyle = P[4]; ctx.fillRect(4, rY + 3 + flut * 0.7, 6, 2);
+      ctx.fillStyle = P[2]; ctx.fillRect(2, rY + 3 + flut * 0.7, 2, 2);
 
       // Face (3-Tone Shaded Skin: #FFCC99, #E09860, #905030)
       drawContouredRect(ctx, 14, headY + 5, 9, 6, P[1], P[7], P[6], P[8]);
       // Cheek highlight & nose
       ctx.fillStyle = P[6]; ctx.fillRect(16, headY + 6, 3, 2);
       ctx.fillStyle = P[8]; ctx.fillRect(21, headY + 7, 2, 1); // Nose shadow
-      // Determined arcade eye with white glint
-      ctx.fillStyle = P[9]; ctx.fillRect(19, headY + 6, 3, 2); // White sclera
-      ctx.fillStyle = P[1]; ctx.fillRect(20, headY + 6, 2, 2); // Pupil
+      // Cute expressive chibi-arcade eye with white sparkle glint
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(18, headY + 5, 4, 3); // Bright cartoon eye sclera
+      ctx.fillStyle = P[1]; ctx.fillRect(19, headY + 5, 2, 3); // Large dark arcade pupil
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(19, headY + 5, 1, 1); // Sparkling specular glint!
+      // Rosy arcade cheek blush
+      ctx.fillStyle = 'rgba(255, 110, 110, 0.4)'; ctx.fillRect(15, headY + 8, 3, 2);
 
       // Blonde bangs falling over headband
       ctx.fillStyle = P[2];
@@ -839,10 +845,10 @@ export class ProceduralSpriteFactory {
     // REGISTER ALL MARCO ROSSI FRAMES & LEGACY KEYS
     // ----------------------------------------------------
 
-    // Idle Frames (4 frames)
+    // Idle Frames (4 frames with bouncy rhythmic breathing cycle)
     for (let i = 0; i < 4; i++) {
-      const bob = i === 1 || i === 2 ? 1 : 0;
-      const flut = Math.sin((i * Math.PI) / 2) * 1.5;
+      const bob = i === 1 ? 1 : i === 2 ? 2 : i === 3 ? 1 : 0;
+      const flut = Math.sin((i * Math.PI) / 2) * 2.2;
       this.registerSprite(`player_idle_${i}`, W, H, AX, AY, (ctx) => {
         drawSoldier(ctx, { torsoBob: bob, headbandFlutter: flut, aimAngle: 0 });
       });
@@ -858,14 +864,14 @@ export class ProceduralSpriteFactory {
       });
     }
 
-    // Run Cycle (6 frames)
+    // Run Cycle (6 frames with springy arcade bounce)
     const runOffsets = [
-      { l: -4, r: 4, bob: 0, flut: -1 },
-      { l: -2, r: 2, bob: 1, flut: 1 },
-      { l: 0, r: 0, bob: 2, flut: -1.5 },
-      { l: 4, r: -4, bob: 0, flut: 1 },
-      { l: 2, r: -2, bob: 1, flut: -1 },
-      { l: 0, r: 0, bob: 2, flut: 1.5 },
+      { l: -5, r: 5, bob: -1, flut: -2 },
+      { l: -2, r: 2, bob: 1, flut: 1.5 },
+      { l: 0, r: 0, bob: 2, flut: -2 },
+      { l: 5, r: -5, bob: -1, flut: 2 },
+      { l: 2, r: -2, bob: 1, flut: -1.5 },
+      { l: 0, r: 0, bob: 2, flut: 2 },
     ];
     for (let i = 0; i < 6; i++) {
       const ro = runOffsets[i];
@@ -1009,9 +1015,10 @@ export class ProceduralSpriteFactory {
       // 3. Head & Authentic Steel Stahlhelm Helmet
       // Face & Neck
       drawContouredRect(ctx, 13, 9 + bob, 8, 5, R[1], R[4], R[4], R[5]);
-      // Scowling eyes and grimace / gas-mask snout
-      ctx.fillStyle = R[15]; ctx.fillRect(17, 10 + bob, 3, 2); // Eye white
-      ctx.fillStyle = R[1]; ctx.fillRect(18, 10 + bob, 2, 2);  // Eye pupil
+      // Comical expressive arcade eyes with specular glint & gas-mask snout
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(16, 9 + bob, 4, 3); // Wide white sclera
+      ctx.fillStyle = R[1]; ctx.fillRect(17, 9 + bob, 2, 3);      // Pupil
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(17, 9 + bob, 1, 1); // Specular arcade glint
       ctx.fillStyle = R[3]; ctx.fillRect(16, 12 + bob, 5, 2);  // Gas mask filter snout
 
       // German Stahlhelm Steel Helmet (with flared brim and specular metallic rim)
@@ -1470,6 +1477,11 @@ export class ProceduralSpriteFactory {
         // Sitting on heels, wrists bound in front with thick twisted hemp cord
         // Head & Sunburned Face
         drawContouredRect(ctx, 12, 8, 8, 7, P[1], P[4], P[4], P[5]);
+        // Cute big cartoon hostage eyes with sparkling glints & rosy cheeks
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(14, 9, 3, 3);
+        ctx.fillStyle = P[1]; ctx.fillRect(15, 9, 2, 3);
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(15, 9, 1, 1);
+        ctx.fillStyle = 'rgba(255, 120, 120, 0.45)'; ctx.fillRect(13, 12, 2, 2);
 
         // Wild bright yellow mop of hair
         drawContouredRect(ctx, 9, 3, 14, 7, P[1], P[2], '#FFF8A0', P[3]);

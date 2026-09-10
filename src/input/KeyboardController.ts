@@ -25,9 +25,10 @@ export interface KeyboardState {
   grenade: boolean;
   pause: boolean;
   ultimate: boolean;
+  help: boolean;
 }
 
-export type KeyAction = 'left' | 'right' | 'up' | 'down' | 'fire' | 'jump' | 'grenade' | 'pause' | 'ultimate';
+export type KeyAction = 'left' | 'right' | 'up' | 'down' | 'fire' | 'jump' | 'grenade' | 'pause' | 'ultimate' | 'help';
 
 export class KeyboardController {
   // Current button held states
@@ -40,12 +41,14 @@ export class KeyboardController {
   public grenade: boolean = false;
   public pause: boolean = false;
   public ultimate: boolean = false;
+  public help: boolean = false;
 
   // Latched edge-detection flags to preserve fast key taps between frames
   public jumpJustPressed: boolean = false;
   public fireJustPressed: boolean = false;
   public grenadeJustPressed: boolean = false;
   public ultimateJustPressed: boolean = false;
+  public helpJustPressed: boolean = false;
 
   // Previous button states for edge-detection (Pressed vs Held)
   private prevJump: boolean = false;
@@ -93,6 +96,9 @@ export class KeyboardController {
 
     // Ultimate: KeyU
     KeyU: 'ultimate',
+
+    // Help / Tutorial Toggle: KeyH
+    KeyH: 'help',
 
     // Pause: Enter, Escape
     Enter: 'pause',
@@ -158,6 +164,7 @@ export class KeyboardController {
       grenade: this.grenade,
       pause: this.pause,
       ultimate: this.ultimate,
+      help: this.help,
     };
   }
 
@@ -169,12 +176,14 @@ export class KeyboardController {
     const shootPressed = this.fireJustPressed || (this.fire && !this.prevFire);
     const grenadePressed = this.grenadeJustPressed || (this.grenade && !this.prevGrenade);
     const ultimatePressed = this.ultimateJustPressed || (this.ultimate && !this.prevUltimate);
+    const helpPressed = this.helpJustPressed;
 
     // Clear edge-detection latches after snapshot consumption
     this.jumpJustPressed = false;
     this.fireJustPressed = false;
     this.grenadeJustPressed = false;
     this.ultimateJustPressed = false;
+    this.helpJustPressed = false;
 
     // Edge-detect pause toggle
     if (this.pause && !this.prevPause) {
@@ -199,6 +208,7 @@ export class KeyboardController {
       shootHeld: this.fire,
       grenadePressed,
       ultimatePressed,
+      helpPressed,
     };
   }
 
@@ -215,11 +225,13 @@ export class KeyboardController {
     this.grenade = false;
     this.pause = false;
     this.ultimate = false;
+    this.help = false;
 
     this.jumpJustPressed = false;
     this.fireJustPressed = false;
     this.grenadeJustPressed = false;
     this.ultimateJustPressed = false;
+    this.helpJustPressed = false;
 
     this.prevJump = false;
     this.prevFire = false;
@@ -259,6 +271,7 @@ export class KeyboardController {
       if (action === 'fire' && !this.fire) this.fireJustPressed = true;
       if (action === 'grenade' && !this.grenade) this.grenadeJustPressed = true;
       if (action === 'ultimate' && !this.ultimate) this.ultimateJustPressed = true;
+      if (action === 'help' && !this.help) this.helpJustPressed = true;
     }
 
     this.setAction(action, true);
@@ -302,6 +315,9 @@ export class KeyboardController {
         return 'grenade';
       case 'u':
         return 'ultimate';
+      case 'h':
+      case '?':
+        return 'help';
       case 'enter':
       case 'escape':
         return 'pause';
@@ -316,6 +332,7 @@ export class KeyboardController {
       if (action === 'fire' && !this.fire) this.fireJustPressed = true;
       if (action === 'grenade' && !this.grenade) this.grenadeJustPressed = true;
       if (action === 'ultimate' && !this.ultimate) this.ultimateJustPressed = true;
+      if (action === 'help' && !this.help) this.helpJustPressed = true;
     }
     switch (action) {
       case 'left':
@@ -341,6 +358,9 @@ export class KeyboardController {
         break;
       case 'ultimate':
         this.ultimate = value;
+        break;
+      case 'help':
+        this.help = value;
         break;
       case 'pause':
         this.pause = value;

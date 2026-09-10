@@ -1,79 +1,91 @@
-# Project: Metal Slug Web (Full Metal Slug) Polish & Diverse Spawning Overhaul
+# Project: Metal Slug Web (Full Metal Slug) — UI/UX & Level Design Overhaul
 
 ## Architecture
-Decoupled multi-tier simulation and presentation architecture:
+Decoupled multi-tier simulation, rendering, and UI architecture:
 1. **Simulation Core (`src/core/`)**:
-   - 100% decoupled from DOM, Window, and Canvas APIs.
-   - Fixed 60Hz timestep semi-implicit Euler integration (`dt = 1/60`).
-   - Natural Newtonian kinematics and platform collision.
-   - **Diverse Spawning Architecture (R1)**:
-     - `PARACHUTE_DESCENT`: Spawns at high altitude ($Y < 50$), controlled descent velocity ($v_y \approx 40-60\text{ px/s}$), horizontal sinusoidal swaying ($A = 18\text{ px}, \omega = 3.0\text{ rad/s}$), ground touchdown at $Y=230$ ($y=192$), canopy detachment and fade, transition to alert combat AI.
-     - `STRUCTURE_AMBUSH`: Ballistic leap-out arc ($v_x = -130\text{ px/s}, v_y = -220\text{ px/s}, g=720\text{ px/s}^2$) leaping from trenches and structures at designated trigger coordinates.
-   - **Decoupled Corpse Simulation (R2)**:
-     - `DeathCorpseManager`: Subscribes to `enemy_death` events. Simulates visual death trajectories without violating core simulation entity culling invariants:
-       - Standard falling death: Stagger, knee buckle, back ground collapse.
-       - Explosion blowback: Ballistic parabolic air launch ($v_y=-300, v_x=\pm 200$), rotational tumbling ($\omega = 8.5\text{ rad/s}$), detached flying Stahlhelm helmet, ground impact bounce.
-       - Burning death: Fire thrash with flame particles, charred silhouette with molten embers, ash crumble collapse.
+   - Decoupled from DOM/Window/Canvas.
+   - Fixed 60Hz semi-implicit Euler timestep.
+   - Enhanced multi-tier platform collision & drop-through resolution (`Platform.ts`, `PlayerController.ts`).
+   - Dynamic paratrooper ground/platform resolution (`SoldierEnemy.ts`).
+   - Destructible cover obstacles (`DestructibleObstacle.ts`: sandbag barricades, supply crates, explosive fuel barrels).
+   - Player death & respawn lifecycle: `ALIVE` -> `DYING` (1.2s knockback arc) -> `RESPAWN_PARACHUTE` / `CONTINUE_COUNTDOWN` (10s timer) -> `GAME_OVER`.
 2. **Render Layer (`src/render/`)**:
-   - HTML5 2D Canvas rendering with procedural pixel-art rasterization (`ProceduralSpriteFactory.ts`).
-   - Authentic 16-color procedural parachute canopy and 12 distinct death animation frames.
-   - Corpse rendering pass with rotation, alpha fading, dynamic suspension cords, and canvas particle emitters.
-3. **Audio Layer (`src/audio/`)**:
-   - Web Audio API procedural sound synthesis including soldier casualty screams and flame sizzle effects.
-4. **Testing & Visual Verification (`tests/`)**:
-   - Vitest unit test suite: 24 test files, 294 tests passed (100% green).
-   - Playwright E2E visual verification suite: 4 spec files, 17 tests passed (100% green).
-   - 3 captured screenshot artifacts in `artifacts/death_animations/`:
-     - `death_standard.png` (~20.7KB)
-     - `death_explosion_blowback.png` (~21.7KB)
-     - `death_burning.png` (~20.9KB)
-   - Root-level `BUG_HUNT_REPORT.md` documenting 7 cataloged defect investigations and root-cause remediations.
+   - Upgraded to modern 16:9 widescreen HD: 960x540 internal canvas framebuffer with crisp pixelated CSS display scaling, eliminating claustrophobia.
+   - Expanded dynamic camera tracking (>528px forward vision) and spacious 1100px boss arenas.
+   - Modular parallax background tiling supporting 960px+ seamlessly.
+   - Charming retro-arcade aesthetics: vibrant tropical azure palette, expressive chibi-arcade proportions, bouncy visual feedback.
+3. **UI & Controls Layer (`src/ui/`)**:
+   - Classic arcade Continue countdown screen (10s timer, large 9..0 digits, press Fire/Jump to continue).
+   - Polished arcade tutorial & controls guide banner/overlay (WASD/Arrows, J/Z Fire, K/X Jump, L/C Grenade, U Ultimate, auto-dismiss & `[H]` toggle).
+   - HUD overhaul: cute animated Marco portrait, Ultimate Move stock gauge, bomb fuse, and beveled metallic arcade framing.
+4. **Testing & Visual Verification (`tests/`, `artifacts/ui_overhaul/`)**:
+   - Playwright visual proof: `artifacts/ui_overhaul/screen_terrain.png` and `artifacts/ui_overhaul/respawn_tutorial.png`.
+   - 100% green Vitest unit test suite (asserting platforms, drop-through, continue countdown, tutorial state).
+   - 100% green Playwright E2E browser tests and 0 TypeScript errors.
+   - Autonomous Git commit, push to `origin/main`, and Vercel deployment status confirmation.
 
 ---
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | Parachute Airborne Drops | Spawn at Y < 50, descent vy 40-60 px/s, sinusoidal sway, ground touchdown at Y=230 | M_POLISH | R1 |
-| 2 | Trench / Structure Ambushes | Leap-out arc vx != 0, vy < 0, gravity landing from structures/trenches | M_POLISH | R1 |
-| 3 | Standard Falling Death | Stagger, knee buckle, backward ground collapse from bullets/rifles | M_POLISH | R2 |
-| 4 | Explosion Blowback Death | Ballistic launch, tumbling rotation, detached flying helmet, ground impact bounce | M_POLISH | R2 |
-| 5 | Flamethrower Burning Death | Thrashing animation, flame particles, charred silhouette, ash collapse | M_POLISH | R2 |
-| 6 | Procedural Death & Parachute Sprites | Parachute canopy + 12 pixel-art death animation frames in ProceduralSpriteFactory | M_POLISH | R1/R2 |
-| 7 | Damage Type Normalization | Normalize damageSourceType across ProjectileManager, Grenade, SoldierEnemy | M_POLISH | R2/BugHunt |
-| 8 | Decoupled Corpse Manager | DeathCorpseManager handles visual death physics without breaking entity invariants | M_POLISH | R2 |
-| 9 | Player Damage Collision Wiring | Enemy bullets, grenades, and melee boxes deal proper damage to PlayerController | M_POLISH | R3/BugHunt |
-| 10 | Soldier Casualty SFX | Procedural screams, grunts, and flame sizzle sound synthesis in SoundEngine | M_POLISH | R2/R3 |
-| 11 | Playwright Death Screenshots | Capture death_standard.png, death_explosion_blowback.png, death_burning.png (>5KB) | M_POLISH | Acceptance |
-| 12 | Diverse Spawning Unit Tests | Automated tests in tests/unit/diverse_spawning.test.ts asserting kinematics | M_POLISH | Acceptance |
-| 13 | Autonomous Bug Hunt Report | Comprehensive audit and fix report documented in BUG_HUNT_REPORT.md | M_POLISH | R3 |
-| 14 | 100% Green Verification | Clean build, 100% pass across vitest (294/294) and playwright (17/17) tests | M_POLISH | Acceptance |
+| 1 | 16:9 HD Resolution (960x540) | Modern 16:9 canvas framebuffer with crisp integer pixel scaling | M1 | R1, Explorer 1 |
+| 2 | Widescreen Camera & Arenas | Camera deadzones (>528px forward sight) and spacious 1100px boss arenas | M1 | R1, Explorer 1 |
+| 3 | Parallax Background Tiling | Modular horizontal multi-buffer wrapping without edge cutoffs | M1 | R1, Explorer 1 |
+| 4 | Charming Arcade Visuals | Vibrant tropical palette, expressive chibi proportions, charming sprites | M1 | User Feedback, Explorer 1 |
+| 5 | Multi-Tier Platform System | 24 platforms across 5 zones (stilt docks, towers, bridges, catwalks) | M2 | R1, Explorer 2 |
+| 6 | Stepped Terrain & Elevation | Ground elevation variation, sand dunes, tidal dips, sunken trenches | M2 | R1, Explorer 2 |
+| 7 | Destructible Cover Obstacles | Sandbag barricades, supply crates, and red explosive fuel barrels | M2 | R1, Explorer 2 |
+| 8 | Platform Drop-Through Fix | Fix freeze bug by caching `ignoredPlatformId` at drop initiation | M2 | BugHunt, Explorer 2 |
+| 9 | Paratrooper Dynamic Landing | Paratroopers check `PlatformPhysics.resolveGroundContact` to land on towers | M2 | R1, Explorer 2 |
+| 10 | Authentic Player Death Arc | 1.2s knockback arc using pre-rendered `player_death_0..3` frames | M3 | R2, Explorer 3 |
+| 11 | Arcade Continue Countdown | 10s countdown timer with large 9..0 digits and continue re-entry | M3 | R2, Explorer 3 |
+| 12 | Tactical Parachute Respawn | Respawn drop-in from screen top with parachute canopy & 2.5s invulnerability | M3 | R2, Explorer 3 |
+| 13 | On-Screen Tutorial & Controls | Arcade instruction placard showing WASD/Arrows, J/Z, K/X, L/C, U | M3 | R2, Explorer 3 |
+| 14 | HUD Polish & Ultimate Stock | Cute Marco portrait, Ultimate stock meter, bomb fuse, metallic bevels | M3 | R2, Explorer 3 |
+| 15 | Visual Proof Screenshots | Capture `screen_terrain.png` and `respawn_tutorial.png` in `artifacts/ui_overhaul/` | M4 | R3, Acceptance |
+| 16 | 100% Green Test Suite | Vitest and Playwright test suites passing with 0 TypeScript compilation errors | M4 | R3, Acceptance |
+| 17 | Autonomous Git Commit & Push | Autonomous commit and push to `origin/main` on GitHub | M5 | R3, Acceptance |
+| 18 | Vercel Deployment Verification | Check Vercel build status and deployment logs to confirm success | M5 | R3, Acceptance |
 
 ---
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M0 | Survey & Architecture Analysis | Map spawning, death animation, and test systems | None | DONE |
-| M_POLISH | Implementation & Polish | R1 (Spawning), R2 (Deaths), R3 (Bug fixes & BUG_HUNT_REPORT.md), E2E Screenshots | M0 | DONE |
-| M_VERIFY | Adversarial Review & Forensic Victory Audit | 2 Reviewers, 2 Challengers, 1 Forensic Integrity Auditor | M_POLISH | DONE |
+| M0 | Survey & Architecture Assessment | Full codebase investigation across viewport, terrain, UI, and test suite | None | DONE |
+| M1 | 16:9 HD Screen & Viewport Expansion | Canvas 960x540, dynamic camera, parallax tiling, charming arcade styling | M0 | DONE |
+| M2 | Level Design & Terrain System Overhaul | 24 platforms, 5 zones, destructible obstacles, paratrooper landing, drop-through fix | M1 | DONE |
+| M3 | Death, Respawn Flow & Tutorial UI | Death arc, 10s continue countdown, parachute respawn, tutorial placard, HUD ultimate gauge | M1 | DONE |
+| M4 | E2E Visual Verification & Test Hardening | Playwright screenshots in artifacts/ui_overhaul/, 100% green tests | M2, M3 | DONE |
+| M5 | Autonomous Git Push & Vercel Verification | Commit, push to origin/main, check Vercel build status & logs | M4 | IN_PROGRESS |
 
 ---
 
-## Code Layout
-- `src/core/entities/enemies/EnemyTypes.ts`: Damage types, death types, spawn behavior interfaces
-- `src/core/entities/enemies/SoldierEnemy.ts`: Kinematics, parachute sway, ambush leap, damage normalization, death events
-- `src/core/entities/enemies/DeathCorpseManager.ts`: Visual death simulation, ballistic arcs, air rotation, ground bounce, particles
-- `src/core/weapons/ProjectileManager.ts`: Clean weapon damage type dispatching
-- `src/core/weapons/Grenade.ts`: Explicit explosive damage dispatching
-- `src/core/player/PlayerController.ts`: Enemy collision and damage handling
-- `src/render/sprites/ProceduralSpriteFactory.ts`: Procedural parachute canopy + 12 death animation frames
-- `src/render/CanvasRenderer.ts`: Parachute suspension lines and corpse rendering pass
-- `src/audio/SoundEngine.ts`: Procedural soldier casualty voice synthesis and death sound effects
-- `src/main.ts`: Stage trigger enhancements, DeathCorpseManager lifecycle, test hooks
-- `tests/unit/diverse_spawning.test.ts`: Automated tests for high-Y parachute drops and ambush leaps
-- `tests/unit/death_animations.test.ts`: Automated tests for damage types, corpse physics, and sprite registrations
-- `tests/unit/adversarial_death_polish2_challenge.test.ts`: High-volume casualty stress tests (150 casualties)
-- `tests/unit/adversarial_diverse_spawning_kinematics.test.ts`: Parachute and ambush kinematics empirical challenge
-- `tests/e2e/death_animations_screenshots.spec.ts`: Playwright screenshot capture into artifacts/death_animations/
-- `BUG_HUNT_REPORT.md`: Comprehensive bug hunt audit and resolution report
+## Interface Contracts
+
+### 1. Viewport & Camera Contract (M1)
+- `CanvasRenderer.VIRTUAL_WIDTH = 960;`
+- `CanvasRenderer.VIRTUAL_HEIGHT = 540;`
+- `<canvas>` element dimensions: `960` x `540` with `image-rendering: pixelated;`
+- Camera viewport: width `960`, height `540`. Forward deadzone: `~528px`.
+- Mid-boss and Boss camera lockdown widths expanded to `1100px`.
+
+### 2. Level Design & Platform Contract (M2)
+- Stage bounds: `STAGE_WIDTH = 3600`, `STAGE_HEIGHT = 540`.
+- Ground line base at `Y = 460` (or `Y = 230` scaled accordingly), with stepped elevations.
+- Preserved platform IDs: `boss_arena_left` at `(x: 1860, y: 170, w: 100, h: 12)` or mapped coordinate preserving crisis tests, `midboss_dock_left`, `midboss_dock_right`, `tower_platform`, `bunker_2`.
+- Destructible obstacle types: `'SANDBAG_BARRICADE'`, `'SUPPLY_CRATE'`, `'EXPLOSIVE_BARREL'`.
+
+### 3. Death & Respawn Contract (M3)
+- Player states:
+  - `PlayerActionState.DYING`: 1.2s knockback arc, cycling `player_death_0..3`.
+  - `PlayerActionState.RESPAWNING_PARACHUTE`: starts at `Y = 20`, controlled descent at `vy = 60 px/s`, canopy attached, 2.5s invulnerability flashing.
+- Continue Countdown:
+  - 10s countdown timer when `lives <= 0`.
+  - Digit rendering: 9..0.
+  - On Fire or Jump button: resets lives to 3, drops in with parachute.
+  - On timer expiration: transitions to final Game Over banner.
+- Tutorial Placard:
+  - Visible on game start, 5s auto-dismiss or toggle with key `H`.
+  - Displays movement, shoot, jump, grenade, ultimate bindings.

@@ -352,7 +352,7 @@ test.describe('Milestone M4: Ultimate Move, Crisis Boss & Ally Expansion E2E Sui
       expect(midBossStatus.health).toBe(320);
       expect(midBossStatus.stageState).toBe('MID_BOSS_BATTLE');
       expect(midBossStatus.boundsMinX).toBe(720);
-      expect(midBossStatus.boundsMaxX).toBe(1200);
+      expect(midBossStatus.boundsMaxX).toBe(1820);
     });
 
     test('2.2: Iron Nokana Boss triggers crisis events across 75%, 50%, and 25% HP checkpoints', async ({

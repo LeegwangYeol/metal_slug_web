@@ -18,6 +18,9 @@ export enum PlayerActionState {
   CRAWLING = 'CRAWLING',
   MELEE_SLASH = 'MELEE_SLASH',
   HIT_STUN = 'HIT_STUN',
+  DYING = 'DYING',
+  RESPAWNING_PARACHUTE = 'RESPAWNING_PARACHUTE',
+  CONTINUE_COUNTDOWN = 'CONTINUE_COUNTDOWN',
   DEAD = 'DEAD',
 }
 
@@ -46,6 +49,7 @@ export interface PlayerInputSnapshot {
   shootHeld: boolean;
   grenadePressed: boolean;
   ultimatePressed?: boolean;
+  helpPressed?: boolean;
 }
 
 export class PlayerKinematics {

@@ -1,6 +1,6 @@
 /**
  * High-Performance HTML5 2D Canvas Renderer.
- * - Virtual 480x270 letterbox scaling with nearest-neighbor crisp pixel rendering.
+ * - Virtual 960x540 letterbox scaling with nearest-neighbor crisp pixel rendering.
  * - Render Passes: Background Parallax -> Terrain/Platforms -> Entities -> Projectiles & Explosions -> Retro Arcade HUD.
  */
 
@@ -32,13 +32,16 @@ export interface RenderPlayerState {
   x: number;
   y: number;
   facing: 1 | -1;
-  state: 'idle' | 'run' | 'jump' | 'crouch' | 'aim' | 'knife' | 'fire' | 'death';
+  state: 'idle' | 'run' | 'jump' | 'crouch' | 'aim' | 'knife' | 'fire' | 'death' | 'parachute';
   aimAngle?: any;
   aimDirection?: Vector2D;
   weaponType?: WeaponType;
   animFrame?: number;
   isMelee?: boolean;
   isFiring?: boolean;
+  isParachuting?: boolean;
+  parachuteSwayAngle?: number;
+  invulnerabilityTimer?: number;
 }
 
 export interface RenderEnemyState {
@@ -112,6 +115,12 @@ export interface RenderHUDState {
   isPaused?: boolean;
   isGameOver?: boolean;
   isStageClear?: boolean;
+  ultimateStock?: number;
+  maxUltimateStock?: number;
+  isContinueActive?: boolean;
+  continueCountdown?: number;
+  showTutorial?: boolean;
+  tutorialAlpha?: number;
 }
 
 export interface RenderCinematicFXState {
@@ -139,10 +148,22 @@ export interface RenderCinematicFXState {
   }>;
 }
 
+export interface RenderObstacleState {
+  id: string;
+  obstacleType: 'SANDBAG_BARRICADE' | 'SUPPLY_CRATE' | 'EXPLOSIVE_BARREL';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  health: number;
+  maxHealth: number;
+}
+
 export interface RenderSceneState {
   time?: number;
   camera: Camera;
   platforms?: Platform[];
+  obstacles?: RenderObstacleState[];
   player?: RenderPlayerState;
   enemies?: RenderEnemyState[];
   corpses?: RenderCorpseState[];
@@ -156,10 +177,10 @@ export interface RenderSceneState {
 
 
 export class CanvasRenderer {
-  public static readonly VIRTUAL_WIDTH = 480;
-  public static readonly VIRTUAL_HEIGHT = 270;
+  public static readonly VIRTUAL_WIDTH = 960;
+  public static readonly VIRTUAL_HEIGHT = 540;
 
-  // Off-screen virtual framebuffer buffer (480x270)
+  // Off-screen virtual framebuffer buffer (960x540)
   public readonly virtualBuffer: CanvasBuffer;
   public readonly virtualCtx: CanvasContext2DLike;
 
@@ -230,6 +251,11 @@ export class CanvasRenderer {
     // Pass 2: Terrain & Platforms
     if (scene.platforms && scene.platforms.length > 0) {
       this.renderPlatformsPass(scene.platforms, cam);
+    }
+
+    // Pass 2.5: Destructible Obstacles
+    if (scene.obstacles && scene.obstacles.length > 0) {
+      this.renderObstaclesPass(scene.obstacles, cam);
     }
 
     // Pass 3: Entities (POWs, Boss, Enemies, Player)
@@ -308,40 +334,244 @@ export class CanvasRenderer {
       const h = plat.bounds.height;
 
       if (plat.type === 'SOLID') {
-        // Ground / Solid obstacle: Beach sand surface, mud layer, and concrete / steel base
-        // Top sand layer
-        ctx.fillStyle = T[2];
-        ctx.fillRect(sx, sy, w, Math.min(4, h));
-        // Mud & dirt layer
-        ctx.fillStyle = T[4];
-        ctx.fillRect(sx, sy + 4, w, Math.min(8, Math.max(0, h - 4)));
-        // Deep rock / steel structure
-        if (h > 12) {
-          ctx.fillStyle = T[5];
-          ctx.fillRect(sx, sy + 12, w, h - 12);
-          // Steel rivets
-          ctx.fillStyle = T[6];
-          for (let rx = sx + 8; rx < sx + w; rx += 24) {
-            ctx.fillRect(rx, sy + 15, 2, 2);
+        const isBunkerOrWall = plat.id.includes('bunker') || plat.id.includes('wall') || plat.id.includes('redoubt');
+        if (isBunkerOrWall) {
+          // Military reinforced concrete bunker / blast wall
+          ctx.fillStyle = '#4B5563'; // concrete slab top
+          ctx.fillRect(sx, sy, w, Math.min(6, h));
+          ctx.fillStyle = '#9CA3AF'; // bevel highlight
+          ctx.fillRect(sx, sy, w, 2);
+
+          if (h > 6) {
+            ctx.fillStyle = '#374151'; // darker concrete facade
+            ctx.fillRect(sx, sy + 6, w, h - 6);
+
+            // Vertical armor panel seams every 24px
+            ctx.fillStyle = '#1F2937';
+            for (let px = sx + 20; px < sx + w - 4; px += 24) {
+              ctx.fillRect(px, sy + 6, 2, h - 6);
+              // Rivets on seams
+              ctx.fillStyle = '#9CA3AF';
+              ctx.fillRect(px - 1, sy + 8, 2, 2);
+              if (h > 24) ctx.fillRect(px - 1, sy + 20, 2, 2);
+              ctx.fillStyle = '#1F2937';
+            }
+
+            // Pillbox embrasure firing slit if bunker has sufficient width
+            if (w >= 50 && h >= 20) {
+              const slitX = sx + Math.floor(w / 2) - 16;
+              const slitY = sy + 10;
+              ctx.fillStyle = '#111827';
+              ctx.fillRect(slitX, slitY, 32, 6);
+              ctx.fillStyle = '#1F2937';
+              ctx.fillRect(slitX + 2, slitY + 1, 28, 4);
+              ctx.fillStyle = '#6B7280';
+              ctx.fillRect(slitX - 2, slitY - 2, 36, 2);
+            }
+          }
+        } else {
+          // Ground terrain: multi-layered sand crest, strata, and rocky earth base
+          // Capped at 42px depth to reveal tropical parallax background scenery beneath!
+          const renderH = Math.min(h, 42);
+
+          // Layer 1: Sunlit golden sand crest (0..5px)
+          ctx.fillStyle = T[2];
+          ctx.fillRect(sx, sy, w, Math.min(4, renderH));
+          ctx.fillStyle = '#FFF3D0';
+          for (let gx = sx + (Math.abs(plat.bounds.x) % 7); gx < sx + w; gx += 14) {
+            ctx.fillRect(gx, sy, 2, 1);
+          }
+
+          // Layer 2: Dune / Sandstone strata (4..12px)
+          if (renderH > 4) {
+            ctx.fillStyle = T[3];
+            ctx.fillRect(sx, sy + 4, w, Math.min(8, renderH - 4));
+            ctx.fillStyle = '#C29B62';
+            for (let gx = sx + 4; gx < sx + w; gx += 16) {
+              ctx.fillRect(gx, sy + 6, 3, 2);
+            }
+          }
+
+          // Layer 3: Compressed earth & rock strata (12..24px)
+          if (renderH > 12) {
+            ctx.fillStyle = T[4];
+            ctx.fillRect(sx, sy + 12, w, Math.min(12, renderH - 12));
+            ctx.fillStyle = '#3D2614';
+            for (let rx = sx + 8; rx < sx + w; rx += 20) {
+              ctx.fillRect(rx, sy + 16, 3, 2);
+              ctx.fillRect(rx + 8, sy + 20, 2, 2);
+            }
+          }
+
+          // Layer 4: Rocky shoreline base (24..42px)
+          if (renderH > 24) {
+            ctx.fillStyle = '#2D1B0D';
+            ctx.fillRect(sx, sy + 24, w, renderH - 24);
+            ctx.fillStyle = '#1A1612';
+            for (let bx = sx; bx < sx + w; bx += 8) {
+              const toothH = (bx % 3) + 1;
+              ctx.fillRect(bx, sy + renderH - toothH, 6, toothH);
+            }
           }
         }
       } else {
-        // SEMI_SOLID: Wooden pier dock planks / rustic scaffolding
-        ctx.fillStyle = T[8]; // Wooden deck top
+        // SEMI_SOLID: Wooden pier dock planks, high bridges, watchtowers, crane decks
+        // 1. Deck top planks
+        ctx.fillStyle = T[8];
         ctx.fillRect(sx, sy, w, Math.min(5, h));
-        ctx.fillStyle = T[9]; // Wood grain seams
-        for (let bx = sx + 12; bx < sx + w; bx += 16) {
+        ctx.fillStyle = T[9];
+        for (let bx = sx + 12; bx < sx + w; bx += 14) {
           ctx.fillRect(bx, sy, 1, Math.min(5, h));
         }
-        // Support crossbeams underneath
+
+        // 2. Horizontal bearer beam underneath
         if (h > 5) {
           ctx.fillStyle = T[9];
-          ctx.fillRect(sx, sy + 5, w, h - 5);
-          ctx.fillStyle = T[7]; // Steel bracket supports
-          ctx.fillRect(sx + 4, sy + 5, 4, h - 5);
-          if (w > 30) {
-            ctx.fillRect(sx + w - 8, sy + 5, 4, h - 5);
+          ctx.fillRect(sx, sy + 5, w, Math.min(6, h - 5));
+          ctx.fillStyle = T[7];
+          ctx.fillRect(sx + 2, sy + 5, 4, Math.min(6, h - 5));
+          if (w > 20) {
+            ctx.fillRect(sx + w - 6, sy + 5, 4, Math.min(6, h - 5));
           }
+        }
+
+        // 3. Timber Stilts / Pilings extending downwards
+        const isTower = plat.id.includes('tower') || plat.id.includes('crane') || plat.id.includes('catwalk');
+        const stiltHeight = isTower ? 90 : 54;
+
+        for (let px = sx + 12; px < sx + w - 8; px += 36) {
+          ctx.fillStyle = '#3D2614';
+          ctx.fillRect(px, sy + h, 6, stiltHeight);
+          ctx.fillStyle = '#7D5836';
+          ctx.fillRect(px + 1, sy + h, 2, stiltHeight);
+          ctx.fillStyle = '#9AA0AB';
+          ctx.fillRect(px + 2, sy + h + 2, 2, 2);
+        }
+
+        // Diagonal cross bracing between pilings if wide enough
+        if (w >= 70) {
+          ctx.fillStyle = '#2A1A0D';
+          ctx.fillRect(sx + 14, sy + h + 14, w - 28, 3);
+          ctx.fillRect(sx + 14, sy + h + 32, w - 28, 3);
+        }
+
+        // 4. Watchtower ladder if tower platform
+        if (isTower) {
+          const ladderX = sx + 10;
+          const ladderH = 80;
+          ctx.fillStyle = '#4E331A';
+          ctx.fillRect(ladderX, sy + h, 2, ladderH);
+          ctx.fillRect(ladderX + 10, sy + h, 2, ladderH);
+          ctx.fillStyle = '#A88850';
+          for (let ry = sy + h + 6; ry < sy + h + ladderH - 4; ry += 8) {
+            ctx.fillRect(ladderX + 2, ry, 8, 2);
+          }
+        }
+      }
+    }
+  }
+
+  // ==========================================
+  // PASS 2.5: DESTRUCTIBLE OBSTACLES
+  // ==========================================
+  private renderObstaclesPass(obstacles: RenderObstacleState[], camera: Camera): void {
+    const ctx = this.virtualCtx;
+
+    for (const obs of obstacles) {
+      if (!camera.isVisible({ x: obs.x, y: obs.y, width: obs.width, height: obs.height })) continue;
+
+      const screenPos = camera.worldToScreen(obs.x, obs.y);
+      const sx = Math.round(screenPos.x);
+      const sy = Math.round(screenPos.y);
+      const w = obs.width;
+      const h = obs.height;
+
+      switch (obs.obstacleType) {
+        case 'SANDBAG_BARRICADE': {
+          // Double-stacked burlap sandbags
+          const bagH = Math.floor(h * 0.55);
+          const bottomY = sy + h - bagH;
+
+          // Bottom row
+          ctx.fillStyle = '#8B8070';
+          ctx.fillRect(sx, bottomY, w, bagH);
+          ctx.fillStyle = '#A69B88';
+          ctx.fillRect(sx + 1, bottomY + 1, w - 2, bagH - 2);
+          ctx.fillStyle = '#C2B8A3';
+          ctx.fillRect(sx + 2, bottomY + 1, w - 4, 2);
+
+          // Top row (staggered)
+          const topH = h - bagH + 1;
+          const topW = w - 6;
+          ctx.fillStyle = '#8B8070';
+          ctx.fillRect(sx + 3, sy, topW, topH);
+          ctx.fillStyle = '#B5AA96';
+          ctx.fillRect(sx + 4, sy + 1, topW - 2, topH - 2);
+          ctx.fillStyle = '#D6CCB8';
+          ctx.fillRect(sx + 5, sy + 1, topW - 4, 2);
+
+          // Rope ties & seams
+          ctx.fillStyle = '#5A5244';
+          ctx.fillRect(sx + Math.floor(w * 0.35), sy, 2, h);
+          ctx.fillRect(sx + Math.floor(w * 0.7), bottomY, 2, bagH);
+          break;
+        }
+        case 'SUPPLY_CRATE': {
+          // Military supply crate
+          ctx.fillStyle = '#5A3D1E';
+          ctx.fillRect(sx, sy, w, h);
+          ctx.fillStyle = '#8B6232';
+          ctx.fillRect(sx + 1, sy + 1, w - 2, h - 2);
+          ctx.fillStyle = '#A67C46';
+          ctx.fillRect(sx + 2, sy + 2, w - 4, h - 4);
+
+          // Diagonal / edge cross bracing
+          ctx.fillStyle = '#5A3D1E';
+          ctx.fillRect(sx + 2, sy + 2, 2, h - 4);
+          ctx.fillRect(sx + w - 4, sy + 2, 2, h - 4);
+          ctx.fillRect(sx + 2, sy + 2, w - 4, 2);
+          ctx.fillRect(sx + 2, sy + h - 4, w - 4, 2);
+
+          // Ammo stencil icon (gold diamond/star)
+          ctx.fillStyle = '#FCE071';
+          const cx = sx + Math.floor(w / 2);
+          const cy = sy + Math.floor(h / 2);
+          ctx.fillRect(cx - 2, cy - 2, 5, 5);
+          ctx.fillStyle = '#FFF3B0';
+          ctx.fillRect(cx - 1, cy - 1, 3, 3);
+          break;
+        }
+        case 'EXPLOSIVE_BARREL': {
+          // Red explosive fuel barrel
+          ctx.fillStyle = '#881212';
+          ctx.fillRect(sx, sy, w, h);
+          ctx.fillStyle = '#D32F2F';
+          ctx.fillRect(sx + 1, sy + 1, w - 2, h - 2);
+          ctx.fillStyle = '#EF5350';
+          ctx.fillRect(sx + 2, sy + 1, 3, h - 2);
+
+          // Steel rims (top and bottom)
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(sx, sy + 2, w, 2);
+          ctx.fillRect(sx, sy + h - 4, w, 2);
+          ctx.fillStyle = '#9CA3AF';
+          ctx.fillRect(sx + 2, sy + 2, w - 4, 1);
+          ctx.fillRect(sx + 2, sy + h - 4, w - 4, 1);
+
+          // Hazard yellow caution band
+          const bandY = sy + Math.floor(h / 2) - 2;
+          ctx.fillStyle = '#FBBF24';
+          ctx.fillRect(sx + 1, bandY, w - 2, 5);
+          // Caution slashes
+          ctx.fillStyle = '#111827';
+          ctx.fillRect(sx + 3, bandY, 2, 5);
+          ctx.fillRect(sx + 8, bandY, 2, 5);
+          if (w > 12) ctx.fillRect(sx + 13, bandY, 2, 5);
+
+          // Barrel cap
+          ctx.fillStyle = '#1F2937';
+          ctx.fillRect(sx + Math.floor(w / 2) - 2, sy - 1, 4, 2);
+          break;
         }
       }
     }
@@ -559,8 +789,43 @@ export class CanvasRenderer {
       const screen = camera.worldToScreen(p.x, p.y);
       const flip = p.facing === -1;
 
+      // Parachute canopy & suspension lines pass during parachute descent
+      if (p.isParachuting || p.state === 'parachute') {
+        const canopyY = screen.y - 56;
+        const shoulderY = screen.y - 24;
+
+        ctx.save();
+        ctx.strokeStyle = '#D4C4A8'; // Parachute suspension cords
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(screen.x - 3, shoulderY);
+        ctx.lineTo(screen.x - 18, canopyY);
+        ctx.moveTo(screen.x - 1, shoulderY);
+        ctx.lineTo(screen.x - 7, canopyY);
+        ctx.moveTo(screen.x + 1, shoulderY);
+        ctx.lineTo(screen.x + 7, canopyY);
+        ctx.moveTo(screen.x + 3, shoulderY);
+        ctx.lineTo(screen.x + 18, canopyY);
+        ctx.stroke();
+        ctx.restore();
+
+        const tilt = p.parachuteSwayAngle ?? 0;
+        this.spriteFactory.drawSprite(ctx, 'parachute_canopy', screen.x, canopyY, {
+          rotation: tilt,
+        });
+      }
+
+      // Invulnerability flashing (e.g. 2.5s upon landing or hit stun)
+      let alpha = 1.0;
+      if (p.invulnerabilityTimer !== undefined && p.invulnerabilityTimer > 0) {
+        alpha = Math.floor(time * 16) % 2 === 0 ? 0.35 : 1.0;
+      }
+
       const spriteKey = this.resolvePlayerSpriteKey(p, time);
-      this.spriteFactory.drawSprite(ctx, spriteKey, screen.x, screen.y, { flipX: flip });
+      this.spriteFactory.drawSprite(ctx, spriteKey, screen.x, screen.y, {
+        flipX: flip,
+        alpha,
+      });
     }
   }
 
@@ -660,8 +925,11 @@ export class CanvasRenderer {
    */
   public resolvePlayerSpriteKey(p: RenderPlayerState, time: number): string {
     if (p.state === 'death') {
-      const d = p.animFrame !== undefined ? Math.min(3, p.animFrame) : 2;
+      const d = p.animFrame !== undefined ? Math.min(3, Math.max(0, p.animFrame)) : 2;
       return `player_death_${d}`;
+    }
+    if (p.state === 'parachute') {
+      return 'player_jump_rise';
     }
     if (p.state === 'knife' || p.isMelee) {
       const k = p.animFrame !== undefined ? Math.min(2, p.animFrame) : 1;

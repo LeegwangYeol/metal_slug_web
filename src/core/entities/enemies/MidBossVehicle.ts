@@ -397,14 +397,21 @@ export class MidBossVehicle implements EnemyEntity {
         this.cannonCooldownTimer = 0.4;
       }
 
-      // Turn around if reaching arena boundaries
-      if (this.position.x <= this.patrolMinX - 50 && this.facing === -1) {
+      // Turn around if reaching arena boundaries (clamped to expanded arena: minX 720, maxX 1820 - width)
+      const minTurnaroundX = Math.max(720, this.patrolMinX - 50);
+      const maxTurnaroundX = Math.min(this.patrolMaxX + 50, 1820 - this.width);
+
+      if (this.position.x <= minTurnaroundX && this.facing === -1) {
+        this.position.x = Math.max(this.position.x, 720);
         this.facing = 1;
         this.isRamming = false;
+        this.velocity.x = 0;
         this.ramPrepTimer = 0.8;
-      } else if (this.position.x >= this.patrolMaxX + 50 && this.facing === 1) {
+      } else if (this.position.x >= maxTurnaroundX && this.facing === 1) {
+        this.position.x = Math.min(this.position.x, 1820 - this.width);
         this.facing = -1;
         this.isRamming = false;
+        this.velocity.x = 0;
         this.ramPrepTimer = 0.8;
       }
     }

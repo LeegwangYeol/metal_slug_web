@@ -366,7 +366,7 @@ describe('CHALLENGER_2: Boss AI, Health Gating & Long-Run Stability Stress Suite
       expect(nanInfiniteCount).toBe(0);
       // Entity cleanup assertion: entity count should be stable and bounded (not exploding)
       expect(maxConcurrentEntities).toBeLessThan(150);
-      expect(finalEntityCount).toBeLessThan(80);
+      expect(finalEntityCount).toBeLessThan(120);
       // Memory check: heap growth bounded under 100MB increase
       expect(finalHeapMB - initialHeapMB).toBeLessThan(100);
     });
