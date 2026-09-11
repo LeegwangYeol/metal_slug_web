@@ -1,188 +1,144 @@
-# Milestone M2 Overhaul Handoff Report: Smooth Out-of-Bounds Enemy Spawning & Clean Despawning
+# Milestone 2 Handoff Report: Camera Overhaul & Cinematic Viewport Engine
 
-**Agent**: `worker_m2`  
-**Milestone**: M2 Overhaul (R1: Smooth Out-of-Bounds Enemy Spawning & Off-Screen Despawning)  
-**Date**: 2026-09-03  
-**Target Recipient**: `parent` (orchestrator: `390e9a3c-c60d-42f9-80ff-35ac81372992`)  
-**Handoff Type**: Hard (Task Complete)  
+**Agent**: Worker 2 (Agent 12)  
+**Role**: Implementer & QA for Milestone 2  
+**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2`  
+**Date**: 2026-09-11T02:50:00Z  
 
 ---
 
 ## 1. Observation
 
-### 1.1 Source Code Changes & Implementations
-1. **`src/core/engine/StageManager.ts`**:
-   - `StageTrigger` interface updated:
-     ```typescript
-     export interface StageTrigger {
-       id: string;
-       triggerX: number;
-       triggered: boolean;
-       lockCameraBounds?: CameraBounds;
-       spawnAction: (engine: GameEngine, cameraX: number) => void;
-       isCompleted?: (engine: GameEngine) => boolean;
-     }
-     export type SpawnTrigger = StageTrigger;
-     ```
-   - Trigger execution updated in `update(cameraX: number, playerX: number)`:
-     ```typescript
-     trigger.spawnAction(this.engine, cameraX);
-     this.engine.eventBus.emit('spawn_trigger_fired', { id: trigger.id, cameraX });
-     ```
-   - `despawnOffscreenEntities(cameraX: number)` implemented:
-     ```typescript
-     despawnOffscreenEntities(cameraX: number = this.currentCameraX): void {
-       const allEntities = this.engine.getAllEntities();
-       for (const entity of allEntities) {
-         if (!entity.isAlive) continue;
-         if (
-           entity.id === 'player' ||
-           entity.type === 'PLAYER' ||
-           entity.type === 'BOSS_TETSUYUKI' ||
-           entity.type === 'MID_BOSS_VEHICLE' ||
-           entity.type === 'POW'
-         ) {
-           continue;
-         }
-         const isMinion =
-           entity instanceof SoldierEnemy ||
-           entity.type.startsWith('SOLDIER_') ||
-           entity.type === 'minion' ||
-           entity.type === 'ENEMY_BULLET' ||
-           entity.type === 'ENEMY_GRENADE';
+### 1.1 Legacy Camera Deadzones & Ratchet Lock in `src/render/Camera.ts`
+Prior to modification, `src/render/Camera.ts` exhibited legacy side-scroller behavior:
+- **Asymmetric Deadzones**:
+  - `deadzoneLeft = Math.floor(this.viewportWidth * 0.35);` (336px)
+  - `deadzoneRight = Math.floor(this.viewportWidth * 0.44);` (422px)
+  - `deadzoneTop = Math.floor(this.viewportHeight * 0.30);` (162px)
+  - `deadzoneBottom = Math.floor(this.viewportHeight * 0.70);` (378px)
+  The horizontal midpoint was $379\text{px}$ (39.5%), permanently pinning the player $101\text{px}$ to the left of the $480\text{px}$ screen center.
+- **Forward-Lock Ratchet**:
+  `forwardLock` defaulted to `true`, clamping `this.x = Math.max(this.x, this.maxReachedX)` and preventing backward exploration.
+- **Instant Snapping / Euler Damping**:
+  `smoothSpeed` defaulted to `0` (instant lockstep). When $> 0$, it used linear Euler interpolation `Math.min(1, dt * smoothSpeed)` which is framerate-dependent.
+- **No Velocity Input**:
+  `update(targetX, targetY, dt)` accepted no velocity vector and lacked velocity lookahead.
 
-         if (isMinion) {
-           if (entity.position.x < cameraX - 180 || entity.position.y > 320) {
-             entity.isAlive = false;
-             this.engine.removeEntity(entity.id);
-             this.engine.eventBus.emit('entity_despawned', { id: entity.id, type: entity.type });
-           }
-         }
-       }
-     }
-     ```
-
-2. **`src/core/entities/enemies/SoldierEnemy.ts`**:
-   - `SoldierConfig` extended with `cameraX?: number` and `isIngress?: boolean`.
-   - Constructor ingress detection:
-     ```typescript
-     const isOffscreenRight = config.cameraX !== undefined && this.position.x > config.cameraX + 460;
-     const isOffscreenLeft = config.cameraX !== undefined && this.position.x < config.cameraX - 20;
-
-     if (config.isIngress || isOffscreenRight || isOffscreenLeft) {
-       this.isIngress = true;
-       this.ingressCameraX = config.cameraX ?? (isOffscreenRight ? this.position.x - 520 : 0);
-       this.facing = isOffscreenLeft ? 1 : -1;
-       this.velocity.x = this.facing * 110;
-       this.state = 'INGRESS';
-     }
-     ```
-   - Ingress state update & seamless boundary transition:
-     ```typescript
-     private updateIngressAI(_dt: number, engine?: GameEngine): void {
-       if (engine && (engine as any).cameraX !== undefined) {
-         this.ingressCameraX = (engine as any).cameraX;
-       }
-       this.velocity.x = this.facing * 110;
-
-       const reachedBoundary =
-         (this.facing === -1 && this.position.x <= this.ingressCameraX + 460) ||
-         (this.facing === 1 && this.position.x >= this.ingressCameraX + 20);
-
-       if (reachedBoundary) {
-         this.isIngress = false;
-         this.transitionToNormalRoleAI();
-       }
-     }
-     ```
-
-3. **`src/main.ts`**:
-   - `stageManager.update(this.camera.x, this.player.position.x)` passes live camera position.
-   - All wave triggers (`trigger_wave_1`, `trigger_wave_2`, `trigger_wave_3`, `trigger_mid_boss`) calculate right-entering spawn positions out-of-bounds at `cameraX + 520px` with `+40px` echelon staggering:
-     - `trigger_wave_1`: `rebel_rifle_1` at `cameraX + 520`, `rebel_knife_1` at `cameraX + 560`.
-     - `trigger_wave_2`: `rebel_shield_1` at `cameraX + 520`, `rebel_grenade_1` at `cameraX + 560`, `rebel_rifle_2` at `cameraX + 600`.
-     - `trigger_mid_boss`: `rebel_mb_support` at `Math.max(cameraX + 520, 1220)` (outside locked arena boundary).
-     - `trigger_wave_3`: `rebel_knife_2` at `cameraX + 520`, `rebel_shield_2` at `cameraX + 560`, `rebel_grenade_2` at `cameraX + 600`.
-
-4. **`tests/unit/stage_spawning_despawn.test.ts`**:
-   - 11 dedicated unit tests created verifying:
-     1. StageTrigger camera parameter delivery to spawnAction.
-     2. Despawn of off-screen minions behind camera ($X < \text{cameraX} - 180$) and fallen entities ($Y > 320$).
-     3. Immunity of Player, Boss, and POW entities from off-screen culling.
-     4. Ingress state initialization at $v_x = -110\text{ px/s}$ for right-spawns.
-     5. Boundary crossing transition at $X \le \text{cameraX} + 460\text{px}$ into normal role AI.
-     6. Out-of-bounds placement and echelon staggering across all stage waves.
-
-### 1.2 Tool Execution Results
-- `npm run build`:
+### 1.2 Viewport Call Sites in `src/main.ts`
+- Line 490 previously invoked:
+  ```typescript
+  this.camera.update(this.player.position.x, this.player.position.y, dt);
   ```
-  > fullmetalslug@1.0.0 build
-  > tsc -b && vite build
+  Ignoring player kinematics (`this.player.velocity.x`, `this.player.velocity.y`).
 
-  vite v6.4.3 building for production...
-  transforming...
-  ✓ 31 modules transformed.
-  rendering chunks...
-  computing gzip size...
-  dist/index.html                  1.26 kB │ gzip:  0.58 kB
-  dist/assets/index-BxtTXTtJ.js  167.58 kB │ gzip: 43.77 kB │ map: 614.01 kB
-  ✓ built in 697ms
-  ```
-- `npm test`:
-  ```
-  Test Files  14 passed (14)
-       Tests  156 passed (156)
-    Duration  4.99s
-  ```
+### 1.3 Parallax Seams & Mist Blinking in `src/render/GothicBackdrop.ts`
+- **Asymmetric Sky Gradient**:
+  `createSkySurface` used gradient `0.0 -> DEEP`, `0.5 -> MID`, `1.0 -> SLATE`. When tiled vertically at negative world positions, the SLATE bottom of tile 0 met the DEEP top of tile 1, creating a visible horizontal line.
+- **Foreground Mist Flickering**:
+  `renderForegroundMist` previously executed two loops:
+  1. An unconditional horizontal row at $y = 0$ with `alpha = 0.10`.
+  2. A conditional 2D grid when `camY !== 0 && Math.abs(startY) > 4`.
+  This produced double opacity (`0.20`) along $y = 0$ and sudden popping/blinking whenever $|startY|$ crossed $4\text{px}$.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Root Cause of Pop-In**:
-   - Previously, wave spawn actions used hardcoded static coordinates such as $X=340$ and $X=420$ in `trigger_wave_1`. When the player triggered at $X=180$, the camera viewport spanned $[0, 480\text{px}]$. Entities placed at 340 and 420 appeared at 71% and 87.5% screen width, visibly popping into view.
-2. **Out-of-Bounds Formulation**:
-   - For a viewport width of $480\text{px}$, the visible right edge is $\text{cameraX} + 480\text{px}$. Setting the base spawn position to $X_{\text{spawn}} = \text{cameraX} + 520\text{px}$ places the entity $40\text{px}$ outside the frustum. Staggering squad members by $+40\text{px}$ ensures no AABB overlap upon instantiation.
-3. **Ingress Kinematics & Smooth Transition**:
-   - Walking at patrol speed ($40\text{ px/s}$) would take $> 1\text{ second}$ to reach the screen. Spawning with run-in velocity $v_x = -110\text{ px/s}$ allows the minion to enter the visible margin ($X \le \text{cameraX} + 460\text{px}$) within $\approx 0.54\text{s}$. Upon crossing this boundary, `SoldierEnemy` seamlessly switches to its tactical patrol / combat AI state (`PATROL` for rifle, `IDLE` for knife/grenade, `GUARD_ADVANCE` for shield) without abrupt velocity snaps.
-4. **Memory Hygiene & Despawning**:
-   - Because `Camera.forwardLock = true` prevents backward scrolling, minions left behind ($\Delta X < -180\text{px}$) or falling into pits ($Y > 320\text{px}$) cannot interact with the player. Marking `isAlive = false` and calling `engine.removeEntity(id)` completely unlinks them from physics simulation and the spatial hash grid, avoiding memory leaks.
+1. **Elimination of Deadzone Hysteresis & Implementation of True Centered Tracking**:
+   - In omnidirectional top-down horde survival, undead swarm from all 360 degrees.
+   - Grounding the ideal camera target at:
+     $$\text{idealTargetX} = \text{targetX} - \frac{\text{viewportWidth}}{2} + \text{lookaheadX}$$
+     $$\text{idealTargetY} = \text{targetY} - \frac{\text{viewportHeight}}{2} + \text{lookaheadY}$$
+     guarantees that in steady-state ($v = 0$), player world coordinate $(P_x, P_y)$ renders at screen center $(W/2, H/2) = (480, 270)$, providing balanced $480\text{px}$ horizontal and $270\text{px}$ vertical reaction clearance.
+   - `forwardLock` is disabled by default (`false`) to allow unrestricted 360-degree exploration.
+
+2. **Continuous-Time Exponential Damping Filter ($k = 8.0\,\text{s}^{-1}$)**:
+   - Integrating $\dot{x} = k(x_{\text{target}} - x)$ yields:
+     $$x(t + \Delta t) = x(t) + (x_{\text{target}} - x(t)) \cdot (1 - e^{-k \Delta t})$$
+   - Since $1 - e^{-k \Delta t} \in (0, 1)$ for all $\Delta t > 0$, the filter is unconditionally stable, strictly non-overshooting, and mathematically invariant under framerate changes.
+   - When $\Delta t \le 0$ (e.g. during reset or initialization), coordinates snap immediately without delay.
+
+3. **Subtle Bounded Velocity Lookahead ($\le 40\text{px}$) with Damping ($k = 5.0\,\text{s}^{-1}$)**:
+   - For player speed $s = \sqrt{v_x^2 + v_y^2}$:
+     $$\vec{L}_{\text{target}} = \frac{\vec{v}}{s} \cdot \min(40.0, s \cdot 0.20)$$
+   - The Euclidean norm $\|\vec{L}_{\text{target}}\|_2$ is strictly clamped to $\le 40.0\text{px}$.
+   - The camera stores internal state `lookaheadX, lookaheadY` and damps toward $\vec{L}_{\text{target}}$ with $k = 5.0$:
+     $$\text{lookahead} \mathrel{+}= (\vec{L}_{\text{target}} - \text{lookahead}) \cdot (1 - e^{-5.0 \Delta t})$$
+   - Cascading lookahead damping ($k = 5.0$) into camera tracking ($k = 8.0$) produces a critically damped second-order response: direction reversal glides smoothly without sudden jumps ($|\Delta x| < 15\text{px}$, $|\Delta^2 x| < 5\text{px}$).
+
+4. **Decoupled Screen Shake Trauma**:
+   - `this.x` and `this.y` track purely world coordinates.
+   - Random shake offsets `shakeOffsetX, shakeOffsetY` decay quadratically and are added only when computing `renderX = Math.round(x + shakeOffsetX)` and `renderY = Math.round(y + shakeOffsetY)`.
+   - When the timer expires, shake offsets are strictly zeroed, guaranteeing zero permanent drift.
+
+5. **Parallax Backdrop Alignment**:
+   - Symmetrical sky gradient (`DEEP -> MID -> DEEP`) ensures $C^0$ and $C^1$ continuity when tiled vertically.
+   - Toroidal wrapping in `createCloudSurface` eliminates flat clipped edges.
+   - In `renderForegroundMist`, removing the $y = 0$ pass and threshold condition in favor of a single continuous 2D modular wrapping loop eliminates flickering and ensures uniform depth mist.
 
 ---
 
 ## 3. Caveats
 
-- **Immunity Constraints**: Player, boss vehicles/structures (`BOSS_TETSUYUKI`, `MID_BOSS_VEHICLE`), and hostage POWs are explicitly protected from off-screen culling so stage encounters and rescues remain stable regardless of camera position.
-- No other caveats.
+- **Stage Boundary Clamping**: The camera top-left position is clamped to $[\text{minX}, \text{maxX} - W] \times [\text{minY}, \text{maxY} - H]$ (e.g. $[-2000, 1040] \times [-2000, 1460]$). When player approaches within $480\text{px}$ of the stage boundary, the camera decelerates to a stop while the player moves toward the arena perimeter.
+- **Backward Compatibility**: `Camera.update(targetX, targetY, dt, vx = 0, vy = 0)` retains optional velocity arguments defaulting to 0, ensuring existing callers and test harnesses remain 100% valid.
 
 ---
 
 ## 4. Conclusion
 
-Milestone M2 Overhaul requirements are fully implemented, genuinely verified, and 100% green:
-- `StageTrigger` receives `cameraX`.
-- `despawnOffscreenEntities()` cleans up off-screen/fallen minions.
-- `SoldierEnemy` runs in smoothly at $-110\text{ px/s}$ and transitions cleanly at the screen margin.
-- `src/main.ts` waves spawn out-of-bounds at $\text{cameraX} + 520\text{px}$ with $+40\text{px}$ staggering. Zero popping.
-- All 14 test suites and 156 tests pass with 0 errors.
+All Milestone 2 tasks have been implemented and verified:
+1. `src/render/Camera.ts`: Complete overhaul for centered top-down tracking, exponential damping ($k = 8.0$), bounded velocity lookahead ($\le 40\text{px}$, $k = 5.0$), decoupled screen shake trauma, and stage boundary clamping.
+2. `src/main.ts`: Player velocity vector passed to `this.camera.update`.
+3. `src/render/GothicBackdrop.ts`: Parallax layers aligned with symmetrical sky gradient, toroidal cloud wrapping, and flicker-free continuous 2D foreground mist wrapping.
+4. `tests/unit/camera_tracking.spec.ts`: 23 comprehensive tests covering all 6 test suites passing 100% green.
+5. Overall suite: All 32 test files (467 tests) pass green, `npx tsc --noEmit` reports 0 errors, and `npm run build` succeeds.
 
 ---
 
 ## 5. Verification Method
 
-To independently verify this milestone:
-1. Build verification:
+### 5.1 Commands Executed & Outputs
+1. **Camera Unit Test Suite**:
    ```bash
-   npm run build
+   npx vitest run tests/unit/camera_tracking.spec.ts
    ```
-   Must exit with code 0 and build production bundle without errors.
-2. Full test suite execution:
+   *Output*:
+   ```
+   ✓ tests/unit/camera_tracking.spec.ts (23 tests) 34ms
+   Test Files  1 passed (1)
+        Tests  23 passed (23)
+   ```
+2. **Full Regression Test Suite**:
    ```bash
    npm test
    ```
-   Must exit with code 0, reporting 14 test files passed and 156 tests green (100%).
-3. Inspect files:
-   - `src/core/engine/StageManager.ts` (lines 20–35, 115–185)
-   - `src/core/entities/enemies/SoldierEnemy.ts` (lines 132–165, 245–265, 305–385)
-   - `src/main.ts` (lines 645–725)
-   - `tests/unit/stage_spawning_despawn.test.ts`
+   *Output*:
+   ```
+   Test Files  32 passed (32)
+        Tests  467 passed (467)
+   ```
+3. **TypeScript Compilation**:
+   ```bash
+   npx tsc --noEmit
+   ```
+   *Output*: Exit code 0, 0 type errors.
+4. **Vite Production Build**:
+   ```bash
+   npm run build
+   ```
+   *Output*: Exit code 0, built in 220ms.
+
+### 5.2 Files Modified
+- `src/render/Camera.ts`
+- `src/main.ts`
+- `src/render/GothicBackdrop.ts`
+- `tests/unit/ChallengerRestartEngine_M1_1.test.ts`
+- `tests/unit/GothicBackdrop.test.ts`
+- `tests/unit/camera_tracking.spec.ts` (new)
+
+### 5.3 Invalidation Conditions
+- Any static stationary player rendering at a screen coordinate other than $(480, 270) \pm 0.01\text{px}$.
+- Any velocity vector producing lookahead magnitude $> 40.0\text{px}$.
+- Any permanent coordinate drift following screen shake trauma.
+- Any TypeScript compilation errors or failing unit tests.

@@ -140,12 +140,25 @@ export class AbyssalLightning extends Weapon {
     const px = this.player.position.x;
     const py = this.player.position.y;
 
-    const nearbyCount = this.hordeManager.getEnemiesInRadius(
+    const rawCount = this.hordeManager.getEnemiesInRadius(
       px,
       py,
-      effectiveRange,
+      effectiveRange + 32,
       this.scratchPrimary
     );
+
+    let nearbyCount = 0;
+    for (let i = 0; i < rawCount; i++) {
+      const enemyId = this.scratchPrimary[i];
+      const enemy = this.hordeManager.pool[enemyId];
+      if (!enemy || !enemy.active || !enemy.isAlive) continue;
+      const dx = enemy.x - px;
+      const dy = enemy.y - py;
+      const maxReach = effectiveRange + enemy.radius;
+      if (dx * dx + dy * dy <= maxReach * maxReach) {
+        this.scratchPrimary[nearbyCount++] = enemyId;
+      }
+    }
 
     if (nearbyCount === 0) return 0;
 
@@ -187,13 +200,18 @@ export class AbyssalLightning extends Weapon {
         const chainCount = this.hordeManager.getEnemiesInRadius(
           prevX,
           prevY,
-          130,
+          130 + 32,
           this.scratchChain
         );
 
         let nextTargetId = -1;
         for (let c = 0; c < chainCount; c++) {
           const cid = this.scratchChain[c];
+          const cand = this.hordeManager.pool[cid];
+          if (!cand || !cand.active || !cand.isAlive) continue;
+          const cdx = cand.x - prevX;
+          const cdy = cand.y - prevY;
+          if (cdx * cdx + cdy * cdy > (130 + cand.radius) * (130 + cand.radius)) continue;
           if (!hitEnemies.has(cid)) {
             nextTargetId = cid;
             break;

@@ -1,57 +1,50 @@
-# BRIEFING — 2026-09-10T15:33:00Z
+# BRIEFING — 2026-09-11T02:21:30Z
 
 ## Mission
-Investigate Milestone 1 (Restart State Engine & Lifecycle Architecture) across WeaponManager, UpgradeSystem, UpgradeModal, WaveDirector, Camera/HUD, and Vitest test design for restart.spec.ts.
+Investigate weapon projectile collision radii and unit testing infrastructure for Grim Harvest: Undead Siege Milestone 1.
 
 ## 🔒 My Identity
-- Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Archetype: Teamwork explorer
+- Roles: Read-only investigation, synthesis
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 1 (Restart State Engine & Lifecycle Architecture)
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 1 - Hitbox and Camera
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Do not modify source code files
-- Wait for explicit user approval before implementation (handled by parent/worker)
-- Produce 5-component handoff report in .agents/explorer_m1_3/handoff.md
-- Maintain progress.md heartbeat
+- Wait for explicit user approval before proceeding with implementation
+- Files for content delivery. Messages for coordination.
+- Stay within assigned folder for writes (.agents/explorer_m1_3/)
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
 - Updated: not yet
 
 ## Investigation State
 - **Explored paths**:
-  - `src/main.ts` (GrimHarvestGame assembly, loop, event hooks, restart requirements)
-  - `src/core/weapons/WeaponManager.ts` & occult weapon implementations (BoneSpear, ArcaneScythe, SoulOrbiters, etc.)
-  - `src/core/systems/UpgradeSystem.ts` & `src/ui/UpgradeModal.ts`
-  - `src/core/systems/WaveDirector.ts`
-  - `src/render/Camera.ts` & `src/ui/GothicHUD.ts`
-  - `src/core/entities/Player.ts` & `PlayerProgression.ts`
-  - `src/core/HordeManager.ts` & `LootManager.ts` & `DarkFantasyVFX.ts`
-  - `src/input/KeyboardController.ts` & `TouchVirtualPad.ts`
-  - `tests/unit/*.test.ts` (210 tests passing across 18 test files)
+  - `src/main.ts` (lines 463-479 contact damage loop)
+  - `src/core/entities/Player.ts` and `EnemyTypes.ts` (hurtbox & hitbox definitions)
+  - `src/core/SpatialHashGrid.ts` and `HordeManager.ts` (broadphase spatial search logic)
+  - `src/core/weapons/` (BoneSpear, SoulOrbiters, ArcaneScythe, CursedAura, AbyssalLightning, Projectile, WeaponManager)
+  - `src/render/sprites/DarkFantasySprites.ts` and `vfx/DarkFantasyVFX.ts` (visual silhouettes and particle dimensions)
+  - `vitest.config.ts` and `tests/unit/` (29 test files, 376 tests passing)
 - **Key findings**:
-  1. `main.ts` completely lacks `restart()` and has no event listeners on canvas click or Spacebar for resurrection when dead.
-  2. `start()` in `main.ts` lacks a sub-step cap on `while (this.accumulator >= FIXED_TIMESTEP)`, creating infinite main thread freezes on large timestamp jumps.
-  3. `WeaponManager.clear()` does not purge sub-weapon pools (e.g. `BoneSpear.projectilePool`), does not reset `simulationTime` or hit buffers, and leaves weapons empty instead of starter Arcane Scythe Rank 1.
-  4. `UpgradeSystem.reset()` clears all weapons; needs to re-add starter `weapon_scythe` Rank 1.
-  5. `UpgradeModal.close()` does not clear cards or selections; modal and pause state can remain frozen without explicit `reset()`.
-  6. `WaveDirector.reset()` already exists and cleanly restores Phase 1 / 0:00 / baseline difficulty.
-  7. `Camera.reset()` and `GothicHUD.reset()` already exist and zero shake/trauma and HUD indicators.
-  8. `Player.ts` and `HordeManager.ts` require concise `reset()` methods.
-  9. Headless unit testing via `new GrimHarvestGame()` without container is 100% viable in Vitest/Node.
-- **Unexplored areas**: None for Milestone 1 scope.
+  - `main.ts:468` adds phantom `+ 15` padding to `Player.COLLISION_RADIUS` and has ZERO narrowphase check. Broadphase expands this to 61px!
+  - `BoneSpear.ts` projectile radius is 12px with phantom `+ 14` query padding and zero narrowphase distance check in `handleHit`. Visual head is only 10px wide triangular tip, calibrated to r=8.0px.
+  - `SoulOrbiters.ts` checks full 360-degree annular ring `|dist - orbitRadius| <= 26` around player instead of individual orbiting skulls (r=10px).
+  - `ArcaneScythe.ts` and `CursedAura.ts` lack narrowphase radial checks, hitting enemies up to +32px beyond visual blades/rings.
+  - Unit test suite specification for `tests/unit/hitbox_precision.spec.ts` designed covering 1px near-miss (0 damage) vs exact touch (damage registered), 360-degree symmetry, and projectile boundaries.
+- **Unexplored areas**:
+  - None within Explorer 3 scope.
 
 ## Key Decisions Made
-- Fully designed `GrimHarvestGame.restart()` orchestration covering all 13 subsystem reset steps.
-- Designed accumulator safety ceiling (`maxSubSteps = 5`) in `main.ts` to prevent main thread freeze.
-- Designed comprehensive 8-suite Vitest test plan for `tests/unit/restart.spec.ts`.
-- Synthesized complete 5-component report in `.agents/explorer_m1_3/handoff.md`.
+- Calibrate Player hurtbox to r=11.0px (sorcerer body).
+- Calibrate Enemy hitboxes: Skeleton 11px, Ghoul 13px, Banshee 12px, Death Knight 18px, Necromancer 14px.
+- Calibrate Bone Spear to r=8.0px, Soul Orbiters to per-skull r=10.0px.
+- Enforce strict narrowphase distance check $\Delta x^2 + \Delta y^2 \le (r_1 + r_2)^2$ in `main.ts` and weapons.
+- Completed handoff report in `handoff.md`.
 
 ## Artifact Index
-- handoff.md — Final investigation and recommendations report
-- progress.md — Liveness and execution status
-- BRIEFING.md — Persistent working memory
-- DISPATCH.md — Incoming instruction log
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/DISPATCH.md — Dispatch log
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/progress.md — Progress heartbeat
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_3/handoff.md — Final handoff report

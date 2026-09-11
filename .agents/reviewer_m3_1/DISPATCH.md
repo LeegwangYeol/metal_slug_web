@@ -1,29 +1,22 @@
-## 2026-09-10T18:29:36Z
+## 2026-09-11T03:05:23Z
 
-You are reviewer_m3_1 (role: High-Reliability Reviewer).
-Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1
+You are Reviewer 1 (Agent 21) for Milestone 3: Automated Playwright E2E Suite & Visual Proof.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1
+Project root: /Users/user/teamwork_projects/metal_slug_web
 
-MANDATORY FIRST STEP:
-Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
-Also read:
+Read the following documents:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
 - /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3/handoff.md
 
-Review Mission:
-Evaluate Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish):
-1. Examine code in \`src/render/vfx/DarkFantasyVFX.ts\`, \`src/render/GothicBackdrop.ts\`, \`src/main.ts\`, and \`tests/unit/DarkFantasyVFX.spec.ts\`.
-2. Verify:
-   - Dynamic Radial Lighting: Dual-pass offscreen buffer (\`destination-out\` + \`lighter\`), warm amber player torch flicker, dynamic spell flashes.
-   - Contact Drop Shadows: Elliptical shadows under player, horde enemies, and soul gems.
-   - Ground Decal System: 500-slot circular ring buffer with blood splatters, blood pools, lightning scorch, and sigil scorch.
-   - Arcane Particles: Branching abyssal lightning, swirling soul motes, bone fragments, rune circles.
-   - Atmospheric Mist: 3-layer depth mist in \`GothicBackdrop.ts\`.
+Review tasks:
+1. Review `tests/e2e/hitbox_dodge.spec.ts` and `tests/e2e/camera_view.spec.ts`.
+2. Verify that:
+   - `hitbox_dodge.spec.ts` genuinely verifies that near-miss grazing (12-20px outside physical touch) deals ZERO damage.
+   - `hitbox_dodge.spec.ts` genuinely verifies that physical contact deals damage and triggers blood burst VFX.
+   - `camera_view.spec.ts` genuinely verifies centered camera tracking and generates visual proof screenshots.
 3. Run verification commands:
-   - \`npx vitest run tests/unit/DarkFantasyVFX.spec.ts\`
-   - \`npm test\`
-   - \`npx tsc --noEmit\`
-
-Write your report in \`/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1/handoff.md\`.
-Explicitly state your verdict: \`APPROVE\` or \`REQUEST_CHANGES\`.
-When complete, send a message to orchestrator with your verdict.
+   - `npx playwright test tests/e2e/hitbox_dodge.spec.ts tests/e2e/camera_view.spec.ts`
+4. Document findings and state a clear verdict: **APPROVE** or **REQUEST_CHANGES** in `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1/handoff.md`.
+5. Send a message to orchestrator when finished.

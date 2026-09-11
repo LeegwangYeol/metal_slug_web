@@ -1,348 +1,405 @@
-# Milestone 3 Exploration & Architectural Blueprint: Dynamic Lighting, Rich VFX & Atmospheric Polish
+# Milestone 3 (Agent 19): Playwright Reliability & Flakiness Investigation Report
 
-**Investigator**: explorer_m3_3 (Codebase Researcher / Explorer)  
-**Date**: 2026-09-10T16:15:00Z  
-**Target Subsystems**:
-1. `src/render/vfx/DarkFantasyVFX.ts` (Particle System & Arcane Effects Engine)
-2. `src/render/GothicBackdrop.ts` (Multi-Layer Atmospheric Mist & Parallax Pipeline)
-3. `tests/unit/DarkFantasyVFX.spec.ts` (Comprehensive Vitest Specification & Empirical Verification Suite)
+**Author**: Explorer 3 (Agent 19 - Playwright Reliability & Flakiness Explorer)  
+**Date**: 2026-09-11  
+**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3`  
+**Target Scope**: Playwright E2E test reliability, headless browser rendering nuances, requestAnimationFrame pacing, reliable waiting strategies, and deterministic execution for Milestone 3 (`tests/e2e/hitbox_dodge.spec.ts`, `tests/e2e/camera_view.spec.ts`, and CI test runners).
 
 ---
 
 ## 1. Observation
 
-### 1.1 Existing Codebase State & Current Implementations
+### 1.1 Rendering Architecture & Context Inspection
+- **Pure 2D Canvas Engine**: Inspection of all source rendering files confirms zero WebGL usage:
+  - `src/main.ts:213`: `this.ctx = canvas.getContext('2d');`
+  - `src/render/sprites/DarkFantasySprites.ts:190`: `const ctx = canvas.getContext('2d');`
+  - `src/render/GothicBackdrop.ts:87`: `const ctx = canvas.getContext('2d')!;`
+  - `src/render/vfx/DarkFantasyVFX.ts:1517`: `this.lightCtx = this.lightCanvas?.getContext('2d') ?? null;`
+  - Grep search for `webgl` in `src/` returned 0 occurrences across the entire codebase.
+- **Offscreen Procedural & Composite Stencils**:
+  - `DarkFantasySprites.ts` uses cached offscreen canvases for procedural entity rasterization (Skeleton, Ghoul, Banshee, Death Knight, Necromancer, Sorcerer).
+  - `DarkFantasyVFX.ts` manages 5 offscreen canvases (`lightCanvas`, `vignetteCanvas`, `torchStencilCanvas`, `spellStencilCanvas`, `pointStencilCanvas`) with composite operations:
+    - `'source-over'` for dark ambient fill (`rgba(8, 6, 12, 0.88)`).
+    - `'destination-out'` for torch/spell light carving.
+    - `'lighter'` for additive bloom passes.
 
-1. **`DarkFantasyVFX.ts` (`src/render/vfx/DarkFantasyVFX.ts:11-42, 63-93, 156-188, 470-593`)**:
-   - **Data Structures**:
-     - `ParticleType` is restricted to 7 types:
-       `'BLOOD_DROPLET' | 'BONE_CHIP' | 'SOUL_SPARK' | 'GHOUL_BILE' | 'SPELL_TRAIL' | 'SPELL_CIRCLE' | 'GEM_GLINT'` (lines 11–18).
-     - `Particle` interface (lines 20–42) includes `id, active, type, x, y, vx, vy, drag, gravity, life, maxLife, startSize, endSize, size, color, startAlpha, endAlpha, alpha, rotation, vRot, extra`.
-   - **Allocation & Pooling**:
-     - Constructor defaults to `capacity = 500` pre-allocated particle objects in `this.pool`, paired with `freeIndices: Int32Array`, `activeIndices: Int32Array`, and `indexInActive: Int32Array` (lines 56–93).
-     - `allocateParticle()` uses swap-and-pop from `freeIndices` (lines 103–125). When saturated, it currently returns `this.pool[this.activeIndices[0]]` without re-ordering `activeIndices` or cycling the active array.
-   - **Motion Integration (`update(dt)`)**:
-     - Standard Euler integration with drag: `vx *= Math.pow(drag, dt * 60)`, `vy *= Math.pow(drag, dt * 60)`, `vy += gravity * dt` (lines 169–173).
-     - `SOUL_SPARK` only exhibits simple 1D X-axis oscillation:
-       `p.vx += Math.sin(p.life * 12.0 + p.extra) * 15.0 * dt;` (lines 175–177). It lacks true 2D orbital/swirling drift.
-   - **Dual-Layer Rendering**:
-     - `renderGround(ctx, camera)` (lines 470–514): Renders only `SPELL_CIRCLE`. It draws a basic 5-pointed star and single outer ring.
-     - `renderAir(ctx, camera)` (lines 516–593): Renders all non-circle particles. All drawing uses default `source-over` composite operation. There is **zero additive blending** (`ctx.globalCompositeOperation = 'lighter'`), causing soul motes, sparks, and spell trails to appear as flat opaque shapes rather than luminous spiritual energy.
-     - `BLOOD_DROPLET` is rendered as a simple uniform circle (`ctx.arc(sx, sy, s, 0, Math.PI * 2)`) (lines 543–546), completely lacking velocity-based elongation, directional spraying, or viscous blood pooling.
-     - `BONE_CHIP` is rendered as a simple solid rectangle (`ctx.fillRect(-s / 2, -s / 2, s, s * 0.6)`) (lines 553), with no 3D tumbling projection, marrow detailing, or geometry variation.
-     - There is **no branching lightning arc emitter** in `DarkFantasyVFX.ts`.
+### 1.2 Playwright Configuration & Headless Chromium Flags
+- In `playwright.config.ts:20-29`:
+  ```typescript
+  headless: true,
+  viewport: { width: 960, height: 540 },
+  deviceScaleFactor: 1,
+  trace: 'off',
+  video: 'off',
+  screenshot: 'only-on-failure',
+  launchOptions: {
+    args: ['--disable-gpu', '--disable-dev-shm-usage', '--no-sandbox'],
+  },
+  ```
+- And in `projects: [ { name: 'chromium', ... } ]` (lines 37–40):
+  ```typescript
+  launchOptions: {
+    args: ['--disable-gpu', '--disable-dev-shm-usage', '--no-sandbox'],
+  },
+  ```
+- **Observations on Chromium Args**:
+  - `--disable-gpu` disables GPU hardware acceleration, forcing Chromium to use CPU software rasterization (Skia software renderer).
+  - Crucial background throttling prevention flags are **missing**:
+    - `--disable-background-timer-throttling` is absent.
+    - `--disable-backgrounding-occluded-windows` is absent.
+    - `--disable-renderer-backgrounding` is absent.
+  - When Chromium detects a tab/window is in the background, occluded, or loses focus in headless environments, it can throttle `requestAnimationFrame` down to 1–10 Hz and throttle `setTimeout` intervals.
 
-2. **Weapon Integration Gaps (`src/core/weapons/AbyssalLightning.ts` & `src/core/weapons/CursedAura.ts`)**:
-   - `AbyssalLightning.ts:27-32, 282-288, 301-305`:
-     - Implements an internal `activeBolts: ActiveBolt[]` array that dynamically instantiates heap objects via `this.activeBolts.push(...)` and churns memory via `this.activeBolts.splice(i, 1)`.
-     - In `createBoltVisual()` (lines 256–288), bolts are straight line-segments jittered along a single perpendicular vector. There are **zero recursive branching forks**, **zero child branches**, and **no cyan-to-purple dissipation timeline**.
-   - `CursedAura.ts:169-176, 210-227`:
-     - Dynamically pushes pulse rings to `activeRings: ActiveRing[]`.
-     - Renders a plain single circle with `ctx.arc(...)`. There are no inscribed occult glyphs, radial rune spokes, or shockwave expansion effects.
-   - `main.ts:160-192`:
-     - On player level-up (`this.player.progression.onLevelUp(...)`), the game pauses and opens `UpgradeModal`, but does **not** trigger any occult ascension rune or ritual VFX on the ground.
+### 1.3 Canvas DOM & Responsive CSS Nuance
+- In `index.html:31-43`:
+  ```css
+  canvas {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    display: block;
+  }
+  ```
+- In `src/main.ts:208-209`: `canvas.width = 960; canvas.height = 540;`.
+- When CSS is `width: 100%; height: 100%`, any discrepancy in window frame size, scrollbars, or device pixel ratio causes CSS layout dimensions to deviate slightly from the 960x540 internal buffer, introducing subpixel anti-aliasing interpolation during screenshots unless explicitly pinned.
+- In `tests/e2e/horde_survival.spec.ts:45-49` and `tests/e2e/restart_survival.spec.ts:45-49`, existing stable visual proof tests explicitly fix this by setting:
+  ```typescript
+  canvas.style.width = '960px';
+  canvas.style.height = '540px';
+  ```
 
-3. **Atmospheric Mist in `GothicBackdrop.ts` (`src/render/GothicBackdrop.ts:335-354, 482-530`)**:
-   - **Surface Generation (`createMistSurface`)**:
-     - Pre-renders 24 radial gradient circles onto a single `mistCanvas` (1024x540) using `PRECOMPUTED_TRANSLUCENCIES.mistBase` and `mistUpper` (lines 340–353).
-   - **Render Pass**:
-     - Layer 6 (Background rolling mist, lines 482–504) draws `mistCanvas` at Parallax 0.40 and Parallax 0.65. Sub-layer B applies a rigid vertical translation `Math.sin(elapsedTime * 0.5) * 15` to the entire canvas. This produces a rigid sliding sheet effect rather than organic undulating waves.
-     - `renderForegroundMist(ctx, camX, _camY, elapsedTime)` (lines 513–529):
-       - Draws `mistCanvas` at Parallax 0.85 across the screen at `y = 0`.
-       - **Direct Defect**: `_camY` is marked as unused and completely ignored! When the player moves vertically across the cursed graveyard arena, the foreground mist fails to track vertical camera movement, breaking atmospheric immersion.
+### 1.4 Window Global Attachment & Property Discrepancy
+- In `src/main.ts:614-620`:
+  ```typescript
+  const bootstrap = () => {
+    if ((window as any).__game) return;
+    const container = document.getElementById('game-container') ?? document.body;
+    const game = new GrimHarvestGame(container);
+    game.start();
+    (window as any).__game = game;
+    (window as any).__GAME__ = game;
+  };
+  ```
+- **Critical Finding**: Only `__game` and `__GAME__` are exposed on `window`. `window.game` is **NOT** exposed!
+- Any test or waiting utility querying `window.game` will encounter `undefined` and time out after 10,000ms.
+- Furthermore, `bootstrap()` runs asynchronously:
+  - If `document.readyState === 'loading'`, it attaches to `DOMContentLoaded`.
+  - Even after `page.goto('/')` resolves, `<script type="module" src="/src/main.ts"></script>` executes asynchronously via the browser module loader.
 
-4. **Testing Environment & Existing Invariants**:
-   - All 24 test suites (285 unit tests) are currently 100% green (`npm test` passes in 3.42s).
-   - `tests/unit/DarkFantasyVFX.test.ts` contains 11 baseline tests verifying 500-slot initialization, free/active counts, and dual-layer culling.
-   - `tests/unit/ChallengerM2_2.test.ts` (lines 10–148) enforces strict pool invariants:
-     - `activeCount + freeCount === 500` across 15,000 cycles.
-     - 100% object identity preservation (zero new objects instantiated).
-     - Heap growth strictly bounded (< 10MB).
-     - Strict 1:1 balance between `ctx.save()` and `ctx.restore()`.
+### 1.5 HUD & Health Bar Architecture (Canvas vs DOM)
+- In `src/ui/GothicHUD.ts:11`:
+  `7. Zero DOM overhead: 100% rendered directly on 2D canvas context at locked 60Hz.`
+- The vitality bar, level badge, XP bar, timer, and kill count are rendered 100% directly onto the 2D canvas context via `GothicHUD.renderVitalityBar()` (`src/ui/GothicHUD.ts:429-470`).
+- There are **zero** DOM elements for health, XP, or HUD overlays inside `#game-container`.
+- Vitality bar geometry in virtual canvas space:
+  - `barX = 96, barY = 18, barW = 160, barH = 22`
+  - Active blood fill is rendered from `(barX, barY)` to `(barX + bloodW, barY + barH)` with gradient `bloodBright` (`#e53e3e`) and `bloodBase` (`#6b1212`).
+  - Charred empty reservoir background is `bloodDark` (`#380a0a`).
+
+### 1.6 Timing Spikes & Benchmark Flakiness in CI / Parallel Execution
+- Running `npx vitest run` across all 33 test files in parallel yielded a test failure:
+  - `tests/unit/DarkFantasySprites.spec.ts:542`: `expect(elapsedMs).toBeLessThan(10.0)` failed with `expected 49.63ms to be less than 10`.
+  - When run isolated via `npx vitest run tests/unit/DarkFantasySprites.spec.ts`, the exact same test passed in **0.572ms**!
+  - Cause: In parallel test execution, CPU contention caused thread scheduling pauses that inflated wall-clock time from 0.57ms to 49.6ms.
+- In `tests/e2e/game_initialization.spec.ts:129-131` and `tests/e2e/horde_survival.spec.ts:972-974`:
+  - `expect(benchmark.maxFrameTimeMs).toBeLessThan(50.0);`
+  - In `horde_survival.spec.ts:938-940`, `maxFrameTimeMs` is tracked from **frame 1** without excluding cold-start JIT and texture pre-render frames (`frameCount <= 5`).
+  - On constrained CI runners (e.g. 2 vCPUs), a cold-start JIT or backdrop initialization frame can take 55–65ms on frame 1, triggering a timing flake despite steady 60Hz subsequent frames.
+
+### 1.7 Live Autonomous Loop vs Deterministic Stepping Benchmark
+- Running `npx playwright test tests/e2e/horde_survival.spec.ts -g "Visual Proof"` executed 4 tests in **3.3 seconds** total (~300ms per test).
+- Running live rAF loop survival tests (`horde_survival.spec.ts:62`) requires 30 seconds of real-time game ticking + 230 CDP IPC roundtrips (`waitForTimeout(130)`), taking **35–45 seconds**.
+- In `setupDeterministicGame(page)`:
+  - Pausing rAF via `g.stop()` and manually calling `game.step(1/60)` + `game.render()` completely decouples test verification from browser vsync and CPU jitter.
 
 ---
 
 ## 2. Logic Chain
 
-### 2.1 Overhaul Architecture for `DarkFantasyVFX.ts`
-
-From Observation 1.1 and 1.2, elevating `DarkFantasyVFX` to AAA dark-fantasy visual fidelity requires 4 targeted architectural upgrades while preserving strict $O(1)$ zero-garbage pool invariants:
-
-#### A. Branching Abyssal Lightning Arcs (`LIGHTNING_SEGMENT` / Recursive Subdivided Forks)
-1. **Algorithmic Midpoint Displacement with Probabilistic Forking**:
-   - Let strike origin be $(x_1, y_1)$ and target impact be $(x_2, y_2)$.
-   - Subdivide recursively down to depth $D = 3$:
-     - Compute midpoint $(mx, my) = \left(\frac{x_1 + x_2}{2}, \frac{y_1 + y_2}{2}\right)$.
-     - Compute perpendicular unit normal: $\hat{n} = \left(-\frac{\Delta y}{L}, \frac{\Delta x}{L}\right)$ where $L = \sqrt{\Delta x^2 + \Delta y^2} \lor 1$.
-     - Displace midpoint: $\vec{m}' = \vec{m} + \hat{n} \cdot (\text{random}() - 0.5) \cdot L \cdot 0.35 \cdot (0.75^{\text{depth}})$.
-     - At depth 1 and 2, evaluate branch probability $P_{\text{branch}} = 0.40$:
-       If triggered, spawn a child fork shooting outward at angle $\theta_{\text{fork}} = \text{atan2}(\Delta y, \Delta x) \pm (25^\circ \dots 40^\circ)$ with length $L_{\text{fork}} = L \cdot (0.45 \dots 0.65)$.
-   - Each resulting segment is allocated from the pre-allocated particle pool as a `LIGHTNING_SEGMENT`.
-2. **Particle Representation**:
-   - `p.type = 'LIGHTNING_SEGMENT'`.
-   - `p.x = segX1, p.y = segY1`, `p.vx = segX2 - segX1, p.vy = segY2 - segY1`.
-   - `p.size` = line width (trunk: 3.5px, primary fork: 2.2px, secondary fork: 1.4px).
-   - `p.extra` = branch level (0 for main trunk, 1 for primary fork, 2 for secondary fork).
-   - `p.maxLife` = 0.16s – 0.22s.
-3. **Cyan-to-Purple Dissipation Timeline**:
-   - Let progress $\tau = \text{life} / \text{maxLife} \in [0, 1]$.
-   - $\tau \in [0.0, 0.25]$: Blinding incandescent core (`#ffffff` / `#e6fffa`) enclosed by intense electric cyan corona (`#4fd1c5` / `#38b2ac`, `shadowBlur: 12`, `shadowColor: '#4fd1c5'`).
-   - $\tau \in [0.25, 0.65]$: Core transitions into crackling violet current (`#b794f6` / `#9f7aea`).
-   - $\tau \in [0.65, 1.0]$: Corona dissipates into faint abyssal purple ether (`rgba(112, 56, 184, alpha)`) with terminal spark motes popping at fork ends.
-
-#### B. Swirling Necrotic Soul Motes (`SOUL_SPARK` / Ethereal Kinematics & Additive Blending)
-1. **Multi-Harmonic 2D Sinusoidal Drift**:
-   - Replace the simplistic 1D X-oscillation with dual-frequency Lissajous swirl and ethereal buoyancy:
-     $$\frac{dx}{dt} = v_x \cdot \text{drag} + A_x \cos(\omega_x \cdot t + \phi) + B_x \sin(2\omega_x \cdot t)$$
-     $$\frac{dy}{dt} = v_y \cdot \text{drag} + g_{\text{inv}} + A_y \sin(\omega_y \cdot t + \phi)$$
-     where $g_{\text{inv}} = -32\text{ px/s}^2$ (inverted gravity / soul levitation), $\omega_x = 7.5\text{ rad/s}$, $\omega_y = 5.0\text{ rad/s}$, and amplitudes $A_x = 24\text{ px/s}, A_y = 12\text{ px/s}$.
-2. **Soft Additive Blending (`lighter`) Pass**:
-   - In `renderAir()`, partition luminous particles (`SOUL_SPARK`, `SPELL_TRAIL`, `GEM_GLINT`, `LIGHTNING_SEGMENT`):
-     ```typescript
-     ctx.save();
-     ctx.globalCompositeOperation = 'lighter';
-     // Render soft radial halos and glowing white cores
-     ctx.restore(); // Automatically restores 'source-over'
-     ```
-   - Each soul mote renders a soft outer halo (radius $s$, alpha $0.5 \cdot \alpha$, color `#48bb78` or `#9f7aea`) and a blazing inner pinpoint core (radius $0.35 \cdot s$, alpha $\alpha$, color `#f0fff4`). Overlapping motes additively sum into blazing spiritual vortexes.
-
-#### C. Visceral Blood Particles & 3D Tumbling Bone Shards
-1. **Enemy Impact vs Catastrophic Death Gore**:
-   - *Impact (`emitBloodImpact`)*:
-     - Directional spray cone aligned with weapon trajectory: $\theta_{\text{base}} = \text{atan2}(dirY, dirX) \pm 0.35\text{ rad}$.
-     - Count: 4–6 high-velocity droplets ($120-220\text{ px/s}$).
-     - Elongated droplet rendering: Aligned with velocity vector $\theta = \text{atan2}(v_y, v_x)$, length $L = s \cdot (1 + \text{speed} / 120)$. Rendered as viscous teardrops with arterial crimson `#9b111e` to `#e53e3e`.
-   - *Death (`emitDeathGore`)*:
-     - Catastrophic 360-degree radial blast: 14–20 blood droplets + 8–12 bone chips + 6 soul motes.
-     - Parabolic downward trajectory ($g = 180\text{ px/s}^2$) so droplets splatter toward the ground.
-2. **Bone Shard 3D Tumbling Projection**:
-   - Fragment archetypes: Splinter slivers, curved rib shards, and irregular vertebra chunks.
-   - Tumbling 3D illusion: Modulate horizontal width by cosine of tumble phase:
-     $$W(t) = s \cdot |\cos(p.\text{rotation} \cdot 1.8)| + 1.0,\quad H(t) = s \cdot (0.45 + 0.3 \cdot |\sin(p.\text{rotation})|)$$
-   - Ground bounce: When shard reaches ground level or progress $> 0.7$, reflect vertical velocity: $v_y = -v_y \cdot 0.35$, simulating bone fragments clattering onto flagstones.
-
-#### D. Occult Glowing Rune Circles (Level-Up Ascension & Sigil Shockwaves)
-1. **Level-Up Occult Ascension Seal (`emitLevelUpRune(x, y)` / `SPELL_CIRCLE` with mode)**:
-   - Centered on the player during level-up pauses ($R = 72\text{px}$, duration $2.4\text{s}$).
-   - 4-tiered sacred ceremonial geometry:
-     - *Tier 1*: Outer binding ring with 12 radial archaic rune hashes along perimeter.
-     - *Tier 2*: Clockwise rotating ring ($\omega = +1.2\text{ rad/s}$) carrying 8 runic node medallions.
-     - *Tier 3*: Counter-clockwise rotating inner heptagram ($\omega = -1.6\text{ rad/s}$) with illuminated celestial intersections.
-     - *Tier 4*: Central pulsing eye of the void breathing with $r = 14 + 4\sin(t \cdot 7)$.
-   - Emits an ascending ethereal ring of 12 rising soul motes spiraling upwards from the circle perimeter.
-2. **Ultimate / Sigil Activation Shockwave (`emitSigilShockwave(x, y, maxRadius)` / `emitUltimateRune`)**:
-   - Rapid explosive expansion: $r(t) = r_{\max} \cdot \left(1 - (1 - \tau)^3\right)$ where $\tau = t / 0.35$.
-   - Heavy outer shockwave ring ($4\text{px}$ stroke) in blinding cyan/crimson with blooming glow (`shadowBlur: 14`).
-   - 8-directional occult spikes projecting outward from the perimeter.
-   - Spawns a ring of crackling electric sparks along the expanding circumference.
-
----
-
-### 2.2 Atmospheric Depth Mist Architecture in `GothicBackdrop.ts`
-
-From Observation 1.3, mist must provide genuine 3D volumetric depth and multi-frequency undulation:
-
-1. **3-Layer Depth Mist Separation**:
-   - **Layer 1: Low Creeping Graveyard Ground Mist (Midground, Parallax 0.40)**:
-     - Hugs the flagstones and tombstones below horde entities.
-     - Slow horizontal drift: $V_x = +18\text{ px/s}$.
-     - Base opacity $\alpha = 0.20$.
-   - **Layer 2: Undulating Graveyard Midground Mist (Mid-to-Fore, Parallax 0.65)**:
-     - Weaves between horde entities and player with counter-current drift: $V_x = -26\text{ px/s}$.
-     - True vertical multi-harmonic undulation:
-       $$Y_{\text{undulate}}(x, t) = 14 \cdot \sin(0.0035 x + 1.2 t) + 8 \cdot \cos(0.007 x - 0.7 t)$$
-     - Sliced strip blitting (10–12 vertical strips of width $96\text{px}$) ensures undulating displacement at $< 0.10\text{ms}$ execution cost.
-   - **Layer 3: Cinematic Foreground Depth Mist (Foreground, Parallax 1.15)**:
-     - Rendered in `renderForegroundMist()` after all entities and particles.
-     - Full 2D camera tracking:
-       $$\text{startX} = -((((camX \cdot 1.15 + t \cdot 38.0) \pmod W) + W) \pmod W)$$
-       $$\text{startY} = -((((camY \cdot 0.35 + 10 \cdot \sin(t \cdot 0.6)) \pmod H) + H) \pmod H)$$
-     - Solves the $camY$ defect. Soft billows ($\alpha = 0.08$) provide optical depth without obscuring combat.
-
-2. **360-Degree Seamless Wrapping Guarantee**:
-   - Loop bounds evaluated across `x < vw + W` and `y < vh + H` guarantee zero gaps across any camera coordinate $[-10000, 10000]$.
-
----
-
-### 2.3 Comprehensive Vitest Test Suite Architecture (`tests/unit/DarkFantasyVFX.spec.ts`)
-
-To ensure complete verification, `tests/unit/DarkFantasyVFX.spec.ts` must be structured into 8 exhaustive test suites:
-
-| Suite | Focus Area | Key Assertions & Thresholds |
-| :--- | :--- | :--- |
-| **Suite 1** | **Pool Pre-allocation & Invariants** | Strict count conservation (`active + free === capacity`), 25,000 churn cycles, 100% object identity preservation (0 heap allocations). |
-| **Suite 2** | **Saturation & FIFO Cycling** | 200% burst load clamping, safe oldest particle displacement, zero array growth. |
-| **Suite 3** | **Decal Cycling & Alpha Decay** | Bounded ring buffer, monotonic alpha decay ($\alpha \ge 0$, no negative underflow), off-screen frustum culling. |
-| **Suite 4** | **Branching Abyssal Lightning** | Jagged recursive subdivision, branch length/width scaling, cyan-to-purple dissipation timeline, terminal spark generation. |
-| **Suite 5** | **Swirling Soul Motes & Additive Blending** | 2D multi-harmonic sinusoidal drift, upward ethereal lift ($vy < 0$), `globalCompositeOperation = 'lighter'`, strict restoration to `'source-over'`. |
-| **Suite 6** | **Impact & Death Gore System** | Directional elongated blood spray on impact vs 360-degree burst on death, 3D bone tumbling illusion ($|\cos(\text{rot})|$), ground bounce. |
-| **Suite 7** | **Occult Runes (Level-Up & Sigil)** | Multi-tiered level-up seal with counter-rotating geometry, expanding sigil shockwave with radial spikes, viewport culling. |
-| **Suite 8** | **Numerical Hygiene & State Hygiene** | Zero NaNs across extreme fuzzing ($dt = 0, dt = 10$, negative coords, zero normals), 1:1 `save`/`restore` balance, zero shadow leaks. |
+1. **Premise 1 (Rendering Pipeline)**: Since Grim Harvest relies strictly on Canvas 2D (`CanvasRenderingContext2D`) and software compositing with `--disable-gpu` (Obs 1.1, 1.2), there are no WebGL context loss risks (`webglcontextlost`, SwiftShader/ANGLE initialization failures). However, heavy CPU software rasterization of large offscreen stencil canvases (`lightCanvas` 960x540) increases susceptibility to CPU starvation under load.
+2. **Premise 2 (Headless rAF Nuances)**: Headless Chromium without GPU acceleration drives `requestAnimationFrame` using an emulated BeginFrame timer. Without `--disable-background-timer-throttling` and related flags (Obs 1.2), Chromium may aggressively throttle rAF and timers if it marks the window as unfocused or occluded. Calling `await page.focus('canvas#game-canvas')` and supplying these launch flags prevents throttling.
+3. **Premise 3 (Waiting Strategies)**:
+   - Because `(window as any).game` is currently missing (only `__game` and `__GAME__` exist, Obs 1.4), test suites must use a unified fallback: `window.game ?? window.__game ?? window.__GAME__`.
+   - Because the HUD is 100% canvas-rendered with zero DOM elements (Obs 1.5), tests attempting to locate DOM selectors like `.health-bar` will fail. Reliable waiting must either:
+     - Query in-memory simulation state via `page.waitForFunction(() => window.__game.player.stats.currentHealth < 100)` or `hud.displayHealth`.
+     - Sample canvas pixels at `(116, 29)` via `ctx.getImageData(116, 29, 1, 1)`.
+4. **Premise 4 (Eliminating Flakiness)**:
+   - Wall-clock sleeps (`page.waitForTimeout(N)`) cause timing flakes because real-world seconds do not map 1:1 to in-game `elapsedTime` in headless CI.
+   - For visual proofs and mathematical boundary tests (such as near-miss dodge at 25px vs collision at 21px), asynchronous rAF loops introduce kinematic drift if frame deltas vary.
+   - Employing `setupDeterministicGame()` (`g.stop()`, manual `game.step(1/60)`, and manual `game.render()`) makes execution 100% deterministic, reduces test execution time from 35s to 300ms, and guarantees mathematical reproducibility across CI and local environments.
+5. **Premise 5 (Benchmarking Tolerance)**: Hard assertions like `maxFrameTimeMs < 50.0` from frame 1 fail under cold-start JIT contention (Obs 1.6). Excluding the first 5–10 warmup frames before asserting max frame time ensures tests measure steady-state performance rather than initial browser setup overhead.
 
 ---
 
 ## 3. Caveats
 
-1. **Particle Pool Capacity Backward Compatibility**:
-   - Existing tests (`DarkFantasyVFX.test.ts` and `ChallengerM2_2.test.ts`) instantiate `new DarkFantasyVFX(500)` and assert `capacity === 500`.
-   - The constructor **must** continue to accept `capacity: number = 500` as default, allowing `main.ts` or higher-capacity environments to pass `1000` while keeping all legacy tests green.
-2. **Canvas Composite State Leaks**:
-   - Using `ctx.globalCompositeOperation = 'lighter'` for soul motes and lightning must be wrapped inside `ctx.save()` / `ctx.restore()` or explicitly reset to `'source-over'`. Failure to reset would cause HUD or entity rendering to bleed additively.
-3. **Decal System Coordination with Peer Agent (explorer_m3_2)**:
-   - `explorer_m3_2` is focusing on the ground decal system (blood pools, blast marks).
-   - `DarkFantasyVFX` should provide clean ground particle hooks (`SPELL_CIRCLE`, ground blood droplets, scorch markers) that seamlessly interface with or complement the dedicated decal manager without duplicate rendering passes.
-4. **Headless / Node.js Mock Fidelity**:
-   - In headless test runs (`vitest`), Canvas 2D is mocked via stub objects. All drawing routines in `DarkFantasyVFX.ts` and `GothicBackdrop.ts` must safely execute without crashing when gradient or composite methods return stub objects.
+1. **Hardware Acceleration Variability**: While `--disable-gpu` ensures identical software rendering across Linux CI (headless GitHub Actions) and local macOS/Windows, it increases CPU usage. In ultra-low-spec CI environments (<2 vCPUs), running multiple tests concurrently would cause frame drops; hence `workers: 1` and `fullyParallel: false` in `playwright.config.ts` must be maintained.
+2. **Dynamic Live Steering vs Controlled Spawning in E2E Dodge**:
+   - In `tests/e2e/hitbox_dodge.spec.ts`, if the test allows the `WaveDirector` to spawn 50+ random enemies from all perimeter directions, the autonomous bot could become trapped, causing unintended damage and test failure.
+   - The test must either clear the background horde (`game.hordeManager.clear()`) and spawn controlled test enemies for exact near-miss verification, or use a constrained enemy count with a conservative dodging safety radius.
+3. **Canvas Tainted Origin**: Sampling pixel data via `ctx.getImageData()` is valid and un-tainted because all sprites, procedural textures, and fonts are generated dynamically in-memory or loaded from same-origin Vite assets without cross-origin image tainting.
 
 ---
 
-## 4. Conclusion & Concrete Code Specifications
+## 4. Conclusion & Actionable Hardening Recommendations
 
-### 4.1 Proposed Upgraded `DarkFantasyVFX.ts` Interface & Implementation Blueprint
-
-The following complete TypeScript specification defines the exact signatures, algorithms, and rendering passes to be implemented in `src/render/vfx/DarkFantasyVFX.ts`:
-
+### 4.1 Recommended Playwright Configuration Updates (`playwright.config.ts`)
+Add the following Chromium launch arguments to eliminate headless timer and rAF throttling:
 ```typescript
-export type ParticleType =
-  | 'BLOOD_DROPLET'
-  | 'BONE_CHIP'
-  | 'SOUL_SPARK'
-  | 'GHOUL_BILE'
-  | 'SPELL_TRAIL'
-  | 'SPELL_CIRCLE'
-  | 'GEM_GLINT'
-  | 'LIGHTNING_SEGMENT'
-  | 'OCCULT_SEAL';
-
-export interface Particle {
-  id: number;
-  active: boolean;
-  type: ParticleType;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  drag: number;
-  gravity: number;
-  life: number;
-  maxLife: number;
-  startSize: number;
-  endSize: number;
-  size: number;
-  color: string;
-  startAlpha: number;
-  endAlpha: number;
-  alpha: number;
-  rotation: number;
-  vRot: number;
-  extra: number; // Fork level for lightning, archetype for bone, mode for rune
+// In playwright.config.ts launchOptions.args:
+launchOptions: {
+  args: [
+    '--disable-gpu',
+    '--disable-dev-shm-usage',
+    '--no-sandbox',
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+  ],
 }
 ```
 
-#### Emitter Enhancements:
-1. **`emitLightningArc(x1, y1, x2, y2, isEvolution = false, color?: string)`**:
-   - Executes recursive midpoint subdivision up to depth 3 with 35% fork probability.
-   - Allocates `LIGHTNING_SEGMENT` particles storing `vx = x2 - x1, vy = y2 - y1`.
-   - Core glow rendered with white core + cyan/violet corona.
-2. **`emitSoulBurst(x, y, gemType, count = 6, swirlSpeed = 1.0)`**:
-   - Initializes motes with randomized orbital phases `extra = Math.random() * Math.PI * 2`.
-   - `update(dt)` applies multi-harmonic drift:
-     ```typescript
-     p.vx += (Math.cos(p.life * 7.5 + p.extra) * 24.0 - p.vx * 0.1) * dt;
-     p.vy += (Math.sin(p.life * 5.0 + p.extra) * 12.0 - 32.0) * dt;
-     ```
-3. **`emitBloodImpact(x, y, dirX, dirY, count = 4)` vs `emitDeathGore(x, y, gemType)`**:
-   - `emitBloodImpact`: Directional spray along $(\text{dirX}, \text{dirY})$, high drag ($0.88$), elongated teardrop rendering.
-   - `emitDeathGore`: Full 360-degree visceral blast combining arterial blood droplets, tumbling bone chips (using 3 distinct geometric archetypes), and rising soul sparks.
-4. **`emitLevelUpRune(x, y, radius = 72, duration = 2.4)` & `emitSigilShockwave(x, y, maxRadius = 180)`**:
-   - `emitLevelUpRune`: Spawns multi-tier ceremonial occult seal with dual counter-rotating geometry and spiraling ascending perimeter sparks.
-   - `emitSigilShockwave`: Spawns rapidly expanding shockwave ring ($10\text{px} \to 180\text{px}$) with radial spikes and crackling electric perimeter sparks.
+### 4.2 Game Bootstrap Ergonomics (`src/main.ts`)
+Add `(window as any).game = game;` at line 620 alongside `__game` and `__GAME__` so tests can uniformly access `window.game`.
 
-#### Render Hygiene:
-- `renderGround`: Renders `SPELL_CIRCLE` and `OCCULT_SEAL` with balanced `save()`/`restore()`.
-- `renderAir`: Renders flying gore and groups luminous particles (`SOUL_SPARK`, `LIGHTNING_SEGMENT`, `SPELL_TRAIL`, `GEM_GLINT`) within an additive `ctx.globalCompositeOperation = 'lighter'` block, strictly resetting to `'source-over'`.
+### 4.3 Standard Waiting & Readiness Helper Pattern
+All E2E tests should use this standardized waiting function:
+```typescript
+export async function waitForGameReady(page: Page, timeoutMs = 15000) {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('canvas#game-canvas', { timeout: timeoutMs });
+  
+  await page.waitForFunction(() => {
+    const w = window as any;
+    const g = w.game ?? w.__game ?? w.__GAME__;
+    return (
+      g &&
+      g.player &&
+      g.player.isAlive &&
+      g.hordeManager &&
+      g.weaponManager &&
+      g.backdrop &&
+      g.backdrop.isInitialized &&
+      g.isRunning
+    );
+  }, { timeout: timeoutMs });
 
----
+  await page.focus('canvas#game-canvas');
+}
+```
 
-### 4.2 Proposed Upgraded `GothicBackdrop.ts` Mist Pipeline
+### 4.4 Checking Health & HUD State Without DOM Elements
+- **Approach 1 (Direct State Inspection)**:
+  ```typescript
+  const health = await page.evaluate(() => {
+    const g = (window as any).game ?? (window as any).__game;
+    return g.player.stats.currentHealth;
+  });
+  expect(health).toBe(100);
+  ```
+- **Approach 2 (Canvas Pixel Sampling)**:
+  ```typescript
+  const barSample = await page.evaluate(() => {
+    const canvas = document.querySelector('canvas#game-canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    // Sample middle of health bar fill: (x=116, y=29)
+    const data = ctx.getImageData(116, 29, 1, 1).data;
+    return { r: data[0], g: data[1], b: data[2], a: data[3] };
+  });
+  // Verify healthy crimson blood color
+  expect(barSample?.r).toBeGreaterThan(120);
+  expect(barSample?.g).toBeLessThan(50);
+  ```
 
-1. **Undulating Midground Mist**:
-   ```typescript
-   // Sub-layer B (Mid swirling undulating mist)
-   const sliceCount = 10;
-   const sliceW = vw / sliceCount;
-   for (let s = 0; s < sliceCount; s++) {
-     const sliceWorldX = camX * 0.65 + s * sliceW;
-     const undulationY = 14 * Math.sin(sliceWorldX * 0.0035 + elapsedTime * 1.2) +
-                         8 * Math.cos(sliceWorldX * 0.007 - elapsedTime * 0.7);
-     const startX = -((((sliceWorldX - elapsedTime * 26.0) % W) + W) % W);
-     const startY = -((((camY * 0.65 + undulationY) % H) + H) % H);
-     ctx.drawImage(this.mistCanvas, s * (W / sliceCount), 0, W / sliceCount, H,
-                   s * sliceW, startY, sliceW, vh);
-   }
-   ```
-2. **Foreground Mist Vertical Camera Tracking**:
-   ```typescript
-   public renderForegroundMist(ctx: CanvasRenderingContext2D, camX: number, camY: number, elapsedTime: number): void {
-     if (!this.mistCanvas || !this.enableMist) return;
-     ctx.save();
-     const vw = this.viewportWidth;
-     const vh = this.viewportHeight;
-     const W = 1024;
-     const H = 540;
-     const startX = -((((camX * 1.15 + elapsedTime * 38.0) % W) + W) % W);
-     const startY = -((((camY * 0.35 + Math.sin(elapsedTime * 0.6) * 10) % H) + H) % H);
-     ctx.globalAlpha = 0.08;
-     for (let x = startX; x < vw + W; x += W) {
-       for (let y = startY; y < vh + H; y += H) {
-         ctx.drawImage(this.mistCanvas, x, y);
-       }
-     }
-     ctx.restore();
-   }
-   ```
+### 4.5 Blueprint for Milestone 3 Tests
 
----
+#### A. `tests/e2e/hitbox_dodge.spec.ts` (Feature 10)
+```typescript
+import { test, expect } from '@playwright/test';
 
-### 4.3 Proposed Full Specification Test Suite: `tests/unit/DarkFantasyVFX.spec.ts`
+test.describe('Milestone 3: Hitbox Precision & Near-Miss Dodge Verification', () => {
+  test('verifies near-miss enemy dodge (distance = r_p + r_e + 3px) deals ZERO damage, while exact collision registers damage', async ({ page }) => {
+    // 1. Boot and wait for game
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('canvas#game-canvas', { timeout: 10000 });
 
-The specification test file will contain 8 comprehensive suites (over 25 rigorous unit tests) utilizing a full operation-tracing mock Canvas context:
-- Suite 1: Pool Pre-allocation, Zero-Garbage Lifecycles & Saturation Invariants (25,000 cycles, 0 allocations).
-- Suite 2: Decal Cycling & Persistent Ground State Lifecycle.
-- Suite 3: Branching Abyssal Lightning & Dissipation Timeline.
-- Suite 4: Swirling Necrotic Soul Motes & Additive Blending Hygiene.
-- Suite 5: Bone Fragments, Visceral Gore & Impact/Death Differentiation.
-- Suite 6: Occult Glowing Rune Circles (Level-Up & Sigil Shockwaves).
-- Suite 7: Numerical Hygiene & Zero NaN / Infinity Fuzzing Harness.
-- Suite 8: Canvas Composite Hygiene & 60Hz Frame Execution Budget (< 1.5ms).
+    await page.waitForFunction(() => {
+      const g = (window as any).__game ?? (window as any).game;
+      return g && g.player && g.hordeManager && g.isRunning;
+    }, { timeout: 10000 });
+
+    // 2. Stop rAF for deterministic stepping
+    await page.evaluate(() => {
+      const g = (window as any).__game ?? (window as any).game;
+      g.stop();
+      g.hordeManager.clear(); // clear random wave director spawns
+      
+      // Position player at origin
+      g.player.position.x = 0;
+      g.player.position.y = 0;
+      g.player.stats.currentHealth = 100;
+
+      // Spawn skeleton (r_e = 11px, player r_p = 11px, contact = 22px)
+      // Position at near-miss trajectory: x = 25px (3px clearance), y moving from -100 to +100
+      const enemy = g.hordeManager.spawn('skeleton', 25.0, -80.0);
+      if (enemy) {
+        enemy.velocity.x = 0;
+        enemy.velocity.y = 100; // moves downward past player
+      }
+    });
+
+    // 3. Step 60 frames (1.0 second of simulation)
+    await page.evaluate(() => {
+      const g = (window as any).__game ?? (window as any).game;
+      for (let i = 0; i < 60; i++) {
+        g.step(1 / 60);
+      }
+      g.render();
+    });
+
+    // 4. Assert ZERO damage taken during near-miss graze
+    const nearMissStatus = await page.evaluate(() => {
+      const g = (window as any).__game ?? (window as any).game;
+      return {
+        health: g.player.stats.currentHealth,
+        isAlive: g.player.isAlive,
+        vfxParticles: g.vfx.getParticleCount(),
+      };
+    });
+    expect(nearMissStatus.health).toBe(100);
+    expect(nearMissStatus.isAlive).toBe(true);
+
+    // 5. Test Exact Touch: Position enemy into true physical contact (x = 21px, d < 22px)
+    await page.evaluate(() => {
+      const g = (window as any).__game ?? (window as any).game;
+      g.hordeManager.clear();
+      g.hordeManager.spawn('skeleton', 21.0, 0.0);
+      g.step(1 / 60);
+      g.render();
+    });
+
+    const collisionStatus = await page.evaluate(() => {
+      const g = (window as any).__game ?? (window as any).game;
+      return {
+        health: g.player.stats.currentHealth,
+        hasBloodVFX: g.vfx.getParticleCount() > 0,
+      };
+    });
+
+    expect(collisionStatus.health).toBeLessThan(100);
+  });
+});
+```
+
+#### B. `tests/e2e/camera_view.spec.ts` (Feature 11)
+```typescript
+import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
+
+test.describe('Milestone 3: Camera Overhaul & Visual Proof Verification', () => {
+  const ARTIFACT_DIR = path.resolve(process.cwd(), 'artifacts/dark_fantasy');
+
+  test.beforeAll(() => {
+    if (!fs.existsSync(ARTIFACT_DIR)) {
+      fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+    }
+  });
+
+  test('captures improved_camera_angle.png (>50KB, centered player tracking, comfortable 360 top-down FOV)', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('canvas#game-canvas', { timeout: 10000 });
+
+    await page.waitForFunction(() => {
+      const g = (window as any).__game ?? (window as any).game;
+      return g && g.backdrop && g.backdrop.isInitialized;
+    }, { timeout: 10000 });
+
+    await page.evaluate(() => {
+      const canvas = document.querySelector('canvas#game-canvas') as HTMLCanvasElement;
+      canvas.style.width = '960px';
+      canvas.style.height = '540px';
+
+      const g = (window as any).__game ?? (window as any).game;
+      g.stop();
+
+      // Position player at origin, camera centered
+      g.player.position.x = 0;
+      g.player.position.y = 0;
+      g.camera.reset(-480, -270);
+      g.camera.update(0, 0, 1 / 60, 0, 0);
+
+      // Verify mathematical centering on viewport
+      const screenPos = g.camera.worldToScreen(0, 0);
+      (window as any)._screenPos = screenPos;
+
+      // Populate rich visual scene: concentric undead horde, drops, and lighting
+      g.hordeManager.clear();
+      g.hordeManager.spawnWave('SKELETON', 30, { x: 0, y: 0 }, 160);
+      g.hordeManager.spawnWave('GHOUL', 20, { x: 0, y: 0 }, 250);
+      g.hordeManager.spawnWave('BANSHEE', 15, { x: 0, y: 0 }, 340);
+      g.hordeManager.spawnWave('DEATH_KNIGHT', 8, { x: 0, y: 0 }, 420);
+
+      g.lootManager.spawnDrop('EMERALD_SHARD', 60, 40, false);
+      g.lootManager.spawnDrop('RUBY_GEM', -80, -30, false);
+
+      for (let i = 0; i < 8; i++) g.step(1 / 60);
+      g.render();
+    });
+
+    const screenPos = await page.evaluate(() => (window as any)._screenPos);
+    expect(screenPos.x).toBeCloseTo(480, 1);
+    expect(screenPos.y).toBeCloseTo(270, 1);
+
+    const targetPath = path.join(ARTIFACT_DIR, 'improved_camera_angle.png');
+    await page.locator('canvas#game-canvas').screenshot({ path: targetPath });
+
+    expect(fs.existsSync(targetPath)).toBe(true);
+    const stats = fs.statSync(targetPath);
+    expect(stats.size).toBeGreaterThan(50 * 1024);
+  });
+
+  test('captures hitbox_precision_dodge.png (>50KB, tight near-miss graze without phantom damage or blood burst)', async ({ page }) => {
+    // Similar deterministic setup showing player grazing past undead claws at 25px with active scythe
+    const targetPath = path.join(ARTIFACT_DIR, 'hitbox_precision_dodge.png');
+    // ... capture screenshot and assert > 50KB ...
+  });
+});
+```
 
 ---
 
 ## 5. Verification Method
 
-To independently verify all findings and validate future implementations:
+To independently verify all findings and test execution:
 
-1. **Unit Test Execution**:
+1. **Verify Playwright Test Discovery & Execution**:
    ```bash
-   npm test
+   npx playwright test --list
+   npx playwright test tests/e2e/game_initialization.spec.ts
+   npx playwright test tests/e2e/challenger_m4_restart_stress.spec.ts
+   npx playwright test tests/e2e/horde_survival.spec.ts -g "Visual Proof"
    ```
-   Ensures all 24 test suites (285 tests) continue to pass 100% green without regressions.
-2. **Dedicated VFX Specification Run**:
+   *Expected*: All tests pass cleanly in headless mode with 1 worker.
+
+2. **Verify Canvas Rendering Context**:
+   Inspect `src/main.ts:213` and verify `canvas.getContext('2d')` is used with zero WebGL invocations.
+
+3. **Verify Existing Visual Artifact Sizes**:
    ```bash
-   npx vitest run tests/unit/DarkFantasyVFX.test.ts
+   ls -la artifacts/dark_fantasy/*.png
    ```
-   And once implemented:
-   ```bash
-   npx vitest run tests/unit/DarkFantasyVFX.spec.ts
-   ```
-3. **TypeScript Compilation Check**:
-   ```bash
-   npx tsc --noEmit
-   ```
-   Confirms strict type safety across all particle type additions and interface signatures.
+   *Expected*: All existing 6 artifacts (`horde_swarm.png`, `level_up_modal.png`, `survival_gameplay.png`, `enhanced_graphics_swarm.png`, `restart_verified.png`, `occult_vfx_lighting.png`) exceed 50,000 bytes (ranges between 186 KB and 335 KB).
+
 4. **Invalidation Conditions**:
-   - If `activeCount + freeCount !== capacity` at any frame, the pooling invariant is broken.
-   - If any particle field contains `NaN`, `Infinity`, or `undefined`, the numerical hygiene test must fail.
-   - If `ctx.globalCompositeOperation` is not `'source-over'` after rendering, the composite cleanup test must fail.
-   - If foreground mist does not track vertical camera motion, the backdrop parity test must fail.
-
+   - If tests reintroduce `page.waitForTimeout()` without state predicates and fail under CI CPU throttling.
+   - If new tests query `window.game` before `(window as any).game = game;` is merged into `src/main.ts`.
+   - If tests query non-existent DOM elements for HUD/health instead of canvas state or pixel data.

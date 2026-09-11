@@ -1,52 +1,46 @@
-# BRIEFING — 2026-09-10T16:16:00Z
+# BRIEFING — 2026-09-11T11:57:00+09:00
 
 ## Mission
-Investigate Milestone 3 architecture for Entity Contact Drop Shadows and Ground Decal System in metal_slug_web.
+Investigate Playwright camera screenshot capture and visual proof artifact generation (>50KB) for Milestone 3.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Roles: Camera View & Screenshot Capture Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 3
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 3 (Camera View & Screenshot Capture)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Variable shadow radius scaled to entity bounds (Player: 18x7, Skeleton: 14x5, Ghoul: 16x6, Death Knight: 24x9, Banshee: floating diffuse shadow)
-- Ground Decal System: persistent blood splatters, blast scorch marks, zero-allocation circular buffer (e.g. 500 pooled decals)
-- Always wait for explicit user approval before proceeding with implementation
+- Produce analysis report in handoff.md following 5-component protocol
+- Output screenshot capture blueprint for tests/e2e/camera_view.spec.ts
+- Ensure target screenshots improved_camera_angle.png & hitbox_precision_dodge.png are > 50KB
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: 2026-09-10T16:16:00Z
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: 2026-09-11T11:57:00+09:00
 
 ## Investigation State
 - **Explored paths**:
-  - `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`
-  - `src/main.ts` (render pipeline, loop, restart hooks)
-  - `src/render/vfx/DarkFantasyVFX.ts` (particle pool, renderGround, renderAir)
-  - `src/render/sprites/DarkFantasySprites.ts` (baked vector shadow drawers, damage flashing)
-  - `src/render/GothicBackdrop.ts`, `src/render/DarkFantasyPalette.ts`
-  - `src/core/entities/EnemyTypes.ts`, `src/core/entities/Enemy.ts`, `src/core/entities/Player.ts`
-  - `src/core/systems/LootManager.ts`
-  - `src/core/weapons/AbyssalLightning.ts`, `src/core/weapons/CursedAura.ts`
-  - Test suites: `DarkFantasyVFX.test.ts`, `ChallengerM2_1AdversarialHarness.test.ts`, `ChallengerM3_2.test.ts`
+  - `src/render/Camera.ts` (centered tracking, lookahead clamping <= 40px, damping k=8.0)
+  - `src/main.ts` (contact damage exact circle check, render pipeline passes, resolution 960x540)
+  - `src/core/entities/Player.ts`, `src/core/systems/HordeManager.ts` (calibrated radii, spawnWave, pool)
+  - `src/core/weapons/WeaponManager.ts`, `src/core/systems/LootManager.ts`
+  - `src/render/vfx/DarkFantasyVFX.ts`, `src/render/GothicBackdrop.ts`, `src/ui/GothicHUD.ts`
+  - `playwright.config.ts`, `tests/e2e/horde_survival.spec.ts`, `tests/e2e/restart_survival.spec.ts`
+  - `artifacts/dark_fantasy/` permissions and file size empirics
 - **Key findings**:
-  - Shadows currently baked inside procedural sprites flash white/crimson on damage and clip across adjacent enemies; moving to a dedicated pre-entity pass solves both issues.
-  - Pre-rendered offscreen radial gradient shadow atlas ensures <0.5ms blit time for 700+ entities/gems at 60 FPS.
-  - Soul Gems currently lack contact shadows; adding floor-pinned shadows creates convincing 3D hover depth with existing sinusoidal bobbing.
-  - Banshee floating diffuse shadow can dynamically modulate radius and alpha inversely with float height.
-  - No ground decal system currently exists; `DarkFantasyVFX.renderGround` only draws spell circles.
-  - Formulated 500-slot zero-allocation circular buffer decal system covering blood splatters, pooling cores, lightning scorches, and death sigil craters.
-- **Unexplored areas**: Implementation phase (waiting on user/orchestrator direction).
+  - `artifacts/dark_fantasy` is `drwxr-xr-x` owned by `user:staff`, fully writable.
+  - 960x540 canvas renders with high-entropy dark fantasy assets empirically yield 182KB to 328KB PNGs, far exceeding 50KB.
+  - Symmetrical centered tracking at (480, 270) with bounded lookahead (<= 40px) eliminates side-scroller blind spots.
+  - Narrowphase damage at `distSq <= (Player.COLLISION_RADIUS + enemy.radius)^2` allows near-miss grazing at 24px (2px air gap) with 0 damage.
+- **Unexplored areas**: None for this investigation scope.
 
 ## Key Decisions Made
-- Formulated dedicated Pre-Entity Contact Drop Shadow Pass architecture with offscreen stamp atlas.
-- Formulated Zero-Allocation Circular Buffer Ground Decal System (500 capacity, O(1) wrap-around).
-- Documented complete 5-component handoff report in `handoff.md`.
+- Designed a 4-test Playwright suite for `tests/e2e/camera_view.spec.ts` covering live tracking, `improved_camera_angle.png` capture, `hitbox_precision_dodge.png` capture, and visual proof invariant audit.
+- Documented deterministic harness via `game.stop()`, `game.step(1/60)`, and synchronous `game.render()`.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/DISPATCH.md — Incoming dispatches
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/BRIEFING.md — Working memory
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/progress.md — Liveness heartbeat
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/handoff.md — Final investigation report
+- `handoff.md` — 5-component report with full TypeScript implementation blueprint
+- `progress.md` — Heartbeat and progress update
+- `DISPATCH.md` — Received task assignment

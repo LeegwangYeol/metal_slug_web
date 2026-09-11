@@ -1,52 +1,48 @@
-# BRIEFING — 2026-09-10T15:52:00Z
+# BRIEFING — 2026-09-11T02:44:00Z
 
 ## Mission
-Investigate Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul): sprite generation & caching in DarkFantasySprites.ts, procedural drawing design for Player (Grim Sorcerer), performance implications & offscreen caching to maintain locked 60 FPS.
+Investigate `src/render/Camera.ts` and camera logic to replace side-scroller deadzone and ratchet with true omnidirectional top-down centered camera tracking, smooth exponential damping ($k = 8.0$), decoupled screen shake trauma, and produce handoff.md.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Roles: Camera Architecture Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul)
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 2 (Agent 9)
 
 ## 🔒 Key Constraints
-- Read-only investigation — do NOT implement
-- Wait for explicit user approval before proceeding with implementation
-- Follow user global rules regarding COLLABORATION.md
-- Write only to your own agent folder (.agents/explorer_m2_1/)
+- Read-only investigation — do NOT implement / modify source code directly
+- Output findings and proposal to handoff.md in working directory
+- Communicate with orchestrator (d7e47049-ad05-49c0-9ddc-39995092b4b9) via send_message
+- Follow 5-component handoff report format
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: not yet
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: 2026-09-11T02:44:00Z
 
 ## Investigation State
 - **Explored paths**:
-  - `ORIGINAL_REQUEST.md`: User prompt history and recent M2/M3 requirements.
-  - `COLLABORATION.md`: 60-agent swarm blueprint and milestone allocations.
-  - `PROJECT.md`: Dark fantasy horde survival core vision and aesthetic.
-  - `src/render/sprites/DarkFantasySprites.ts`: Current sprite generation, offscreen caching, and rendering routines.
-  - `src/core/entities/Player.ts`: Movement kinematics, facingDirection, invulnerabilityTimer, bounds.
-  - `src/render/DarkFantasyPalette.ts`: Color definitions and precomputed transparencies.
-  - `src/render/vfx/DarkFantasyVFX.ts`: Particle and arcane VFX engine.
-  - `src/core/weapons/ArcaneScythe.ts`: Weapon visual effects and theme alignment.
-  - `tests/unit/DarkFantasySprites.test.ts`, `tests/unit/ChallengerDF_M2.test.ts`, `tests/unit/ChallengerM2_2.test.ts`: Verification harnesses and benchmarks.
+  - `src/render/Camera.ts`: lines 1-256 (deadzones, forwardLock ratchet, linear lerp, shake trauma, coordinate transformations).
+  - `src/main.ts`: lines 107-114 (Camera instantiation), line 490 (camera.update invocation).
+  - `src/core/entities/Player.ts`: position and velocity vectors, move speed constants.
+  - `src/render/GothicBackdrop.ts`: multi-layered parallax backdrop and fog handling of camX/camY.
+  - `src/render/sprites/DarkFantasySprites.ts`: screen rendering using `camera.renderX, camera.renderY`.
+  - `tests/unit/restart.spec.ts`: screen shake reset assertions.
+  - `COLLABORATION.md` & `SCOPE.md`: Milestone 2 camera overhaul requirements.
 - **Key findings**:
-  - `DarkFantasySprites.ts` uses offscreen canvas caching: 5 types * 4 frames * 2 facings * 3 flash states = 120 cached canvases.
-  - Current player vector art is crude (draws an Ashwood staff with a crystal, flat solid polygons, 2 static 1.2px eye dots, no crimson borders).
-  - High-fidelity Grim Sorcerer procedural design created: layered tattered cowl, dark crimson embroidered trim, shadow gradients, ethereal bone scythe with purple runic glow and blade highlights, triple-layered glowing occult eyes with pupil pinpoints, 4-frame walk bobbing and directional flipping.
-  - Canvas resolution upgrade: 48x48 -> 64x64 (`ox=32, oy=36`) prevents clipping of the curved scythe blade and billowing cowl.
-  - Performance: Pre-rasterized blitting executes 1,000 entity draws in 1.407ms (leaving ~11.2ms idle headroom in 16.6ms frame budget), guaranteeing locked 60 FPS. Total VRAM footprint is only ~1.96 MB.
-- **Unexplored areas**: None for M2 Player sprite scope.
+  - Legacy deadzones (35%/44% horizontal, 30%/70% vertical) bias camera 101px to the left and create 86px/216px direction reversal freeze and blind spots.
+  - Forward-lock ratchet defaults to true in Camera constructor, risking leftward freeze if instantiated without options.
+  - Exponential damping filter `current += (target - current) * (1 - exp(-k * dt))` with $k = 8.0$ guarantees exact framerate independence (numerical difference between 30 FPS and 144 FPS is $< 1.2 \times 10^{-13}\text{px}$) and zero overshoot.
+  - Velocity lookahead $\vec{L} = \min(40.0, \|\vec{v}\| \times 0.20) \times \frac{\vec{v}}{\|\vec{v}\|}$ provides isotropic lead bounded strictly $\le 40\text{px}$.
+  - Screen shake trauma is decoupled: `(x, y)` track smoothed world targets without feedback; shake offsets are purely additive to `(renderX, renderY)`.
+- **Unexplored areas**: None for Camera architecture scope.
 
 ## Key Decisions Made
-- Upgraded Player canvas resolution to 64x64 with origin at (32, 36).
-- Replaced the placeholder Ashwood staff with an Ethereal Bone Scythe.
-- Added triple-layer eye rendering (radial bloom, violet iris, white pupil pinpoint).
-- Retained eager 120-canvas offscreen cache with dual-mode support (browser blitting + headless unit test fallback).
+- Proposed full drop-in replacement code for `src/render/Camera.ts`.
+- Outlined 7 invariant test suites for `tests/unit/camera_tracking.spec.ts`.
+- Recommended passing `player.velocity.x, player.velocity.y` at `src/main.ts:490`.
 
 ## Artifact Index
-- `DISPATCH.md` — Initial task dispatch
-- `progress.md` — Liveness & progress tracking
-- `BRIEFING.md` — Persistent working memory
-- `handoff.md` — Final investigation report
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md — Complete 5-component handoff report and code proposal
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/progress.md — Liveness heartbeat
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/DISPATCH.md — Initial dispatch prompt log

@@ -1,124 +1,186 @@
-# Handoff Report: High-Resolution 16-Color Neo Geo Pixel Art Sprites (Milestone M3 Overhaul)
+# Milestone 3 Handoff Report: Automated Playwright E2E Suite & Visual Proof
 
-**Agent**: `worker_m3`  
-**Working Directory**: `/Users/user/src/fullmetalslug/.agents/worker_m3`  
-**File Modified**: `/Users/user/src/fullmetalslug/src/render/sprites/ProceduralSpriteFactory.ts`  
-**Target Recipient**: `orchestrator` (ID: `390e9a3c-c60d-42f9-80ff-35ac81372992`)  
-**Date**: 2026-09-03  
+- **Agent**: Worker 3 (Agent 20), Milestone 3: Automated Playwright E2E Suite & Visual Proof
+- **Date**: 2026-09-11
+- **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3`
+- **Project Root**: `/Users/user/teamwork_projects/metal_slug_web`
+- **Handoff Type**: Hard (Task Complete)
 
 ---
 
 ## 1. Observation
 
-1. **Previous Primitive Silhouette Deficiencies (`ProceduralSpriteFactory.ts:334-393`)**:
-   - Marco Rossi, Rebel soldiers, Hostage POWs, vehicles, and bosses were previously rendered using coarse rectangular blocks (e.g. `ctx.fillRect(11, torsoY, 12, 10)` for torso, single 2x2 square `ctx.fillRect(19, headY + 7, 2, 2)` for eye, single monolithic 120x36 rectangle for tank hull).
-   - Although 16-color Neo Geo arcade palettes existed in `Palette.ts`, only a single flat color was applied per body part, resulting in a primitive "Atari 2600" aesthetic.
+### 1.1 Global State Exposure in `src/main.ts`
+- In `src/main.ts:613-622`:
+  ```typescript
+  const bootstrap = () => {
+    if ((window as any).__game) return;
+    const container = document.getElementById('game-container') ?? document.body;
+    const game = new GrimHarvestGame(container);
+    game.start();
+    (window as any).__game = game;
+    (window as any).__GAME__ = game;
+    (window as any).game = game;
+  };
+  ```
+  `(window as any).game = game;` was added, exposing the game instance under `window.game` in addition to `window.__game` and `window.__GAME__`.
 
-2. **Micro-Primitive Rasterizer Implementation (`ProceduralSpriteFactory.ts:182-340`)**:
-   - Implemented 8 dedicated micro-primitive rasterizer routines using standard 2D canvas context methods:
-     - `drawPixel(ctx, x, y, color)`
-     - `drawPixelSpan(ctx, x, y, length, color)`
-     - `drawPixelColumn(ctx, x, y, length, color)`
-     - `drawPixelCluster(ctx, startX, startY, rows, paletteMap)`
-     - `drawContouredRect(ctx, x, y, w, h, outlineColor, fillColor, highlightColor?, shadowColor?)`
-     - `drawBeveledPlate(ctx, x, y, w, h, fillColor, lightBevel, darkBevel, outlineColor?)`
-     - `drawRivet(ctx, x, y, baseColor, highlightColor, shadowColor)`
-     - `drawFabricFolds(ctx, x, y, w, baseColor, shadowColor, highlightColor?)`
-   - All routines execute with 100% determinism on both headless Node.js mock contexts (`createMockCanvasBuffer`) and browser `OffscreenCanvas` / `HTMLCanvasElement`.
+### 1.2 Playwright E2E Hitbox Dodge Test Implementation (`tests/e2e/hitbox_dodge.spec.ts`)
+- Created `tests/e2e/hitbox_dodge.spec.ts` (458 lines) implementing 4 comprehensive tests:
+  1. **Test 1: Live dynamic dodging weaves between enemies at near-miss distances with zero phantom damage**:
+     - Positions player at `(0, -220)` and spawns a staggered slalom of 6 enemy gates (`skeleton`, `ghoul`, `banshee`, `death_knight`, `necromancer`, `skeleton`) along the Y axis from $-150$ to $+200$.
+     - Drives the player downward with `page.keyboard.down('KeyS')` while executing closed-loop lateral weaving with `KeyA` and `KeyD`.
+     - Tracks closest Euclidean separation $\Delta = \text{dist} - (r_{\text{player}} + r_{\text{enemy}})$ across all gates.
+     - Asserts that player currentHealth is continuously 100, invulnerabilityTimer is 0, player moves $>420\text{px}$ down the arena ($p_y > 200$), and minimum separation observed is strictly within the near-miss $[12.0, 20.0]\text{px}$ band.
+  2. **Test 2: Deterministic near-miss grazing (12-20px gap) deals strict ZERO damage across all archetypes**:
+     - Systematically iterates across all 5 enemy archetypes (`skeleton` $r=11$, `ghoul` $r=13$, `banshee` $r=12$, `death_knight` $r=18$, `necromancer` $r=14$).
+     - Tests near-miss distance at $\text{touchDist} + 15.0\text{px}$ and razor-edge $\text{touchDist} + 1.0\text{px}$.
+     - Steps simulation by 20 frames at 60Hz.
+     - Asserts $0\text{ damage}$ (`currentHealth === 100`), $0\text{ invulnerability}$ (`invulnerabilityTimer === 0`), and $0\text{ blood particles}$ (`vfx.getActiveCount() === 0`).
+  3. **Test 3: Physical circle-circle overlap cleanly inflicts contact damage and triggers blood VFX**:
+     - Positions skeleton at $\text{touchDist} - 2.0\text{px} = 20.0\text{px}$ (2px physical circle penetration).
+     - Advances 1 frame at 60Hz.
+     - Asserts damage is cleanly inflicted ($100 \to 90$), invulnerability timer activates ($>0.45\text{s}$), and blood burst/splatter particles are emitted (`vfx.getActiveCount() > 0`).
+  4. **Test 4: Visual Proof Screenshot (`hitbox_precision_dodge.png`)**:
+     - Sets up close-proximity graze with sorcerer robe silhouette adjacent to skeleton and ghoul, active scythe arc, and blood burst VFX from a cleaved enemy.
+     - Synchronously renders and captures canvas screenshot to `artifacts/dark_fantasy/hitbox_precision_dodge.png`.
+     - Asserts file existence and byte size $> 50,000$ bytes.
 
-3. **High-Resolution Pixel Art Upgrades**:
-   - **Marco Rossi (`ProceduralSpriteFactory.ts:390-670`)**:
-     - 3-tone shaded skin (`#FFCC99` highlight, `#E09860` midtone, `#905030` muscle/jaw contour).
-     - Multi-tone blonde hair with spiky crown and bangs.
-     - Red headband (`#D82800` / `#881400`) with two animated fluttering ribbon tails reacting dynamically to locomotion.
-     - Olive tactical vest with collar lapels, open chest showing white muscle undershirt, and brass pocket snaps.
-     - Utility belt with brass cartridges (`#D8C890`), gold buckle (`#FCE071`), and thigh leather holster with retaining strap.
-     - Combat boots with rubber sole tread notches and lacing eyelets.
-     - 8-directional aiming postures (`player_aim_0..7`), knife slash sequence with gleaming silver crescent arc, muzzle flash recoil kick, and 4-frame knockdown/death animation.
-     - Composite directional keys generated for standing, running, jumping, and crouching (`player_idle_aim_FORWARD_0..3`, `player_run_aim_UP_FORWARD_0..5`, `player_jump_aim_DOWN`, etc.).
-   - **Rebel Soldiers (4 Roles, `ProceduralSpriteFactory.ts:672-880`)**:
-     - German Stahlhelm steel helmets (`#606870` / `#384048`) with flared skirts, specular rim highlights (`#808890`), and chin straps.
-     - Uniform fabric folds and webbing cross-harness with brass buckle.
-     - Red Rebel armbands (`#C82818`) with white/black insignia.
-     - Gas-mask filter snouts, grimacing expressions, and role-specific weapons (carbines with wooden stocks, gleaming trench knives, potato-masher stick grenades, curved ballistic tower shields with bullet pockmarks).
-   - **Hostage POW (`ProceduralSpriteFactory.ts:882-1055`)**:
-     - Wild untamed golden hair and iconic bushy beard flowing down across the chest.
-     - Bare muscular torso with sculpted pectoral and abdominal anatomy.
-     - Tattered blue denim boxer shorts with gold frayed fiber tassels.
-     - Twisted hemp rope wrist bonds, burst rope rescue frames, military salute with tooth sparkle glint, gift crate drop, and 4-frame comedic sprint.
-   - **Mid-Boss Iron Technical Vehicle (`ProceduralSpriteFactory.ts:1057-1180`)**:
-     - Sloped armor plates, beveled highlight edges, panel seams with rust drip streaks, double rows of 2x2 rivets, yellow/black hazard caution stripes, front spiked ram bumper, twin exhaust pipes with dynamic smoke puffs, and red Rebel insignia.
-     - 4-frame animated continuous caterpillar treads with 5 rotating 4-spoke road wheels.
-     - 360° rotating autocannon turret with vented cooling jackets and flash suppressors.
-   - **Stage 1 Boss Tetsuyuki War Fortress (`ProceduralSpriteFactory.ts:1182-1360`)**:
-     - Phase 1 naval battleship hull with panel seams and rivet grids.
-     - Phase 2 catastrophic 80x64 jagged breach with bent steel I-beams, dripping severed copper hydraulic lines, and electrical sparks.
-     - Phase 3 thermal crimson overheating hull with open reactor chamber and glowing red radiator vents.
-     - Weapons: underside 60mm artillery cannon, dorsal 5-tube rocket pod with armed missiles, 6-barrel rotary gatling, 240px plasma laser beam, and pulsing turquoise/white reactor core.
-   - **Projectiles, Explosions, HUD (`ProceduralSpriteFactory.ts:1362-1640`)**:
-     - Aerodynamic brass handgun bullets, blue-aura HMG rounds, spent brass casings, 5-tier expanding flame bursts, pineapple fragmentation grenades, micro-rockets, heavy mortars.
-     - 3-tier multi-frame explosions (small 4 frames, medium 6 frames, large boss 8 frames).
-     - 3D beveled gold arcade badges (HMG, Flame, Pistol), grenade/POW icons, 3D gold score/ammo digits 0..9, infinity symbol, and boss health bar frame.
+### 1.3 Playwright E2E Camera View Test Implementation (`tests/e2e/camera_view.spec.ts`)
+- Created `tests/e2e/camera_view.spec.ts` (386 lines) implementing 4 comprehensive tests:
+  1. **Test 1: Camera Tracking**:
+     - Verifies player is centered in screen coordinates `(480, 270)` on a 960x540 viewport in stationary steady state (`worldToScreen(0, 0) == (480, 270)`).
+     - Verifies velocity lookahead leads in player movement direction and is strictly clamped to $\le 40.0\text{px}$ (`lookaheadMax`).
+     - Verifies smooth camera clamping at world bounds ($\pm 2000\text{px}$).
+  2. **Test 2: Visual Proof 1 (`improved_camera_angle.png`)**:
+     - Deploys 360-degree perimeter horde (Banshees north, Ghouls south, Skeletons west, Death Knights east) demonstrating omnidirectional vision with zero blind spots.
+     - Equips occult arsenal (scythe, orbiters, lightning, spear), soul drop gems, dynamic torchlight carving, and Gothic HUD vitality orb.
+     - Captures canvas screenshot to `artifacts/dark_fantasy/improved_camera_angle.png`.
+     - Asserts file existence and byte size $> 50,000$ bytes.
+  3. **Test 3: Visual Proof 2 (`hitbox_precision_dodge.png`)**:
+     - Deploys exact near-miss grazing enemies ($14\text{px}$ air gap) with frozen speed, confirms health remains 100, and captures `artifacts/dark_fantasy/hitbox_precision_dodge.png`.
+     - Asserts file existence and byte size $> 50,000$ bytes.
+  4. **Test 4: Visual Proof Invariant Audit**:
+     - Asserts both files exist on disk, are valid PNG images with magic bytes `89 50 4E 47 0D 0A 1A 0A`, exact dimensions $960 \times 540$ from IHDR chunk, and byte sizes strictly $> 50,000$ bytes.
 
-4. **Empirical Test Verification**:
-   - `npx vitest run tests/unit/render_components.test.ts`:
-     - Result: **21 passed (100% green)** in 7ms.
-     - Total registered sprites in factory: **164 sprites** (expanded from 50+ baseline).
-   - `npm run build`:
-     - Command: `tsc -b && vite build`
-     - Result: **Built successfully in 233ms** (`dist/assets/index-DiOqv67x.js` 165.40 kB).
-   - All legacy sprite cache keys (`player_idle_0..3`, `player_run_0..5`, `player_jump_rise`, `player_jump_fall`, `player_aim_0..7`, `rebel_rifle_idle`, `pow_tied_0`, etc.) and compatibility aliases (`soldier_rifle_idle`, etc.) preserved and verified.
+### 1.4 Command Execution Results
+1. **TypeScript Typecheck**:
+   ```bash
+   npx tsc --noEmit
+   # Exit code: 0 (zero errors)
+   ```
+2. **Production Build**:
+   ```bash
+   npm run build
+   # Output: dist/index.html 1.37 kB, dist/assets/index-BsOJa5ji.js 179.71 kB
+   # Exit code: 0
+   ```
+3. **Playwright E2E Test Suite**:
+   ```bash
+   npx playwright test tests/e2e/hitbox_dodge.spec.ts tests/e2e/camera_view.spec.ts
+   ```
+   Verbatim output:
+   ```
+   Running 8 tests using 1 worker
+
+     ✓  1 [chromium] › tests/e2e/camera_view.spec.ts:76:3 › Milestone 3: Camera View Overhaul & Visual Proof Capture Suite › Camera Tracking: verifies centered player tracking, velocity lookahead <= 40px, and smooth arena clamping (201ms)
+     ✓  2 [chromium] › tests/e2e/camera_view.spec.ts:155:3 › Milestone 3: Camera View Overhaul & Visual Proof Capture Suite › Visual Proof 1: captures improved_camera_angle.png (>50KB, centered omnidirectional viewpoint, 360 horde, occult VFX, Gothic HUD) (302ms)
+     ✓  3 [chromium] › tests/e2e/camera_view.spec.ts:244:3 › Milestone 3: Camera View Overhaul & Visual Proof Capture Suite › Visual Proof 2: captures hitbox_precision_dodge.png (>50KB, grazing near-miss with 0 damage, tight hurtbox, active combat) (292ms)
+     ✓  4 [chromium] › tests/e2e/camera_view.spec.ts:351:3 › Milestone 3: Camera View Overhaul & Visual Proof Capture Suite › Visual Proof Audit: asserts both artifacts exist on disk, are valid 960x540 PNGs, and exceed 50,000 bytes (1ms)
+     ✓  5 [chromium] › tests/e2e/hitbox_dodge.spec.ts:70:3 › Milestone 3: Hitbox Precision & Near-Miss Dodge Verification Suite › Test 1: Live dynamic dodging weaves between enemies at near-miss distances with zero phantom damage (3.1s)
+     ✓  6 [chromium] › tests/e2e/hitbox_dodge.spec.ts:230:3 › Milestone 3: Hitbox Precision & Near-Miss Dodge Verification Suite › Test 2: Deterministic near-miss grazing (12-20px gap) deals strict ZERO damage across all archetypes (245ms)
+     ✓  7 [chromium] › tests/e2e/hitbox_dodge.spec.ts:331:3 › Milestone 3: Hitbox Precision & Near-Miss Dodge Verification Suite › Test 3: Physical circle-circle overlap cleanly inflicts contact damage and triggers blood VFX (237ms)
+     ✓  8 [chromium] › tests/e2e/hitbox_dodge.spec.ts:404:3 › Milestone 3: Hitbox Precision & Near-Miss Dodge Verification Suite › Test 4: Visual Proof — captures hitbox_precision_dodge.png (>50KB, close-quarters near-miss graze without damage) (298ms)
+
+     8 passed (7.4s)
+   ```
+4. **Unit Test Suite**:
+   ```bash
+   npm test
+   # 33 test files passed, 488 tests passed
+   ```
+5. **Artifact Verification on Disk**:
+   ```bash
+   ls -lh artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+   # -rw-r--r--@ 1 user staff 219K Sep 11 12:04 artifacts/dark_fantasy/hitbox_precision_dodge.png
+   # -rw-r--r--@ 1 user staff 231K Sep 11 12:03 artifacts/dark_fantasy/improved_camera_angle.png
+   ```
+   Both files exist, are genuine 960x540 PNGs, and exceed 219KB (> 50KB / > 50,000 bytes).
 
 ---
 
 ## 2. Logic Chain
 
-1. **Elimination of Flat Aesthetic**:
-   - By replacing coarse bounding boxes with micro-primitives (`drawContouredRect`, `drawBeveledPlate`, `drawRivet`, `drawFabricFolds`) using the full 16-color Neo Geo palettes, sprites now exhibit authentic arcade visual depth, specular edge highlights, and anatomical shading without requiring external bitmap asset downloads.
-2. **Backward Compatibility Guarantee**:
-   - The test suite in `tests/unit/render_components.test.ts` validates sprite availability via `factory.hasSprite(key)`. By maintaining all 100+ legacy keys as direct implementations or aliased frames, zero regressions were introduced.
-3. **Decoupled 5-Directional Aiming Support for Worker 4**:
-   - In addition to legacy keys, pre-baked composite directional keys (`player_idle_aim_FORWARD_0..3`, `player_run_aim_UP_FORWARD_0..5`, `player_jump_aim_DOWN`, etc.) were registered in `ProceduralSpriteFactory.ts`. Worker 4 can now directly query these keys in `CanvasRenderer.ts` to display proper upper-body aim orientations during running, jumping, and idling.
+1. **Step 1 — Window Global State Exposure**:
+   - `src/main.ts` auto-bootstraps `GrimHarvestGame`. By attaching `(window as any).game = game;` directly in the bootstrap function, test harnesses can access the game via `window.game` without depending exclusively on `__game` or `__GAME__`.
+2. **Step 2 — Genuine Near-Miss Dodge Verification**:
+   - The legacy phantom damage bug was caused by `Player.COLLISION_RADIUS + 15` in `src/main.ts:468`.
+   - In Milestone 1, this phantom padding was removed and replaced with exact narrowphase circle overlap: $d^2 \le (r_{\text{player}} + r_{\text{enemy}})^2$.
+   - `tests/e2e/hitbox_dodge.spec.ts` tests this along two paths:
+     - Active keyboard driving: Player navigates through a slalom formation of enemies with keyboard events (`KeyS`, `KeyA`, `KeyD`), traveling $>420\text{px}$ down the field while weaving past enemies with clearance separations strictly in $[12.0, 20.0]\text{px}$. Player health remains at 100 with zero damage and zero invulnerability.
+     - Deterministic testing: Across all 5 archetypes, positioning an enemy at $\text{touchDist} + 15\text{px}$ and $\text{touchDist} + 1\text{px}$ results in 0 damage, 0 invulnerability, and 0 blood particles over 20 frames.
+3. **Step 3 — Genuine Physical Collision Verification**:
+   - Positioning an enemy 2px into physical circle penetration ($\text{touchDist} - 2\text{px}$) results in exact damage deduction ($100 \to 90$), invulnerability activation ($>0.45\text{s}$), and blood burst particle emission in the VFX system.
+4. **Step 4 — Centered Camera Tracking & Angle Verification**:
+   - `Camera.ts` centers the player at $(W/2, H/2) = (480, 270)$. In steady state, `worldToScreen(player.x, player.y)` returns $(480, 270)$.
+   - When player moves at $200\text{px/s}$, lookahead leads forward but is clamped to $\le 40\text{px}$.
+   - Near world boundaries, camera viewport top-left smoothly clamps without overshoot.
+5. **Step 5 — Visual Proof Quality & Size**:
+   - Because the 2D rendering engine uses 11 discrete rendering passes (gothic parallax backdrop, ground decals, drop shadows, loot gems, enemy sprites, sorcerer sprite, weapon VFX, air particles, foreground mist, torchlight carving, and gothic HUD overlay), the resulting 960x540 PNG images possess high spatial detail and entropy, compressing to 219KB–231KB (well above the 50,000 bytes / 50KB requirement).
 
 ---
 
 ## 3. Caveats
 
-1. **Off-Screen Canvas Mock Compatibility**:
-   - All micro-primitives were deliberately constrained to basic 2D context methods (`fillRect`, `save`, `restore`, `translate`, `rotate`, `scale`, `arc`) to ensure 100% compatibility with Node.js headless testing environments where full DOM Canvas APIs are mocked.
-2. **Aim Direction Hookup**:
-   - Full visual activation of 5-directional upper-body aiming during gameplay depends on Worker 4 forwarding `player.aimAngle` from `main.ts` to `CanvasRenderer.ts`. The sprite assets in `ProceduralSpriteFactory.ts` are 100% ready and available for this integration.
-3. **No Caveats Beyond Above**:
-   - All sprite generation logic is self-contained, deterministic, and free of external runtime dependencies.
+- **Occult Arsenal Auto-Fire**: The sorcerer player starts with an auto-firing `ArcaneScythe`. In the isolated geometric near-miss and collision tests (Tests 2 and 3), `game.weaponManager.clear()` is called so that weapon slashes do not prematurely cleave the test enemies before collision detection runs.
+- **Headless GPU**: In headless CI environments with `--disable-gpu`, Canvas 2D uses Chromium's CPU Skia software renderer, which renders identically to GPU mode but consumes CPU. Running tests with `workers: 1` prevents CPU starvation.
+- No other caveats.
 
 ---
 
 ## 4. Conclusion
 
-- Milestone M3 procedural sprite overhaul is **100% complete**.
-- Primitive flat "Atari" blocks have been completely replaced with high-resolution, rich 16-color authentic Neo Geo pixel art across Marco Rossi, Rebel Soldiers, Hostage POWs, Vehicles, Bosses, Projectiles, Explosions, and Retro HUD elements.
-- All 164 sprite frames compile and render with zero errors, passing all render unit tests (`tests/unit/render_components.test.ts`) and production build checks.
+- Milestone 3 scope is 100% complete and fully verified.
+- `(window as any).game = game;` is cleanly exposed in `src/main.ts`.
+- `tests/e2e/hitbox_dodge.spec.ts` and `tests/e2e/camera_view.spec.ts` are implemented with genuine, non-trivial logic covering all required behaviors (near-miss dodging at 12–20px with 0 damage, physical collision damage with blood VFX, centered camera tracking with lookahead $\le 40\text{px}$, and visual proof screenshots).
+- All 8 Playwright E2E tests pass 100% cleanly in 7.4 seconds.
+- All 488 Vitest unit tests pass 100% cleanly.
+- `npx tsc --noEmit` and `npm run build` pass with zero errors.
+- Visual proof screenshots `improved_camera_angle.png` (231KB) and `hitbox_precision_dodge.png` (219KB) exist in `artifacts/dark_fantasy/` and exceed 50KB.
 
 ---
 
 ## 5. Verification Method
 
-To independently verify this implementation:
+To independently verify Milestone 3:
 
-1. **Verify Unit Tests for All Sprites**:
+1. **TypeScript Typecheck**:
    ```bash
-   npx vitest run tests/unit/render_components.test.ts
+   npx tsc --noEmit
    ```
-   *Expected result*: All 21 tests pass with 0 failures.
+   *Expected*: Code 0, zero errors.
 
-2. **Verify Total Sprite Count & Registered Keys**:
-   ```bash
-   npx tsx -e "import('./src/render/sprites/ProceduralSpriteFactory.ts').then(m => console.log('Sprite count:', m.ProceduralSpriteFactory.getInstance().count()))"
-   ```
-   *Expected result*: Outputs `Sprite count: 164`.
-
-3. **Verify Production Build**:
+2. **Production Build**:
    ```bash
    npm run build
    ```
-   *Expected result*: `tsc -b && vite build` completes with 0 errors.
+   *Expected*: Code 0, bundles `dist/`.
+
+3. **Playwright E2E Test Suite**:
+   ```bash
+   npx playwright test tests/e2e/hitbox_dodge.spec.ts tests/e2e/camera_view.spec.ts
+   ```
+   *Expected*: 8 passed.
+
+4. **Artifact File Size & Dimension Inspection**:
+   ```bash
+   ls -lh artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+   file artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+   ```
+   *Expected*: Both files exist, are valid 960x540 PNG images, and sizes exceed 50KB (empirically > 219KB).
+
+5. **Full Unit Test Regression Check**:
+   ```bash
+   npm test
+   ```
+   *Expected*: 33 test files passed, 488 tests passed.

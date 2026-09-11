@@ -1,50 +1,46 @@
-# BRIEFING — 2026-09-10T15:52:00Z
+# BRIEFING — 2026-09-11T11:44:00+09:00
 
 ## Mission
-Investigate Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul): elite undead sprite generation (Banshee, Death Knight), procedural visual designs, and unit test architecture.
+Investigate camera testing requirements and design unit test specification for `tests/unit/camera_tracking.spec.ts` covering 6 core tests (steady-state centering, exponential damping k=8.0, direction reversal smoothness, velocity lookahead clamp <= 40px, world boundary clamping, screen shake trauma decay without drift).
 
 ## 🔒 My Identity
-- Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Archetype: Explorer
+- Roles: Camera Unit Test Specification Explorer (Agent 11)
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_3
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 2 (Elite Undead Graphics Overhaul)
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 2 (Milestone 2 - Hitbox & Camera)
 
 ## 🔒 Key Constraints
-- Read-only investigation — do NOT implement
-- ALWAYS wait for explicit user approval before proceeding with implementation
-- Communicate with Claude via Rule Guide (Markdown) / COLLABORATION.md
-- Use File for content delivery, Message for coordination
-- Report written to .agents/explorer_m2_3/handoff.md following 5-component structure
+- Read-only investigation — do NOT implement project source code
+- Produce structured reports in .agents/explorer_m2_3/
+- Design comprehensive unit test suite specification for tests/unit/camera_tracking.spec.ts
+- Communicate back to orchestrator via send_message
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: 2026-09-10T15:52:00Z
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: 2026-09-11T11:44:00+09:00
 
 ## Investigation State
 - **Explored paths**:
-  - `src/render/sprites/DarkFantasySprites.ts`
-  - `src/render/DarkFantasyPalette.ts`
-  - `src/render/vfx/DarkFantasyVFX.ts`
-  - `src/core/entities/Enemy.ts` and `src/core/entities/EnemyTypes.ts`
-  - `tests/unit/DarkFantasySprites.test.ts`
-  - `tests/unit/ChallengerDF_M2.test.ts`
-  - `vitest.config.ts`
+  - `src/render/Camera.ts`: Identified legacy deadzones (35%-44%), ratchet lock, instant snapping, screen shake quadratic decay
+  - `src/main.ts`: Line 490 camera update invocation, player position tracking
+  - `src/render/GothicBackdrop.ts`: Parallax layers using double modulo arithmetic `((camX % N) + N) % N` supporting negative coordinates
+  - `tests/unit/hitbox_precision.spec.ts`: Structure and style reference for Milestone 1 unit tests
+  - `tests/unit/ChallengerRestartEngine_M1_1.test.ts`: Identified legacy deadzone assertion `expect(game.camera.x).toBe(-336)` that needs update to `-480`
 - **Key findings**:
-  - Existing Banshee rendering is flat, lacks additive blending (`lighter`), has primitive wisps and rudimentary face.
-  - Existing Death Knight lacks horns despite code comment, has boxy Atari legs/torso, missing filigree, flat weapon.
-  - Atlas caching generates 120 keys (5 types * 4 frames * 2 facings * 3 flash states), but is currently unexercised in Node vitest runs due to `typeof document === 'undefined'`.
-  - Formulated full procedural designs with gradients, additive blending, filigree, and high-fidelity silhouettes.
-  - Designed headless Canvas2D simulation harness for `tests/unit/DarkFantasySprites.spec.ts` to assert zero NaNs, balanced save/restore, and 120 cached entries.
-- **Unexplored areas**: None for this investigation scope.
+  - Exponential damping formula $C(t + \Delta t) = C(t) + (C^* - C(t))(1 - e^{-k \Delta t})$ with $k = 8.0$ guarantees monotonic convergence, zero overshoot, and frame-rate independent stability
+  - Lookahead vector $\vec{L}$ scales with speed and clamps strictly to $\|\vec{L}\| \le 40.0\text{px}$
+  - Screen shake offsets must decouple from base camera position `(x, y)` to ensure zero drift
+  - Optional parameters `vx = 0, vy = 0` preserve backward compatibility
+- **Unexplored areas**: None within Milestone 2 test specification scope.
 
 ## Key Decisions Made
-- Formulated production-ready procedural code for `drawBansheeVector` and `drawDeathKnightVector`.
-- Detailed the 5-suite unit test architecture for `tests/unit/DarkFantasySprites.spec.ts`.
-- Documented findings in `handoff.md`.
+- Designed complete executable test suite `tests/unit/camera_tracking.spec.ts` with 7 test suites (32 test cases)
+- Documented legacy test coupling with `ChallengerRestartEngine_M1_1.test.ts` for Worker 2 and Reviewer 2
+- Produced self-contained 5-component handoff report in `handoff.md`
 
 ## Artifact Index
-- DISPATCH.md — Dispatch log
-- BRIEFING.md — Persistent working memory
-- progress.md — Liveness heartbeat
-- handoff.md — Final investigation report (5 components)
+- DISPATCH.md — Recorded dispatch instructions
+- progress.md — Heartbeat and task tracking
+- BRIEFING.md — Situational awareness
+- handoff.md — Comprehensive 5-component handoff report with verbatim test suite code

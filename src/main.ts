@@ -75,6 +75,7 @@ export class GrimHarvestGame {
 
   private readonly boundOnKeyDown: (e: KeyboardEvent) => void;
   private readonly boundOnCanvasClick: (e: MouseEvent) => void;
+  private damageScratch = new Int32Array(64);
 
   constructor(container?: HTMLElement) {
     this.boundOnKeyDown = this.handleKeyDown.bind(this);
@@ -460,26 +461,39 @@ export class GrimHarvestGame {
       this.vfx
     );
 
-    // 6. Contact Damage & Blood VFX
-    const scratch = new Int32Array(32);
+    // 6. Contact Damage & Blood VFX (Two-Phase: Broadphase Grid Query + Narrowphase Exact Circle Overlap)
     const nearbyCount = this.hordeManager.getEnemiesInRadius(
       this.player.position.x,
       this.player.position.y,
-      Player.COLLISION_RADIUS + 15,
-      scratch
+      Player.COLLISION_RADIUS + 32,
+      this.damageScratch
     );
 
     for (let i = 0; i < nearbyCount; i++) {
-      const enemy = this.hordeManager.pool[scratch[i]];
+      const enemy = this.hordeManager.pool[this.damageScratch[i]];
       if (enemy && enemy.active && enemy.isAlive) {
-        this.player.takeDamage(enemy.damage);
-        this.vfx.emitBloodBurst(this.player.position.x, this.player.position.y, 3);
-        this.vfx.emitBloodSplatter(this.player.position.x, this.player.position.y, 4);
+        const dx = enemy.position.x - this.player.position.x;
+        const dy = enemy.position.y - this.player.position.y;
+        const distSq = dx * dx + dy * dy;
+        const contactDist = Player.COLLISION_RADIUS + enemy.radius;
+        if (distSq <= contactDist * contactDist + 1e-3) {
+          const dealt = this.player.takeDamage(enemy.damage);
+          if (dealt > 0) {
+            this.vfx.emitBloodBurst(this.player.position.x, this.player.position.y, 3);
+            this.vfx.emitBloodSplatter(this.player.position.x, this.player.position.y, 4);
+          }
+        }
       }
     }
 
-    // 7. Camera Tracking
-    this.camera.update(this.player.position.x, this.player.position.y, dt);
+    // 7. Camera Tracking (Centered with Velocity Lookahead)
+    this.camera.update(
+      this.player.position.x,
+      this.player.position.y,
+      dt,
+      this.player.velocity.x,
+      this.player.velocity.y
+    );
 
     // 8. VFX Update & Loot Glints
     this.vfx.update(dt);
@@ -603,6 +617,7 @@ if (typeof document !== 'undefined') {
     game.start();
     (window as any).__game = game;
     (window as any).__GAME__ = game;
+    (window as any).game = game;
   };
 
   if (document.readyState === 'loading') {

@@ -1,40 +1,41 @@
-# BRIEFING — 2026-09-10T16:12:35Z
+# BRIEFING — 2026-09-11T02:56:55Z
 
 ## Mission
-Investigate Milestone 3 dynamic radial lighting, rich VFX, and atmospheric polish architecture for dark fantasy web game.
+Investigate Playwright E2E setup and design `tests/e2e/hitbox_dodge.spec.ts` for verifying near-miss grazing (12-20px, 0 damage) and collision damage.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Roles: read-only investigation, synthesis
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_1
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish)
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 3
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- ALWAYS wait for explicit user approval before proceeding with implementation
-- Files for content delivery, Messages for coordination
-- Self-contained 5-component handoff report (Observation, Logic Chain, Caveats, Conclusion, Verification Method)
+- Never modify project source code directly
+- Produce structured 5-component handoff report in handoff.md
+- Wait for user confirmation for implementation if applicable
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: 2026-09-10T16:12:35Z
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: 2026-09-11T02:56:55Z
 
 ## Investigation State
-- **Explored paths**: `src/render/GothicBackdrop.ts`, `src/render/vfx/DarkFantasyVFX.ts`, `src/render/sprites/DarkFantasySprites.ts`, `src/render/DarkFantasyPalette.ts`, `src/core/weapons/*.ts`, `src/main.ts`, `tests/unit/*.ts`
+- **Explored paths**: `playwright.config.ts`, `package.json`, `tests/e2e/*`, `src/main.ts`, `src/core/entities/Player.ts`, `src/core/HordeManager.ts`, `src/core/entities/EnemyTypes.ts`, `src/render/Camera.ts`, `src/render/vfx/DarkFantasyVFX.ts`, `src/input/KeyboardController.ts`
 - **Key findings**:
-  - Full absence of ambient darkness, edge vignette, and dynamic illumination in current pipeline.
-  - Formulated 3-phase composite strategy: 1) Offscreen lightmap carving with `destination-out`, 2) Blit to main canvas with `source-over`, 3) Additive color bloom pass with `lighter`.
-  - Zero-garbage pre-baked stencil mask atlas (512x512 torch, 256x256 spell flash, 128x128 point light, 960x540 vignette) ensuring <0.25ms execution time (locked 60Hz).
-  - Formulated dynamic lighting formulas for Player torch flicker, Arcane Scythe cleave arc, Abyssal Lightning screen flash + bolt burst, Cursed Aura shockwave ring, Soul Orbiters, and loot shimmers.
-  - Specified contact drop shadows and 128-element terrain blood decal ring buffer.
-- **Unexplored areas**: None within Milestone 3 scope.
+  - WebServer command in `playwright.config.ts`: `kill -9 $(lsof -ti :4173) 2>/dev/null || true; npm run build && npm run preview` at `http://localhost:4173`.
+  - Game exposed on `window.__game` and `window.__GAME__` with `#game-canvas` (960x540) inside `#game-container`.
+  - Contact damage logic in `src/main.ts:465-487` uses narrowphase check `distSq <= (Player.COLLISION_RADIUS + enemy.radius)^2 + 1e-3` with `Player.COLLISION_RADIUS = 11.0px`.
+  - Legacy +15px padding bug caused contact damage at distances up to 45px (12-20px gap beyond physical contact). The fix now ensures 0 damage in that zone.
+  - Complete 4-test suite designed for `tests/e2e/hitbox_dodge.spec.ts`: live dynamic weaving, deterministic 12-20px near-miss grazing (0 damage), physical collision damage, and visual proof screenshot (`hitbox_precision_dodge.png` > 50KB).
+- **Unexplored areas**: None. Investigation complete and documented.
 
 ## Key Decisions Made
-- Selected Strategy 3 (Dual-Pass Offscreen Buffer with `destination-out` carving + `lighter` additive bloom) over single-canvas and multiply blending.
-- Established the 12-step target render pipeline in `main.ts` ensuring HUD and modals render unaffected above lighting.
+- Formulated dual testing strategy (live dynamic weaving + deterministic archetype grazing) to guarantee both gameplay authenticity and 100% CI reproducibility.
+- Created complete, production-ready specification and code in `handoff.md`.
 
 ## Artifact Index
-- `handoff.md` — Milestone 3 lighting and VFX architecture analysis
-- `progress.md` — Heartbeat progress log
-- `DISPATCH.md` — Task dispatch log
+- `DISPATCH.md` — Incoming dispatch record
+- `BRIEFING.md` — Persistent working memory
+- `progress.md` — Heartbeat and progress tracking
+- `handoff.md` — 5-component handoff report with full test suite code design

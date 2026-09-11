@@ -1,17 +1,14 @@
-# Progress — explorer_m1_3
+# Progress — Explorer 3 (Milestone 1)
 
-Last visited: 2026-09-10T15:33:00Z
-Status: Investigation complete. Handoff report published. Sending message to orchestrator.
+Last visited: 2026-09-11T02:21:30Z
+Status: Completed
 
-## Checklist
-- [x] Read incoming dispatch and initialize working files (DISPATCH.md, BRIEFING.md, progress.md)
-- [x] Read mandatory files (ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md)
-- [x] Investigate WeaponManager.ts (projectiles, slots, cooldown timers, starter weapon reset)
-- [x] Investigate UpgradeSystem.ts & UpgradeModal.ts (pending upgrades, card generation, modal display states)
-- [x] Investigate WaveDirector.ts (wave escalation, phase timer, boss spawn triggers, difficulty curve reset)
-- [x] Investigate Camera & HUD reset (camera offset, screen shake, UI elements)
-- [x] Investigate GameEngine.ts / GameLoop / EntityManager orchestration of restart in main.ts
-- [x] Design Vitest unit test suite for tests/unit/restart.spec.ts
-- [x] Synthesize findings into handoff.md
-- [x] Update BRIEFING.md
-- [x] Send completion message to orchestrator parent
+## Tasks
+- [x] Initial dispatch recording and briefing initialization
+- [x] Read ORIGINAL_REQUEST.md, COLLABORATION.md, and orchestrator_hitbox_camera/SCOPE.md
+- [x] Inspect weapon classes under `src/core/weapons/` (ArcaneScythe, BoneSpear, SoulOrbiters, AbyssalLightning, CursedAura, Projectile, WeaponManager)
+- [x] Inspect projectile collision vs enemies in HordeManager and VFX rendering
+- [x] Calibrate collision radii vs glowing visual heads / visual dimensions
+- [x] Inspect `tests/unit/` and `vitest.config.ts` (376 tests passing, node environment)
+- [x] Design unit test suite specification for `tests/unit/hitbox_precision.spec.ts`
+- [x] Write `handoff.md` and message orchestrator

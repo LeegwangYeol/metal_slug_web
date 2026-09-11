@@ -321,3 +321,32 @@ The current dark fantasy graphics are considered "too poor/crude". The team must
 ## 2026-09-10T15:27:30Z
 
 승인 (Explicit user approval received to execute the restart bug-fix and high-fidelity dark fantasy graphics overhaul using the 60-agent swarm.)
+
+## 2026-09-11T02:13:54Z
+
+Use a very large team of 30 agents.
+
+This is a focused bug-fix and enhancement task for the "Grim Harvest: Undead Siege" game. The team must fix unfair damage hitbox detection and improve the jarring camera/viewing angle.
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Fix Damage Hitbox/Collision Logic
+Investigate and resolve issues with the player and enemy damage hitboxes. The current damage detection feels unfair or inaccurate. Ensure collisions closely match the visual sprites so that the player doesn't take unfair damage from attacks that visually missed, and enemy attacks register correctly.
+
+### R2. Fix Camera/Viewing Angle
+Adjust the camera or viewing angle. The current perspective feels "weird" or jarring. Overhaul the camera logic (zoom level, tracking, field of view, or parallax scaling) to provide a smooth, clear, and comfortable view of the action that fits the dark fantasy horde survival genre.
+
+## Acceptance Criteria
+
+### Verification & Deployment
+- [ ] Hitbox Verification: A Playwright E2E test intentionally dodges enemies and verifies that taking damage only occurs when bounding boxes/sprites mathematically and visually overlap.
+- [ ] Camera Verification: Playwright screenshots clearly demonstrate the new, improved camera angle and field of view, ensuring it is no longer jarring.
+- [ ] 100% Green Tests: Unit tests and E2E tests must pass cleanly.
+- [ ] Deployment: Git push to `origin/main` is verified and Vercel build succeeds.
+
+## 2026-09-11T02:16:21Z
+
+승인 (Explicit user approval received to execute the hitbox precision fix and camera overhaul using the 30-agent swarm.)

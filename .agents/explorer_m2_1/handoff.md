@@ -1,523 +1,586 @@
-# Milestone 2 Investigation Report: High-Fidelity Dark Fantasy Graphics Overhaul (Player / Grim Sorcerer)
+# Milestone 2 — Explorer 1 Handoff Report: Camera Architecture & Cinematic Viewport
 
-**Agent**: `explorer_m2_1` (Role: Codebase Researcher / Explorer)  
-**Date**: 2026-09-10  
-**Target File**: `src/render/sprites/DarkFantasySprites.ts`  
-**Milestone**: M2 (High-Fidelity Dark Fantasy Graphics Overhaul)  
+**Agent**: Explorer 1 for Milestone 2 (Agent 9)  
+**Role**: Camera Architecture Explorer  
+**Target Module**: `src/render/Camera.ts`, `src/main.ts`, `tests/unit/camera_tracking.spec.ts`  
+**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1`  
 
 ---
 
 ## 1. Observation
 
-### 1.1 Current Architecture in `src/render/sprites/DarkFantasySprites.ts`
+### 1.1 Current Deadzone Implementation in `src/render/Camera.ts`
+- **File**: `src/render/Camera.ts:75-80`
+  ```typescript
+  // Default deadzone: target stays between 35% and 44% horizontally (>528px forward reaction view on 960w), 30% and 70% vertically
+  this.deadzoneLeft = Math.floor(this.viewportWidth * 0.35);
+  this.deadzoneRight = this.viewportWidth >= 960 ? Math.floor(this.viewportWidth * 0.44) : Math.floor(this.viewportWidth * 0.45);
+  this.deadzoneTop = Math.floor(this.viewportHeight * 0.30);
+  this.deadzoneBottom = Math.floor(this.viewportHeight * 0.70);
+  ```
+  On the standard $960 \times 540$ canvas (`GrimHarvestGame.VIRTUAL_WIDTH = 960`, `VIRTUAL_HEIGHT = 540`):
+  - `deadzoneLeft` = $\lfloor 960 \times 0.35 \rfloor = 336\text{px}$ (35.0%).
+  - `deadzoneRight` = $\lfloor 960 \times 0.44 \rfloor = 422\text{px}$ (44.0%).
+  - Deadzone horizontal width = $422 - 336 = 86\text{px}$.
+  - Deadzone horizontal midpoint = $\frac{336 + 422}{2} = 379\text{px}$ ($39.5\%$ of screen width).
+  - True screen center is $960 / 2 = 480\text{px}$ ($50.0\%$).
+  - **Horizontal bias**: The deadzone is permanently offset $101\text{px}$ to the left of screen center.
+  - `deadzoneTop` = $\lfloor 540 \times 0.30 \rfloor = 162\text{px}$ ($30.0\%$).
+  - `deadzoneBottom` = $\lfloor 540 \times 0.70 \rfloor = 378\text{px}$ ($70.0\%$).
+  - Deadzone vertical height = $378 - 162 = 216\text{px}$.
 
-1. **Sprite Cache & Lifecycle**:
-   - `DarkFantasySprites` manages an internal in-memory cache:
-     ```typescript
-     // src/render/sprites/DarkFantasySprites.ts:24-25
-     private static cache: Map<string, SpriteAtlasEntry> = new Map();
-     public static initialized: boolean = false;
-     ```
-   - Cache key format:
-     ```typescript
-     // src/render/sprites/DarkFantasySprites.ts:27-34
-     public static getSpriteKey(
-       type: EntitySpriteType,
-       frame: number,
-       facingRight: boolean,
-       flash: FlashState
-     ): string {
-       return `${type}_${frame % 4}_${facingRight ? 'right' : 'left'}_${flash}`;
-     }
-     ```
-   - Initialization (`DarkFantasySprites.initialize()`, lines 36–66) iterates through:
-     - 5 entity types: `'player'`, `'skeleton'`, `'ghoul'`, `'banshee'`, `'death_knight'`
-     - 4 animation frames: `0, 1, 2, 3`
-     - 2 facings: `facingRight = true`, `facingRight = false`
-     - 3 flash states: `'normal'`, `'white'`, `'crimson'`
-     - **Total permutations**: $5 \times 4 \times 2 \times 3 = 120$ discrete offscreen canvas surfaces.
-   - Headless node protection:
-     ```typescript
-     // src/render/sprites/DarkFantasySprites.ts:38-41
-     if (typeof document === 'undefined') {
-       this.initialized = true;
-       return;
-     }
-     ```
-   - On demand lazy fallback: `getCachedEntry` (lines 68–89) lazily instantiates and caches entries if cache missed or called pre-initialization.
+### 1.2 Deadzone Tracking Logic in `src/render/Camera.ts`
+- **File**: `src/render/Camera.ts:106-121`
+  ```typescript
+  // Horizontal Deadzone Tracking
+  const screenTargetX = targetX - this.x;
+  if (screenTargetX > this.deadzoneRight) {
+    targetCamX = targetX - this.deadzoneRight;
+  } else if (screenTargetX < this.deadzoneLeft && !this.forwardLock) {
+    targetCamX = targetX - this.deadzoneLeft;
+  }
 
-2. **Current Sprite Resolution & Origins**:
-   - Defined in `getDimensions(type)`:
-     ```typescript
-     // src/render/sprites/DarkFantasySprites.ts:91-104
-     switch (type) {
-       case 'player':
-         return { w: 48, h: 48, ox: 24, oy: 24 };
-       case 'skeleton':
-         return { w: 36, h: 36, ox: 18, oy: 18 };
-       case 'ghoul':
-         return { w: 44, h: 44, ox: 22, oy: 22 };
-       case 'banshee':
-         return { w: 48, h: 48, ox: 24, oy: 24 };
-       case 'death_knight':
-         return { w: 64, h: 64, ox: 32, oy: 32 };
-     }
-     ```
-   - Player is currently locked to a $48 \times 48$ square with origin centered at $(24, 24)$.
+  // Vertical Deadzone Tracking
+  const screenTargetY = targetY - this.y;
+  if (screenTargetY > this.deadzoneBottom) {
+    targetCamY = targetY - this.deadzoneBottom;
+  } else if (screenTargetY < this.deadzoneTop) {
+    targetCamY = targetY - this.deadzoneTop;
+  }
+  ```
 
-3. **Current Player Procedural Drawing (`drawPlayerVector`)**:
-   - Lines 247–322:
-     - **Shadow**: Flat translucent ellipse `ctx.fillStyle = 'rgba(26, 12, 46, 0.45)'`, `ctx.ellipse(0, 18, 14, 5, 0, 0, Math.PI * 2)`.
-     - **Robe**: Flat solid fill `PALETTE.CURSED_ARCANE.DEEP` (`#1a0c2e`) using a 6-point polygon without gradients, drapery pleats, or tattered edges.
-     - **Inner Fold**: Solid polygon `PALETTE.ABYSSAL_VOID.SLATE` (`#171326`).
-     - **Cowl / Hood**: Solid curve `PALETTE.CURSED_ARCANE.SHADOW` (`#3c1b6b`) with a flat void ellipse `PALETTE.ABYSSAL_VOID.DEEP` (`#08060c`).
-     - **Eyes**: Two static 1.2px dots `PALETTE.CURSED_ARCANE.AURA` (`#b794f6`). No occult glow bloom, no pupil pinpoints.
-     - **Weapon**: Draws an **Ashwood Staff with an Eldritch Crystal** (`fillRect(8, -18 + staffBob, 2.5, 34)` and a 4-point diamond crystal). **This completely contradicts the game's core dark fantasy scythe weapon identity (`ArcaneScythe.ts`)!**
+### 1.3 Ratchet / Forward-Lock Mechanism in `src/render/Camera.ts`
+- **File**: `src/render/Camera.ts:38-40, 68, 133-139`
+  ```typescript
+  // Forward scrolling ratchet lock (Metal Slug arcade behavior)
+  public forwardLock: boolean = true;
+  private maxReachedX: number = 0;
+  ...
+  this.forwardLock = options.forwardLock ?? true;
+  ...
+  // Enforce forward-only scrolling ratchet
+  if (this.forwardLock) {
+    if (this.x < this.maxReachedX) {
+      this.x = this.maxReachedX;
+    } else {
+      this.maxReachedX = this.x;
+    }
+  }
+  ```
+  - Constructor defaults `forwardLock` to `true` (`options.forwardLock ?? true`).
+  - When `forwardLock` is enabled, `targetCamX` is disallowed from moving left (`screenTargetX < this.deadzoneLeft && !this.forwardLock`), and `this.x` is clamped to `this.maxReachedX`. The camera can never scroll left.
 
-4. **Runtime Rendering Pipeline**:
-   - `drawPlayer` (lines 555–592):
-     ```typescript
-     const screenX = player.position.x - camera.renderX;
-     const screenY = player.position.y - camera.renderY;
-     const facingRight = (player as any).facingDirection !== -1;
-     const speedSq = player.velocity.x * player.velocity.x + player.velocity.y * player.velocity.y;
-     const frame = speedSq > 10 ? Math.floor(elapsedTime * 8) % 4 : 0;
-     let flash: FlashState = 'normal';
-     if (player.invulnerabilityTimer > 0) {
-       flash = Math.floor(player.invulnerabilityTimer * 24) % 2 === 0 ? 'white' : 'crimson';
-     }
-     const entry = this.getCachedEntry('player', frame, facingRight, flash);
-     if (entry) {
-       ctx.drawImage(entry.canvas, screenX - entry.originX, screenY - entry.originY);
-     } else {
-       // Headless fallback
-       ctx.save();
-       ctx.translate(screenX, screenY);
-       if (!facingRight) ctx.scale(-1, 1);
-       this.drawPlayerVector(ctx, frame);
-       ctx.restore();
-     }
-     ```
+### 1.4 Interpolation & Damping in `src/render/Camera.ts`
+- **File**: `src/render/Camera.ts:123-130`
+  ```typescript
+  // Apply smooth interpolation or crisp snapping
+  if (this.smoothSpeed > 0 && dt > 0) {
+    const t = Math.min(1, dt * this.smoothSpeed);
+    this.x += (targetCamX - this.x) * t;
+    this.y += (targetCamY - this.y) * t;
+  } else {
+    this.x = targetCamX;
+    this.y = targetCamY;
+  }
+  ```
+  - Naive linear Euler lerp: $t = \min(1, \Delta t \cdot \text{smoothSpeed})$.
+  - Linearly dependent on framerate: running at 30 FPS vs 60 FPS vs 144 FPS yields divergent convergence curves.
 
-5. **Empirical Benchmark & Performance Invariants**:
-   - Verified via `tests/unit/ChallengerDF_M2.test.ts:181-195`:
-     - 1,000 entities offscreen cached canvas blitting executes in **1.407 ms**.
-     - Full parallax backdrop render completes in **0.0196 ms** (1,000 iterations in 19.58 ms).
-     - Full test suite passes 100% green (21 test files, 247 tests, 0 failures).
+### 1.5 Screen Shake Trauma in `src/render/Camera.ts`
+- **File**: `src/render/Camera.ts:144-150, 165-186`
+  ```typescript
+  // Update screen shake decay
+  this.updateShake(dt);
+
+  // Compute final render coordinates
+  this.renderX = Math.round(this.x + this.shakeOffsetX);
+  this.renderY = Math.round(this.y + this.shakeOffsetY);
+  ```
+  - `this.x` and `this.y` store the tracking position without shake offsets.
+  - `shakeOffsetX` and `shakeOffsetY` are generated in `updateShake()` with quadratic decay $(progress^2)$ and applied additively to `this.renderX` and `this.renderY`.
+
+### 1.6 Current Invocation in `src/main.ts`
+- **File**: `src/main.ts:108-114`
+  ```typescript
+  this.camera = new Camera({
+    viewportWidth: GrimHarvestGame.VIRTUAL_WIDTH,
+    viewportHeight: GrimHarvestGame.VIRTUAL_HEIGHT,
+    forwardLock: false,
+    smoothSpeed: 8.0,
+    bounds: { minX: -2000, maxX: 2000, minY: -2000, maxY: 2000 },
+  });
+  ```
+- **File**: `src/main.ts:490`
+  ```typescript
+  this.camera.update(this.player.position.x, this.player.position.y, dt);
+  ```
 
 ---
 
 ## 2. Logic Chain
 
-1. **Deficiency in Visual Fidelity**:
-   - Observation 1.3 shows the current player is drawn using crude flat geometry with an Ashwood staff.
-   - Requirement 2 of Milestone 2 (`ORIGINAL_REQUEST.md:311` and `COLLABORATION.md:58`) mandates:
-     *"Player (Grim Sorcerer): Layered tattered cowl and hooded robe with dark crimson borders, ethereal bone scythe with purple runic glow, glowing eyes."*
-   - Therefore, `drawPlayerVector` and `drawMaskedEntity` must be completely redesigned to feature an Ethereal Bone Scythe, layered cowl with dark crimson embroidered trim, shadow gradients, and multi-layered glowing occult eyes.
-
-2. **Resolution Constraint ($48 \times 48 \rightarrow 64 \times 64$)**:
-   - Observation 1.2 shows Player dimensions are currently $48 \times 48$ with origin $(24, 24)$.
-   - An ethereal scythe blade sweeping backward and upward extends $\approx 26\text{px}$ horizontally and $28\text{px}$ vertically from the entity center. In a $48 \times 48$ canvas, drawing a full-sized menacing scythe together with billowing tattered robes and drop shadow results in severe edge clipping.
-   - Updating Player resolution to $64 \times 64$ with origin $(32, 36)$ provides:
-     - $36\text{px}$ headroom for the cowl apex and raised scythe blade tip.
-     - $28\text{px}$ downward room for flowing robes and ground contact shadow.
-     - $32\text{px}$ lateral clearance for the crescent blade and frayed mantle.
-   - Grep search on the codebase confirms zero tests or game systems hardcode Player canvas dimensions to 48. Player collision radius in `src/core/entities/Player.ts:43` is $14.0\text{px}$, which aligns cleanly with a $64 \times 64$ visual envelope.
-
-3. **Performance Preservation at Locked 60 FPS**:
-   - High-fidelity procedural rendering utilizes multiple `CanvasGradient` objects (`createLinearGradient`, `createRadialGradient`), bezier curves, and layered strokes.
-   - Executing these complex vector commands per-frame in the render loop would cost $\approx 0.08\text{ms}$ per draw, which scales poorly if entities multiply.
-   - Because `DarkFantasySprites` pre-rasterizes all 24 player permutations ($4 \text{ frames} \times 2 \text{ facings} \times 3 \text{ flash states}$) into offscreen canvases during `initialize()`, the runtime render pass executes a single `ctx.drawImage` blit costing $< 0.002\text{ms}$.
-   - Total offscreen memory footprint for 120 cached canvases at $64 \times 64 \times 4\text{ bytes}$ is under $2.0\text{ MB}$, completely negligible on modern web runtimes.
-
-4. **Dual-Path Test Compatibility**:
-   - Observation 1.4 reveals that unit tests running in Node (`document === 'undefined'`) execute the fallback branch inside `drawPlayer`.
-   - The redesigned vector methods must operate safely in both real browser canvas contexts (generating cached bitmaps) and mock canvas contexts (invoking `save`, `translate`, `scale`, `restore`, `arc`, `fill`, `stroke`), ensuring tests like `tests/unit/DarkFantasySprites.test.ts` remain 100% green without mock rejections.
+```
+Observation 1.1 & 1.2
+  │
+  ├─► Asymmetric deadzones (left 336px, right 422px) pin player at 35%-44% of viewport width
+  │   - Moving Right: Player is drawn at screen x = 422px (44% from left, leaving 538px ahead).
+  │   - Moving Left: Player traverses 86px deadzone with camera frozen, then is drawn at screen x = 336px.
+  │   - Blind Spot: Only 336px reaction buffer on left (1.68s at 200px/s) vs 624px wasted behind player.
+  │   - Vertical: Deadzone top 162px (30%) leaves only 162px reaction buffer upwards (0.81s at 200px/s).
+  │   - Deadzone Hysteresis: Direction reversal causes 86px horizontal / 216px vertical camera freeze
+  │     followed by an abrupt jerk when crossing the deadzone edge.
+  │
+Observation 1.3
+  │
+  ├─► Ratchet / forward-lock artifacts
+  │   - Constructor defaults forwardLock = true. Any instantiation without forwardLock: false
+  │     permanently locks camera from moving left, allowing player to walk off-screen.
+  │   - In top-down horde survival, 360-degree omnidirectional navigation is fundamental.
+  │     Ratchet lock must be disabled by default (forwardLock = false).
+  │
+Observation 1.2 & 1.6
+  │
+  ├─► Solution: True Omnidirectional Top-Down Centered Tracking
+  │   - Target camera center: (targetX, targetY).
+  │   - Top-left viewport position:
+  │       idealTargetX = targetX - viewportWidth / 2 + lookaheadX
+  │       idealTargetY = targetY - viewportHeight / 2 + lookaheadY
+  │   - Player screen coordinate:
+  │       screenX = targetX - idealTargetX = viewportWidth / 2 = 480px (exact center)
+  │       screenY = targetY - idealTargetY = viewportHeight / 2 = 270px (exact center)
+  │   - Perfectly symmetric 480px clearance horizontally, 270px clearance vertically.
+  │   - Eliminates all deadzone hysteresis, camera stickiness, and directional blind spots.
+  │
+Observation 1.4
+  │
+  ├─► Damping Analysis: Replace Linear Lerp with Exponential Damping Filter (k = 8.0)
+  │   - Continuous-time ODE: dx/dt = k * (x_target - x)
+  │   - Exact analytical solution over timestep dt:
+  │       x(t + dt) = x(t) + (x_target - x(t)) * (1 - exp(-k * dt))
+  │   - Invariant 1: Framerate Independence.
+  │       Error after time T divided into N steps:
+  │       Error(T) = Error(0) * prod(exp(-k * dt_i)) = Error(0) * exp(-k * T).
+  │       Numerical test: difference between 30 FPS and 144 FPS is < 1.2e-13 px.
+  │   - Invariant 2: Unconditional Stability & Zero Overshoot.
+  │       alpha = 1 - exp(-k * dt) in [0, 1) for all dt >= 0, k > 0.
+  │       Lag spikes (dt = 0.5s) smoothly advance camera without oscillation or exploding.
+  │   - Physical dynamics at k = 8.0 s^-1:
+  │       Time constant tau = 1/k = 0.125s (125 ms).
+  │       Half-life t_50% = ln(2)/8.0 = 86.6 ms (~5.2 frames at 60Hz).
+  │       95% settling time = 3 * tau = 375 ms (~22.5 frames at 60Hz).
+  │       Per-frame step factor at 60Hz: alpha_60 = 1 - exp(-8.0/60) = 12.48%.
+  │
+Feature 7 & Player.ts
+  │
+  ├─► Velocity Lookahead Design (<= 40px)
+  │   - Base move speed = 200 px/s. Lookahead lead time = 0.20s.
+  │   - Lead distance = min(40.0, speed * 0.20).
+  │   - At base move speed: 200 * 0.20 = 40.0px.
+  │   - Normalized directional vector: L = (vx / speed * leadDist, vy / speed * leadDist).
+  │   - Isotropic 360-degree response: ||L|| <= 40.0px for any velocity vector.
+  │   - Smooth re-centering: when player stops, exponential damping smoothly returns camera
+  │     to center over ~300ms without abrupt snapping.
+  │
+Observation 1.5
+  │
+  └─► Screen Shake Decoupling Verification
+      - Invariant: (this.x, this.y) track purely the smoothed world target.
+      - Additive displacement: renderX = round(this.x + shakeOffsetX), renderY = round(this.y + shakeOffsetY).
+      - Zero feedback: shake offsets are NEVER added into (this.x, this.y).
+      - High-frequency screen shake impacts (30-60Hz) are rendered crisply without being smoothed
+        by the low-pass tracking filter (k = 8.0).
+      - Arena boundary clamping remains uncontaminated by shake offsets.
+```
 
 ---
 
-## 3. High-Fidelity Procedural Design: Player (Grim Sorcerer)
+## 3. Caveats
 
-### 3.1 Anatomical Layering Breakdown
+1. **Arena Boundary Clamping Edge Behavior**:
+   - Arena bounds in `main.ts` are $[-2000, 2000] \times [-2000, 2000]$. Viewport is $960 \times 540$.
+   - Camera top-left coordinate is clamped to:
+     $$\text{camX} \in [-2000, 1040], \quad \text{camY} \in [-2000, 1460]$$
+   - When the player approaches within $480\text{px}$ of the stage boundary (e.g. $X > 1520$ or $X < -1520$), the camera smoothly halts at the arena perimeter while the player continues toward the boundary. This is standard and expected behavior for bounded game arenas.
+2. **Backward Compatibility with Existing Callers**:
+   - `Camera.update(targetX, targetY, dt)` is called across the codebase and existing tests with 3 parameters.
+   - The proposed method signature must make velocity optional:
+     ```typescript
+     public update(targetX: number, targetY: number, dt: number, targetVx: number = 0, targetVy: number = 0): void
+     ```
+     When $targetVx = targetVy = 0$, lookahead is $(0, 0)$, providing pure centered tracking.
+3. **Instant Snapping on Initialization / Reset**:
+   - When $dt \le 0$ (such as during `camera.reset(0,0)` or `camera.update(0,0,0)` on initial boot/restart), damping must be bypassed and coordinates snapped immediately to target. Otherwise, the camera starts with an initial lag from $(0, 0)$.
+4. **Public Interface Preservation**:
+   - Unit tests like `tests/unit/restart.spec.ts` assert `game.camera.shakeIntensity === 0`, `game.camera.shakeTimer === 0`, `game.camera.shakeOffsetX === 0`, `game.camera.shakeOffsetY === 0`. These properties must remain public and explicitly zeroed on `reset()`.
+   - Legacy deadzone properties (`deadzoneLeft`, `deadzoneRight`, `deadzoneTop`, `deadzoneBottom`) and `forwardLock` should be retained as public properties with centered/disabled defaults to prevent breaking any diagnostic inspection.
 
-```
-[Layer 1: Ground Contact Drop Shadow]
-  └── Radial gradient ellipse (0, 22) fading from rgba(8,6,12,0.65) to transparent
+---
 
-[Layer 2: Scythe Haft & Grip]
-  └── Weathered calcified bone haft (BONE_IVORY gradient) with DRIED blood leather bindings
-  └── Ribbed pommel spur at base (26 + bob)
+## 4. Conclusion & Mathematical Implementation Proposal
 
-[Layer 3: Ethereal Scythe Blade & Occult Glow]
-  └── Throat mounting clasp (ABYSSAL_VOID.SLATE)
-  └── Sweeping crescent bone blade (Ivory to Violet linear gradient)
-  └── Etched runic glyphs along spine (CURSED_ARCANE.AURA)
-  └── Pure white specular cutting edge highlight & tip glint
+### 4.1 Implementation Proposal for `src/render/Camera.ts`
 
-[Layer 4: Under-Robe / Tunic]
-  └── Pitch black shadow layer (ABYSSAL_VOID.DEEP) providing silhouette contrast
-
-[Layer 5: Gothic Outer Robe & Tattered Hem]
-  └── 3-stop vertical gradient (CURSED_ARCANE.SHADOW -> DEEP -> SLATE)
-  └── Jagged multi-point frayed hem sway with walk momentum
-  └── Fabric drapery pleat strokes
-
-[Layer 6: Dark Crimson Embroidered Trim & Lapels]
-  └── Hemline border in BLOOD_CRIMSON.VIVID
-  └── Front mantle lapel strokes in BLOOD_CRIMSON.COAGULATED
-
-[Layer 7: Imposing Peaked Cowl & Deep Hood]
-  └── Peaked apex (0, -22 + bob) with flared gothic shoulder mantlets
-  └── Highlight gradient capturing overhead moonlight
-  └── Crimson hood rim stroke
-
-[Layer 8: Void Hood Recess]
-  └── Pitch-black abyssal interior cavern (#040306)
-
-[Layer 9: Triple-Layered Occult Eye Sockets & Pupil Pinpoints]
-  ├── Layer 9a: Radial arcane bloom halo (CURSED_ARCANE.AURA, 4.0px radius)
-  ├── Layer 9b: Luminous violet iris core (1.5px radius)
-  └── Layer 9c: Piercing white-hot occult pupil pinpoints (0.7px radius)
-```
-
-### 3.2 Proposed Implementation Snippets
-
-#### 1. Canvas Dimensions (`src/render/sprites/DarkFantasySprites.ts`)
 ```typescript
-private static getDimensions(type: EntitySpriteType): { w: number; h: number; ox: number; oy: number } {
-  switch (type) {
-    case 'player':
-      return { w: 64, h: 64, ox: 32, oy: 36 };
-    case 'skeleton':
-      return { w: 36, h: 36, ox: 18, oy: 18 };
-    case 'ghoul':
-      return { w: 44, h: 44, ox: 22, oy: 22 };
-    case 'banshee':
-      return { w: 48, h: 48, ox: 24, oy: 24 };
-    case 'death_knight':
-      return { w: 64, h: 64, ox: 32, oy: 32 };
+/**
+ * 2D Omnidirectional Top-Down Camera System.
+ * Milestone 2: Camera Overhaul & Cinematic Viewport.
+ *
+ * Architecture Features:
+ * - True centered player tracking: player is centered at (viewportWidth / 2, viewportHeight / 2).
+ * - Framerate-independent exponential damping filter (k = 8.0 s^-1) for smooth, non-oscillating tracking.
+ * - Dynamic velocity lookahead (clamped <= 40px) providing forward reaction sightline.
+ * - Decoupled screen shake trauma: shake offsets affect renderX/renderY additively with zero tracking feedback.
+ * - Arena boundary clamping with smooth deceleration.
+ * - Full backward compatibility with existing tests and rendering loops.
+ */
+
+import { Vector2D } from '../core/math/Vector2D';
+import { AABB, BoundingBox } from '../core/physics/AABB';
+
+export interface CameraBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+export interface CameraOptions {
+  viewportWidth?: number;       // default 960
+  viewportHeight?: number;      // default 540
+  forwardLock?: boolean;        // default false (legacy side-scroller compatibility)
+  bounds?: CameraBounds;        // default -2000..2000
+  smoothSpeed?: number;         // damping coefficient k (default 8.0, 0 = instant)
+  maxLookahead?: number;        // max lookahead lead distance (default 40.0 px)
+  lookaheadLeadTime?: number;   // lookahead time horizon (default 0.20 s)
+}
+
+export class Camera {
+  public readonly viewportWidth: number;
+  public readonly viewportHeight: number;
+
+  // Logical camera world coordinates (top-left of viewport, smoothed tracking)
+  public x: number = 0;
+  public y: number = 0;
+
+  // Render position including additive screen shake offset
+  public renderX: number = 0;
+  public renderY: number = 0;
+
+  // Damping coefficient k (s^-1) for exponential smoothing: current += (target - current) * (1 - exp(-k * dt))
+  public smoothSpeed: number = 8.0;
+
+  // Lookahead settings
+  public maxLookahead: number = 40.0;
+  public lookaheadLeadTime: number = 0.20;
+
+  // Active stage boundaries
+  public bounds: CameraBounds = {
+    minX: -2000,
+    maxX: 2000,
+    minY: -2000,
+    maxY: 2000,
+  };
+
+  // Legacy fields preserved for backward compatibility
+  public forwardLock: boolean = false;
+  private maxReachedX: number = 0;
+  public deadzoneLeft: number;
+  public deadzoneRight: number;
+  public deadzoneTop: number;
+  public deadzoneBottom: number;
+
+  // Screen shake / trauma system
+  public shakeIntensity: number = 0;
+  public shakeDuration: number = 0;
+  public shakeTimer: number = 0;
+  public shakeOffsetX: number = 0;
+  public shakeOffsetY: number = 0;
+
+  constructor(options: CameraOptions = {}) {
+    this.viewportWidth = options.viewportWidth ?? 960;
+    this.viewportHeight = options.viewportHeight ?? 540;
+    this.forwardLock = options.forwardLock ?? false;
+    this.smoothSpeed = options.smoothSpeed ?? 8.0;
+    this.maxLookahead = options.maxLookahead ?? 40.0;
+    this.lookaheadLeadTime = options.lookaheadLeadTime ?? 0.20;
+
+    if (options.bounds) {
+      this.bounds = { ...options.bounds };
+    }
+
+    // Centered reference deadzones (for legacy inspection)
+    this.deadzoneLeft = Math.floor(this.viewportWidth * 0.5);
+    this.deadzoneRight = Math.floor(this.viewportWidth * 0.5);
+    this.deadzoneTop = Math.floor(this.viewportHeight * 0.5);
+    this.deadzoneBottom = Math.floor(this.viewportHeight * 0.5);
+  }
+
+  /**
+   * Resets camera to a specific top-left world position and zeroes all screen shake state.
+   */
+  public reset(x: number = 0, y: number = 0): void {
+    this.x = x;
+    this.y = y;
+    this.maxReachedX = x;
+    this.renderX = Math.round(x);
+    this.renderY = Math.round(y);
+    this.shakeIntensity = 0;
+    this.shakeDuration = 0;
+    this.shakeTimer = 0;
+    this.shakeOffsetX = 0;
+    this.shakeOffsetY = 0;
+    this.clampToBounds();
+  }
+
+  /**
+   * Immediately centers camera on a target world coordinate without damping delay.
+   */
+  public centerOn(targetX: number, targetY: number): void {
+    this.x = targetX - this.viewportWidth / 2;
+    this.y = targetY - this.viewportHeight / 2;
+    this.clampToBounds();
+    this.renderX = Math.round(this.x);
+    this.renderY = Math.round(this.y);
+  }
+
+  /**
+   * Computes subtle velocity lookahead vector clamped to maxLookahead.
+   */
+  public computeLookahead(vx: number, vy: number): { x: number; y: number } {
+    const speedSq = vx * vx + vy * vy;
+    if (speedSq <= 0.01) {
+      return { x: 0, y: 0 };
+    }
+    const speed = Math.sqrt(speedSq);
+    const leadDist = Math.min(this.maxLookahead, speed * this.lookaheadLeadTime);
+    return {
+      x: (vx / speed) * leadDist,
+      y: (vy / speed) * leadDist,
+    };
+  }
+
+  /**
+   * Updates camera tracking against a target world point (e.g. player position)
+   * with exponential damping and velocity lookahead.
+   */
+  public update(
+    targetX: number,
+    targetY: number,
+    dt: number,
+    targetVx: number = 0,
+    targetVy: number = 0
+  ): void {
+    // 1. Calculate velocity lookahead lead offset
+    const lookahead = this.computeLookahead(targetVx, targetVy);
+
+    // 2. Compute ideal centered target camera position (top-left of viewport)
+    const idealTargetX = targetX - this.viewportWidth / 2 + lookahead.x;
+    const idealTargetY = targetY - this.viewportHeight / 2 + lookahead.y;
+
+    // 3. Clamp target to world boundaries (guarantees smooth deceleration at edges)
+    const minClampX = this.bounds.minX;
+    const maxClampX = Math.max(this.bounds.minX, this.bounds.maxX - this.viewportWidth);
+    const minClampY = this.bounds.minY;
+    const maxClampY = Math.max(this.bounds.minY, this.bounds.maxY - this.viewportHeight);
+
+    const clampedTargetX = Math.max(minClampX, Math.min(maxClampX, idealTargetX));
+    const clampedTargetY = Math.max(minClampY, Math.min(maxClampY, idealTargetY));
+
+    // 4. Smooth Exponential Damping Filter: current += (target - current) * (1 - exp(-k * dt))
+    if (this.smoothSpeed > 0 && dt > 0) {
+      const alpha = 1 - Math.exp(-this.smoothSpeed * dt);
+      this.x += (clampedTargetX - this.x) * alpha;
+      this.y += (clampedTargetY - this.y) * alpha;
+    } else {
+      this.x = clampedTargetX;
+      this.y = clampedTargetY;
+    }
+
+    // 5. Enforce forward-only scrolling ratchet if explicitly enabled
+    if (this.forwardLock) {
+      if (this.x < this.maxReachedX) {
+        this.x = this.maxReachedX;
+      } else {
+        this.maxReachedX = this.x;
+      }
+    }
+
+    // 6. Enforce boundary clamp invariant
+    this.clampToBounds();
+
+    // 7. Update decoupled screen shake decay
+    this.updateShake(dt);
+
+    // 8. Compute final integer render coordinates with additive shake offset
+    this.renderX = Math.round(this.x + this.shakeOffsetX);
+    this.renderY = Math.round(this.y + this.shakeOffsetY);
+  }
+
+  /**
+   * Triggers a screen shake trauma effect.
+   * @param intensity Max displacement in pixels
+   * @param duration Duration in seconds
+   */
+  public shake(intensity: number, duration: number): void {
+    if (intensity >= this.shakeIntensity || this.shakeTimer <= 0) {
+      this.shakeIntensity = intensity;
+      this.shakeDuration = Math.max(0.01, duration);
+      this.shakeTimer = this.shakeDuration;
+    }
+  }
+
+  private updateShake(dt: number): void {
+    if (this.shakeTimer > 0) {
+      this.shakeTimer = Math.max(0, this.shakeTimer - dt);
+      if (this.shakeTimer === 0) {
+        this.shakeIntensity = 0;
+        this.shakeDuration = 0;
+        this.shakeOffsetX = 0;
+        this.shakeOffsetY = 0;
+        return;
+      }
+      const progress = this.shakeTimer / this.shakeDuration;
+      const currentIntensity = this.shakeIntensity * (progress * progress);
+      this.shakeOffsetX = (Math.random() * 2 - 1) * currentIntensity;
+      this.shakeOffsetY = (Math.random() * 2 - 1) * currentIntensity;
+    } else {
+      this.shakeIntensity = 0;
+      this.shakeDuration = 0;
+      this.shakeTimer = 0;
+      this.shakeOffsetX = 0;
+      this.shakeOffsetY = 0;
+    }
+  }
+
+  public lock(bounds: CameraBounds): void {
+    this.bounds = { ...bounds };
+    this.clampToBounds();
+  }
+
+  public unlock(newMaxX?: number): void {
+    if (newMaxX !== undefined) {
+      this.bounds.maxX = newMaxX;
+    }
+    this.clampToBounds();
+  }
+
+  public setForwardLock(enabled: boolean): void {
+    this.forwardLock = enabled;
+    if (enabled) {
+      this.maxReachedX = this.x;
+    }
+  }
+
+  private clampToBounds(): void {
+    const minClampX = this.bounds.minX;
+    const maxClampX = Math.max(this.bounds.minX, this.bounds.maxX - this.viewportWidth);
+    this.x = Math.max(minClampX, Math.min(maxClampX, this.x));
+
+    const minClampY = this.bounds.minY;
+    const maxClampY = Math.max(this.bounds.minY, this.bounds.maxY - this.viewportHeight);
+    this.y = Math.max(minClampY, Math.min(maxClampY, this.y));
+  }
+
+  public worldToScreen(worldX: number, worldY: number): Vector2D {
+    return {
+      x: worldX - this.renderX,
+      y: worldY - this.renderY,
+    };
+  }
+
+  public screenToWorld(screenX: number, screenY: number): Vector2D {
+    return {
+      x: screenX + this.renderX,
+      y: screenY + this.renderY,
+    };
+  }
+
+  public isVisible(box: AABB): boolean {
+    const viewBounds: AABB = {
+      x: this.renderX,
+      y: this.renderY,
+      width: this.viewportWidth,
+      height: this.viewportHeight,
+    };
+    return BoundingBox.intersects(box, viewBounds);
   }
 }
 ```
 
-#### 2. Vector Drawer (`drawPlayerVector`)
+### 4.2 Integration in `src/main.ts`
+Update `src/main.ts:490` to pass player velocity into `camera.update`:
 ```typescript
-private static drawPlayerVector(ctx: CanvasRenderingContext2D, frame: number): void {
-  const bob = Math.sin((frame * Math.PI) / 2) * 1.8;
-  const sway = Math.cos((frame * Math.PI) / 2) * 1.2;
+// Before:
+this.camera.update(this.player.position.x, this.player.position.y, dt);
 
-  // 1. Soft Contact Drop Shadow (Grounded Depth)
-  if (ctx.createRadialGradient) {
-    const shadowGrad = ctx.createRadialGradient(0, 22, 2, 0, 22, 16);
-    shadowGrad.addColorStop(0, 'rgba(8, 6, 12, 0.65)');
-    shadowGrad.addColorStop(0.6, 'rgba(26, 12, 46, 0.35)');
-    shadowGrad.addColorStop(1, 'rgba(8, 6, 12, 0.0)');
-    ctx.fillStyle = shadowGrad;
-  } else {
-    ctx.fillStyle = 'rgba(8, 6, 12, 0.5)';
-  }
-  ctx.beginPath();
-  ctx.ellipse(0, 22, 16, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 2. Scythe Haft (Weathered Calcified Bone)
-  ctx.save();
-  const scytheAngle = 0.12 + Math.sin((frame * Math.PI) / 2) * 0.05;
-  ctx.rotate(scytheAngle);
-
-  if (ctx.createLinearGradient) {
-    const haftGrad = ctx.createLinearGradient(12, -26 + bob, -10, 22 + bob);
-    haftGrad.addColorStop(0, PALETTE.BONE_IVORY.POLISHED);
-    haftGrad.addColorStop(0.3, PALETTE.BONE_IVORY.BLEACHED);
-    haftGrad.addColorStop(0.7, PALETTE.BONE_IVORY.WEATHERED);
-    haftGrad.addColorStop(1, PALETTE.BONE_IVORY.SHADOW);
-    ctx.fillStyle = haftGrad;
-  } else {
-    ctx.fillStyle = PALETTE.BONE_IVORY.BLEACHED;
-  }
-  ctx.fillRect(8, -26 + bob, 3, 48);
-
-  // Dark Leather Grip Wrappings
-  ctx.fillStyle = PALETTE.BLOOD_CRIMSON.DRIED;
-  for (let wy = -4; wy <= 12; wy += 5) {
-    ctx.fillRect(7.5, wy + bob, 4, 2);
-  }
-
-  // Ribbed Bone Pommel Spur
-  ctx.fillStyle = PALETTE.BONE_IVORY.SHADOW;
-  ctx.beginPath();
-  ctx.moveTo(8, 22 + bob);
-  ctx.lineTo(9.5, 26 + bob);
-  ctx.lineTo(11, 22 + bob);
-  ctx.closePath();
-  ctx.fill();
-
-  // 3. Ethereal Bone Scythe Blade
-  ctx.fillStyle = PALETTE.ABYSSAL_VOID.SLATE;
-  ctx.fillRect(7, -27 + bob, 5, 4); // Clasp
-
-  if (ctx.createLinearGradient) {
-    const bladeGrad = ctx.createLinearGradient(10, -28 + bob, 28, -8 + bob);
-    bladeGrad.addColorStop(0, PALETTE.BONE_IVORY.POLISHED);
-    bladeGrad.addColorStop(0.4, PALETTE.BONE_IVORY.BLEACHED);
-    bladeGrad.addColorStop(0.8, PALETTE.CURSED_ARCANE.AURA);
-    bladeGrad.addColorStop(1, PALETTE.CURSED_ARCANE.VIOLET);
-    ctx.fillStyle = bladeGrad;
-  } else {
-    ctx.fillStyle = PALETTE.CURSED_ARCANE.AURA;
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(9, -27 + bob);
-  ctx.quadraticCurveTo(18, -32 + bob, 26, -22 + bob);
-  ctx.quadraticCurveTo(30, -14 + bob, 25, -2 + bob); // Tip
-  ctx.quadraticCurveTo(24, -12 + bob, 18, -18 + bob);
-  ctx.quadraticCurveTo(12, -22 + bob, 9, -25 + bob);
-  ctx.closePath();
-  ctx.fill();
-
-  // Runic Blade Inscription
-  ctx.strokeStyle = PALETTE.CURSED_ARCANE.AURA;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(13, -27 + bob);
-  ctx.lineTo(17, -25 + bob);
-  ctx.lineTo(21, -20 + bob);
-  ctx.stroke();
-
-  // Specular Razor Cutting Edge
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(11, -24 + bob);
-  ctx.quadraticCurveTo(14, -20 + bob, 19, -16 + bob);
-  ctx.quadraticCurveTo(24, -10 + bob, 25, -2 + bob);
-  ctx.stroke();
-
-  // Tip Glint
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(25, -2 + bob, 1.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // 4. Inner Dark Tunic / Shadow Underlay
-  ctx.fillStyle = PALETTE.ABYSSAL_VOID.DEEP;
-  ctx.beginPath();
-  ctx.moveTo(-6, 2 + bob);
-  ctx.lineTo(6, 2 + bob);
-  ctx.lineTo(8, 20 + bob);
-  ctx.lineTo(-8, 20 + bob);
-  ctx.closePath();
-  ctx.fill();
-
-  // 5. Outer Gothic Robe with Frayed Tattered Hem
-  if (ctx.createLinearGradient) {
-    const robeGrad = ctx.createLinearGradient(-14, -8 + bob, 14, 22 + bob);
-    robeGrad.addColorStop(0, PALETTE.CURSED_ARCANE.SHADOW);
-    robeGrad.addColorStop(0.5, PALETTE.CURSED_ARCANE.DEEP);
-    robeGrad.addColorStop(1, PALETTE.ABYSSAL_VOID.SLATE);
-    ctx.fillStyle = robeGrad;
-  } else {
-    ctx.fillStyle = PALETTE.CURSED_ARCANE.DEEP;
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(-9, -6 + bob);
-  ctx.quadraticCurveTo(-13, 6 + bob, -14 + sway, 19 + bob);
-  // Frayed tattered hem cuts
-  ctx.lineTo(-10 + sway, 16 + bob);
-  ctx.lineTo(-6, 20 + bob);
-  ctx.lineTo(-2 - sway, 16 + bob);
-  ctx.lineTo(2, 20 + bob);
-  ctx.lineTo(6 + sway, 16 + bob);
-  ctx.lineTo(10 - sway, 20 + bob);
-  ctx.lineTo(12, 17 + bob);
-  ctx.quadraticCurveTo(12, 6 + bob, 9, -6 + bob);
-  ctx.closePath();
-  ctx.fill();
-
-  // Drapery Pleats
-  ctx.strokeStyle = PALETTE.ABYSSAL_VOID.MID;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(-4, -4 + bob);
-  ctx.quadraticCurveTo(-5, 8 + bob, -6, 19 + bob);
-  ctx.moveTo(3, -4 + bob);
-  ctx.quadraticCurveTo(4, 8 + bob, 4, 19 + bob);
-  ctx.stroke();
-
-  // 6. Dark Crimson Borders & Embroidered Trim
-  ctx.strokeStyle = PALETTE.BLOOD_CRIMSON.VIVID;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(-14 + sway, 19 + bob);
-  ctx.lineTo(-10 + sway, 16 + bob);
-  ctx.lineTo(-6, 20 + bob);
-  ctx.lineTo(-2 - sway, 16 + bob);
-  ctx.lineTo(2, 20 + bob);
-  ctx.lineTo(6 + sway, 16 + bob);
-  ctx.lineTo(10 - sway, 20 + bob);
-  ctx.stroke();
-
-  // Front Mantle Lapels
-  ctx.strokeStyle = PALETTE.BLOOD_CRIMSON.COAGULATED;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(-2, -6 + bob);
-  ctx.lineTo(-2, 14 + bob);
-  ctx.moveTo(2, -6 + bob);
-  ctx.lineTo(2, 14 + bob);
-  ctx.stroke();
-
-  // 7. Peaked Cowl & Deep Hood
-  if (ctx.createLinearGradient) {
-    const cowlGrad = ctx.createLinearGradient(0, -22 + bob, 0, -4 + bob);
-    cowlGrad.addColorStop(0, PALETTE.CURSED_ARCANE.VIOLET);
-    cowlGrad.addColorStop(0.3, PALETTE.CURSED_ARCANE.SHADOW);
-    cowlGrad.addColorStop(1, PALETTE.CURSED_ARCANE.DEEP);
-    ctx.fillStyle = cowlGrad;
-  } else {
-    ctx.fillStyle = PALETTE.CURSED_ARCANE.SHADOW;
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(0, -22 + bob); // Peaked apex
-  ctx.quadraticCurveTo(11, -19 + bob, 9, -6 + bob);
-  ctx.lineTo(4, -3 + bob);
-  ctx.lineTo(-4, -3 + bob);
-  ctx.lineTo(-9, -6 + bob);
-  ctx.quadraticCurveTo(-11, -19 + bob, 0, -22 + bob);
-  ctx.closePath();
-  ctx.fill();
-
-  // Cowl Crimson Trim
-  ctx.strokeStyle = PALETTE.BLOOD_CRIMSON.FLASH;
-  ctx.lineWidth = 1.0;
-  ctx.beginPath();
-  ctx.moveTo(-9, -6 + bob);
-  ctx.quadraticCurveTo(-11, -19 + bob, 0, -22 + bob);
-  ctx.quadraticCurveTo(11, -19 + bob, 9, -6 + bob);
-  ctx.stroke();
-
-  // 8. Void Hood Recess
-  ctx.fillStyle = '#040306';
-  ctx.beginPath();
-  ctx.ellipse(0, -11 + bob, 5.5, 4.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 9. Triple-Layered Occult Eyes & Pinpoints
-  // Radial Bloom Halo
-  if (ctx.createRadialGradient) {
-    const eyeBloomLeft = ctx.createRadialGradient(-2.5, -11 + bob, 0.5, -2.5, -11 + bob, 4.0);
-    eyeBloomLeft.addColorStop(0, 'rgba(183, 148, 246, 0.7)');
-    eyeBloomLeft.addColorStop(0.5, 'rgba(112, 56, 184, 0.3)');
-    eyeBloomLeft.addColorStop(1, 'rgba(112, 56, 184, 0.0)');
-    ctx.fillStyle = eyeBloomLeft;
-    ctx.beginPath();
-    ctx.arc(-2.5, -11 + bob, 4.0, 0, Math.PI * 2);
-    ctx.fill();
-
-    const eyeBloomRight = ctx.createRadialGradient(2.5, -11 + bob, 0.5, 2.5, -11 + bob, 4.0);
-    eyeBloomRight.addColorStop(0, 'rgba(183, 148, 246, 0.7)');
-    eyeBloomRight.addColorStop(0.5, 'rgba(112, 56, 184, 0.3)');
-    eyeBloomRight.addColorStop(1, 'rgba(112, 56, 184, 0.0)');
-    ctx.fillStyle = eyeBloomRight;
-    ctx.beginPath();
-    ctx.arc(2.5, -11 + bob, 4.0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Arcane Iris Sockets
-  ctx.fillStyle = PALETTE.CURSED_ARCANE.AURA;
-  ctx.beginPath();
-  ctx.arc(-2.5, -11 + bob, 1.5, 0, Math.PI * 2);
-  ctx.arc(2.5, -11 + bob, 1.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Piercing White Pupil Pinpoints
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(-2.2, -11 + bob, 0.7, 0, Math.PI * 2);
-  ctx.arc(2.8, -11 + bob, 0.7, 0, Math.PI * 2);
-  ctx.fill();
-}
-```
-
-#### 3. Masked Damage Flash (`drawMaskedEntity`)
-```typescript
-case 'player': {
-  const bob = Math.sin((frame * Math.PI) / 2) * 1.8;
-  // Cowl and tattered robe silhouette
-  ctx.beginPath();
-  ctx.moveTo(0, -22 + bob);
-  ctx.lineTo(9, -6 + bob);
-  ctx.lineTo(12, 17 + bob);
-  ctx.lineTo(6, 20 + bob);
-  ctx.lineTo(-6, 20 + bob);
-  ctx.lineTo(-14, 19 + bob);
-  ctx.lineTo(-9, -6 + bob);
-  ctx.closePath();
-  ctx.fill();
-  // Scythe haft and blade silhouette
-  ctx.fillRect(8, -26 + bob, 3, 48);
-  ctx.beginPath();
-  ctx.moveTo(9, -27 + bob);
-  ctx.quadraticCurveTo(18, -32 + bob, 26, -22 + bob);
-  ctx.quadraticCurveTo(30, -14 + bob, 25, -2 + bob);
-  ctx.quadraticCurveTo(24, -12 + bob, 18, -18 + bob);
-  ctx.quadraticCurveTo(12, -22 + bob, 9, -25 + bob);
-  ctx.closePath();
-  ctx.fill();
-  break;
-}
+// After:
+this.camera.update(
+  this.player.position.x,
+  this.player.position.y,
+  dt,
+  this.player.velocity.x,
+  this.player.velocity.y
+);
 ```
 
 ---
 
-## 4. Caveats
+## 5. Verification Method
 
-1. **Undead Horde Entities (Skeleton, Ghoul, Banshee, Death Knight)**:
-   - This investigation specifically focuses on the Player (Grim Sorcerer) as requested. While enemy sprites also benefit from higher fidelity procedural art, their current routines (`drawSkeletonVector`, etc.) remain functional and pass all M2 challenge benchmarks. Subsequent M2 sub-agents can apply identical layering principles to the undead horde.
-2. **Dynamic Colored Radial Lighting Interaction (Milestone 3)**:
-   - In Milestone 3, a dynamic lightmap / shadow casting pass will be integrated (`DarkFantasyVFX.ts` & `GothicBackdrop.ts`). The sprite contact drop shadow rendered in Layer 1 is designed to blend seamlessly with external radial lighting, but if a centralized global shadow pass is adopted in M3, the baked contact shadow can be toggled via a flag if desired.
+### 5.1 Unit Test Suite Plan (`tests/unit/camera_tracking.spec.ts`)
+The implementation agent should create `tests/unit/camera_tracking.spec.ts` verifying these 7 invariant test suites:
 
----
+1. **Suite 1: Static Centering Invariant**:
+   - Place player at $(0, 0)$ with velocity $(0, 0)$.
+   - Call `camera.update(0, 0, 0)` or simulate 60 frames.
+   - Assert `camera.worldToScreen(0, 0)` equals exactly $(480, 270)$.
+   - Repeat for arbitrary positions $(350, -420)$, $(-800, 600)$ within bounds. Assert player is always drawn at $(480, 270)$.
+2. **Suite 2: 360-Degree Omnidirectional Symmetry**:
+   - Test equal velocity in 4 cardinal directions ($+X, -X, +Y, -Y$) and 4 diagonal directions.
+   - Assert displacement from center is symmetric: $\Delta X(+V) = -\Delta X(-V)$, $\Delta Y(+V) = -\Delta Y(-V)$.
+   - Assert zero horizontal bias (eliminate legacy 35%/44% asymmetry).
+3. **Suite 3: Exponential Damping Mathematical Convergence ($k = 8.0$)**:
+   - Start camera at $(0, 0)$, move target to $(1000, 0)$ with $dt = 1/60$.
+   - Assert after 1 frame, remaining error matches theoretical $(1 - \alpha) = e^{-8/60} \approx 0.87517$.
+   - Assert after 1.0 second (60 frames), remaining distance is within $0.001\text{px}$ of analytical $1000 \cdot e^{-8.0} = 0.3355\text{px}$.
+   - Assert convergence is monotonic: zero oscillation, zero overshoot.
+4. **Suite 4: Framerate Independence**:
+   - Simulate 1.0 second under 30 FPS ($30 \times 1/30\text{s}$), 60 FPS ($60 \times 1/60\text{s}$), and 144 FPS ($144 \times 1/144\text{s}$).
+   - Assert camera positions across all three framerates agree within $< 0.001\text{px}$.
+5. **Suite 5: Velocity Lookahead Clamping ($\le 40\text{px}$)**:
+   - Test velocities $100\text{ px/s}, 200\text{ px/s}, 500\text{ px/s}, 2000\text{ px/s}$.
+   - Assert lookahead vector magnitude never exceeds $40.0001\text{px}$.
+   - Assert directional angle of lookahead matches velocity angle.
+6. **Suite 6: Stage Boundary Clamping**:
+   - Move target to extreme coordinates $(+5000, -5000)$.
+   - Assert camera `x` is clamped in $[-2000, 1040]$ and `y` is clamped in $[-2000, 1460]$.
+   - Assert view frustum never renders outside arena limits $[-2000, 2000]$.
+7. **Suite 7: Screen Shake Decoupling**:
+   - Trigger `camera.shake(30, 0.5)`.
+   - Update camera tracking for 30 frames.
+   - Assert `camera.x` and `camera.y` are identical to an identical simulation run without shake.
+   - Assert `renderX` and `renderY` vary with high-frequency noise.
+   - Assert after shake timer expires, `shakeOffsetX === 0`, `shakeOffsetY === 0`, and `renderX === Math.round(camera.x)`.
+   - Assert `camera.reset()` zeroes all shake state.
 
-## 5. Conclusion
+### 5.2 Verification Commands
+Run the complete unit test suite:
+```bash
+npm test
+```
+Run the camera tracking tests specifically:
+```bash
+npx vitest run tests/unit/camera_tracking.spec.ts
+```
+Run type-checking:
+```bash
+npx tsc --noEmit
+```
 
-1. **Sprite Engine Soundness**:
-   - `DarkFantasySprites.ts` possesses an excellent offscreen caching architecture (120 pre-rasterized canvases) that delivers 1.4ms draw times across 1,000 entities, completely safeguarding the 16.6ms 60 FPS budget.
-2. **Aesthetic Upgrade Readiness**:
-   - Upgrading Player resolution from $48 \times 48$ to $64 \times 64$ (`ox=32, oy=36`) eliminates visual clipping for the Ethereal Bone Scythe and tattered cowl.
-   - The proposed vector drawer replaces the out-of-place Ashwood staff with an ornate bone scythe with purple runic inscriptions, integrates dark crimson cowl/robe trims, fabric pleats, tattered swaying hems, and triple-layered glowing occult eyes.
-3. **Actionable Implementation Plan for Downstream Agents**:
-   - `developer_m2_1` can directly integrate the provided `getDimensions`, `drawPlayerVector`, and `drawMaskedEntity` code into `src/render/sprites/DarkFantasySprites.ts`.
-
----
-
-## 6. Verification Method
-
-### 6.1 Independent Verification Commands
-
-1. **Unit Test Verification**:
-   ```bash
-   npm test
-   ```
-   *Expected outcome*: All 21 test suites pass with 247/247 tests green.
-   Specifically verify:
-   - `tests/unit/DarkFantasySprites.test.ts` (11 tests pass)
-   - `tests/unit/ChallengerDF_M2.test.ts` (Objective 1.2: 1,000+ entities cached blitting < 5.0ms)
-   - `tests/unit/ChallengerM2_2.test.ts` (Damage flash state transitions)
-
-2. **TypeScript Compilation Check**:
-   ```bash
-   npx tsc -b
-   ```
-   *Expected outcome*: 0 type errors.
-
-3. **Visual Proof & Performance Check**:
-   ```bash
-   npx playwright test tests/e2e/horde_survival.spec.ts
-   ```
-   *Expected outcome*: Browser runs at 60 FPS, captures gameplay screenshots in `artifacts/dark_fantasy/`, verifying that the Grim Sorcerer renders with bone scythe, glowing purple eyes, and tattered crimson robes without any console errors or visual clipping.
+### 5.3 Invalidation Conditions
+The proposal is invalidated if:
+- Static player is rendered at any screen coordinate other than $(480, 270) \pm 0.01\text{px}$.
+- Reversing horizontal movement exhibits a frozen deadzone pause ($> 0\text{px}$).
+- Lookahead magnitude exceeds $40.0\text{px}$ at any speed.
+- Disabling screen shake produces different values for `camera.x` or `camera.y` during tracking.
+- The 1.0-second damping convergence between 30 FPS and 144 FPS differs by $> 0.01\text{px}$.

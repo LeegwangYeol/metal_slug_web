@@ -11,10 +11,12 @@ export type EnemyType =
   | 'ghoul'
   | 'banshee'
   | 'death_knight'
+  | 'necromancer'
   | 'SKELETON'
   | 'GHOUL'
   | 'BANSHEE'
-  | 'DEATH_KNIGHT';
+  | 'DEATH_KNIGHT'
+  | 'NECROMANCER';
 
 export interface EnemyStatsConfig {
   hp: number;
@@ -30,7 +32,7 @@ export const ENEMY_BASE_STATS: Record<string, EnemyStatsConfig> = {
   skeleton: {
     hp: 25,
     speed: 65,
-    radius: 12,
+    radius: 11,
     damage: 10,
     mass: 1.0,
     gemType: 'emerald',
@@ -39,7 +41,7 @@ export const ENEMY_BASE_STATS: Record<string, EnemyStatsConfig> = {
   ghoul: {
     hp: 45,
     speed: 110,
-    radius: 14,
+    radius: 13,
     damage: 15,
     mass: 1.2,
     gemType: 'emerald',
@@ -48,7 +50,7 @@ export const ENEMY_BASE_STATS: Record<string, EnemyStatsConfig> = {
   banshee: {
     hp: 80,
     speed: 75,
-    radius: 16,
+    radius: 12,
     damage: 20,
     mass: 0.8,
     gemType: 'ruby',
@@ -57,11 +59,20 @@ export const ENEMY_BASE_STATS: Record<string, EnemyStatsConfig> = {
   death_knight: {
     hp: 350,
     speed: 40,
-    radius: 22,
+    radius: 18,
     damage: 40,
     mass: 5.0,
     gemType: 'violet',
     xpValue: 20,
+  },
+  necromancer: {
+    hp: 120,
+    speed: 55,
+    radius: 14,
+    damage: 25,
+    mass: 1.5,
+    gemType: 'ruby',
+    xpValue: 8,
   },
 };
 

@@ -142,7 +142,7 @@ export class BoneSpear extends Weapon {
       nx * speed,
       ny * speed,
       speed,
-      12, // radius
+      8.0, // radius: calibrated to 8.0px matching visual VFX head
       damage,
       stats.knockback,
       pierce,
@@ -150,6 +150,13 @@ export class BoneSpear extends Weapon {
     );
 
     return p;
+  }
+
+  public checkCollision(proj: Projectile, enemy: Enemy): boolean {
+    const dx = enemy.x - proj.x;
+    const dy = enemy.y - proj.y;
+    const hitDist = proj.radius + enemy.radius;
+    return dx * dx + dy * dy <= hitDist * hitDist + 1e-3;
   }
 
   public recycleProjectile(p: Projectile): void {
@@ -245,11 +252,11 @@ export class BoneSpear extends Weapon {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
 
-      // Check collision with enemies near projectile
+      // Check collision with enemies near projectile (Two-Phase: Broadphase + Narrowphase)
       const hitCount = this.hordeManager.getEnemiesInRadius(
         p.x,
         p.y,
-        p.radius + 14,
+        p.radius + 32,
         this.scratchIds
       );
 
@@ -257,8 +264,13 @@ export class BoneSpear extends Weapon {
         const enemyId = this.scratchIds[j];
         const enemy = this.hordeManager.pool[enemyId];
         if (enemy && enemy.active && enemy.isAlive) {
-          const despawned = this.handleHit(p, enemy, vfx, lootManager, engine);
-          if (despawned) break;
+          const dx = enemy.x - p.x;
+          const dy = enemy.y - p.y;
+          const hitDist = p.radius + enemy.radius;
+          if (dx * dx + dy * dy <= hitDist * hitDist + 1e-3) {
+            const despawned = this.handleHit(p, enemy, vfx, lootManager, engine);
+            if (despawned) break;
+          }
         }
       }
     }

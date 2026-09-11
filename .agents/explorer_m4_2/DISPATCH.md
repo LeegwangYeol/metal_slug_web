@@ -1,31 +1,23 @@
-## 2026-09-10T18:47:24Z
+## 2026-09-11T04:23:45Z
+You are Explorer 2 for Milestone 4 (Agent 26): Git Remote & Vercel Deployment Explorer.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2
+Project root: /Users/user/teamwork_projects/metal_slug_web
 
-You are explorer_m4_2 (role: Codebase Researcher / Explorer).
-Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2
-
-MANDATORY FIRST STEP:
-Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
-Also read:
+Read the following documents before starting:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
 - /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-- /Users/user/teamwork_projects/metal_slug_web/tests/e2e/horde_survival.spec.ts
-- /Users/user/teamwork_projects/metal_slug_web/src/main.ts
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/GATE_STATUS.md
 
 Mission:
-Investigate Milestone 4 (Automated E2E Verification & Visual Proof Suite):
-1. Analyze how the player survives >= 15 continuous seconds post-restart in `tests/e2e/restart_survival.spec.ts`:
-   - Examine the 8-directional dynamic window evaluation steering bot in `tests/e2e/horde_survival.spec.ts:218-466`.
-   - Evaluate what parameters (speed, horizon, collision distance, gem collection) ensure 100% reliable survival for 15+ seconds against Phase 1 waves without taking lethal damage.
-   - How auto-firing weapon (Arcane Scythe) engages enemies, slays minions, drops XP gems, and triggers clean progression.
-2. Define exact pass criteria for the 15-second survival test:
-   - `elapsedTime >= 15.0`
-   - `player.isAlive === true`
-   - `player.stats.currentHealth > 0`
-   - `kills >= 1`
-   - `accumulator <= 1/60 + 0.01`
-   - Zero duplicate RAF loops running (verify frame delta is consistent ~16.6ms).
-   - Zero console errors and zero page errors.
-
-Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/handoff.md`.
-Update your `progress.md`.
-When complete, send a message to orchestrator with your findings.
+Investigate the git repository configuration and production deployment pipeline:
+1. Inspect git repository status, current branch, remotes (`git remote -v`), and upstream tracking branch (`git status -uno`, `git branch -vv`).
+2. Inspect what changes are staged, unstaged, or untracked that need to be committed for Milestone 4:
+   - Modified engine files in `src/` (`main.ts`, `render/Camera.ts`, `render/GothicBackdrop.ts`, `core/entities/Player.ts`, `core/entities/EnemyTypes.ts`, `core/entities/Enemy.ts`, `core/weapons/`)
+   - New and updated unit tests in `tests/unit/` (`hitbox_precision.spec.ts`, `camera_tracking.spec.ts`, etc.)
+   - New E2E tests in `tests/e2e/` (`hitbox_dodge.spec.ts`, `camera_view.spec.ts`)
+   - Visual proof screenshots in `artifacts/dark_fantasy/` (`improved_camera_angle.png`, `hitbox_precision_dodge.png`)
+3. Formulate the exact git staging and commit command for Worker 4 (Agent 27).
+4. Inspect the live production deployment URL: `https://metal-slug-web-lovat.vercel.app` using `curl -I -sS` or HTTP inspection to see the current deployment headers and status. Formulate the verification command for after the git push.
+5. Document all commands, git state, and verification steps in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/handoff.md`.
+6. Send a message to the orchestrator when finished.

@@ -1,29 +1,20 @@
-## 2026-09-10T18:47:24Z
+## 2026-09-11T04:23:44Z
+You are Explorer 1 for Milestone 4 (Agent 25): Full Suite Health & Verification Explorer.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1
+Project root: /Users/user/teamwork_projects/metal_slug_web
 
-You are explorer_m4_1 (role: Codebase Researcher / Explorer).
-Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1
-
-MANDATORY FIRST STEP:
-Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
-Also read:
+Read the following documents before starting:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
 - /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-- /Users/user/teamwork_projects/metal_slug_web/src/main.ts
-- /Users/user/teamwork_projects/metal_slug_web/playwright.config.ts
-- /Users/user/teamwork_projects/metal_slug_web/tests/e2e/horde_survival.spec.ts
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/GATE_STATUS.md
 
 Mission:
-Investigate Milestone 4 (Automated E2E Verification & Visual Proof Suite):
-1. Analyze Playwright test setup and how `npm run test:e2e` / `npx playwright test` operates:
-   - WebServer preview port 4173.
-   - Page initialization hooks (`window.__game ?? window.__GAME__`).
-2. Investigate the restart trigger and lifecycle flow in `src/main.ts`:
-   - How `isGameOver`, `isPaused`, and `deathDebounceTimer` are set upon player death.
-   - How Spacebar and Canvas click trigger `restart()`.
-   - The exact 0.5s death debounce: how long the test must wait before triggering the restart event.
-   - Invariants that must be asserted immediately upon restart: `isGameOver === false`, `player.isAlive === true`, `player.stats.currentHealth === 100`, `level === 1`, `starterWeapon === 'scythe'`, `accumulator <= 1/60`, `elapsedTime === 0`, `isPaused === false`.
-3. Formulate a blueprint for `tests/e2e/restart_survival.spec.ts` focusing on the death-and-restart execution flow.
-
-Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/handoff.md`.
-Update your `progress.md`.
-When complete, send a message to orchestrator with your findings.
+Investigate and assess the health of the entire project test and build suite across all milestones:
+1. Run `npx tsc --noEmit` to verify type checking across all files.
+2. Run `npm test` (or `npx vitest run`) to verify all unit test suites (hitbox, camera, weapons, engine, etc.). Ensure 100% of tests pass.
+3. Run `npx playwright test` to verify all end-to-end test suites (`tests/e2e/hitbox_dodge.spec.ts`, `tests/e2e/camera_view.spec.ts`, etc.).
+4. Run `npm run build` to verify production bundle generation.
+5. Check `git status -s` and inspect modified/untracked files across `src/`, `tests/`, and `artifacts/dark_fantasy/`.
+6. Document your findings, exact test counts, pass rates, build outputs, and status summary in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/handoff.md`.
+7. Send a message to the orchestrator when finished.

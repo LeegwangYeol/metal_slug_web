@@ -1,474 +1,242 @@
-# Milestone 1 Handoff Report: Restart State Engine & Lifecycle Architecture
+# Handoff Report — Explorer 1 (Milestone 1: Player Contact Damage & Hurtbox Calibration)
 
-**Agent**: `explorer_m1_1` (Role: Codebase Researcher / Explorer)  
-**Date**: 2026-09-10T15:33:00Z  
-**Target Milestone**: Milestone 1 (Restart State Engine & Lifecycle Architecture)  
-**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_1`
+**Author**: Explorer 1 (`.agents/explorer_m1_1`)  
+**Target Milestone**: Milestone 1 (Precision Damage Hitbox & Collision Subsystem)  
+**Project**: Grim Harvest: Undead Siege (`/Users/user/teamwork_projects/metal_slug_web`)  
+**Date**: 2026-09-11T02:20:00Z  
 
 ---
 
 ## 1. Observation
 
-### 1.1 `src/main.ts` & `GrimHarvestGame` Lifecycle Missing Restart & Cleanup
-- In `src/main.ts` (lines 31–64), `GrimHarvestGame` instantiates 12 subsystems as `public readonly` fields in its constructor:
-  - `Player` (lines 66–79)
-  - `HordeManager` (lines 80–84)
-  - `LootManager` (lines 86)
-  - `Camera` (lines 89–95)
-  - `KeyboardController` & `TouchVirtualPad` (lines 98–99)
-  - `GothicBackdrop`, `DarkFantasyVFX`, `GothicHUD` (lines 102–110)
-  - `WeaponManager`, `UpgradeSystem`, `UpgradeModal` (lines 114–122)
-  - `WaveDirector` (lines 143–148)
-- Lines 202–235 define `public start(): void`:
-  ```typescript
-  public start(): void {
-    if (this.isRunning) return;
-    this.isRunning = true;
-    this.lastTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    this.accumulator = 0;
+Direct code inspections, line numbers, and verbatim quotations from the codebase:
 
-    const tickFrame = (now: number) => {
-      if (!this.isRunning) return;
+### 1.1 `src/main.ts` Contact Damage Loop (Lines 463–479)
+```typescript
+    // 6. Contact Damage & Blood VFX
+    const scratch = new Int32Array(32);
+    const nearbyCount = this.hordeManager.getEnemiesInRadius(
+      this.player.position.x,
+      this.player.position.y,
+      Player.COLLISION_RADIUS + 15,
+      scratch
+    );
 
-      const dt = Math.min((now - this.lastTime) / 1000, 0.1);
-      this.lastTime = now;
-
-      if (!this.isPaused) {
-        this.accumulator += dt;
-        while (this.accumulator >= GrimHarvestGame.FIXED_TIMESTEP) {
-          this.step(GrimHarvestGame.FIXED_TIMESTEP);
-          this.accumulator -= GrimHarvestGame.FIXED_TIMESTEP;
-        }
-      } else {
-        this.upgradeModal.update(dt);
+    for (let i = 0; i < nearbyCount; i++) {
+      const enemy = this.hordeManager.pool[scratch[i]];
+      if (enemy && enemy.active && enemy.isAlive) {
+        this.player.takeDamage(enemy.damage);
+        this.vfx.emitBloodBurst(this.player.position.x, this.player.position.y, 3);
+        this.vfx.emitBloodSplatter(this.player.position.x, this.player.position.y, 4);
       }
-
-      this.render();
-
-      if (typeof requestAnimationFrame !== 'undefined') {
-        this.animationFrameId = requestAnimationFrame(tickFrame);
-      }
-    };
-
-    if (typeof requestAnimationFrame !== 'undefined') {
-      this.animationFrameId = requestAnimationFrame(tickFrame);
     }
-  }
-  ```
-- Lines 237–243 define `public stop(): void`:
-  ```typescript
-  public stop(): void {
-    this.isRunning = false;
-    if (this.animationFrameId !== null && typeof cancelAnimationFrame !== 'undefined') {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-  }
-  ```
-- **Finding**: There is **no `restart()` method**, **no `reset()` method**, and **no `destroy()` method** in `src/main.ts`.
+```
+- Line 464: `const scratch = new Int32Array(32);` is allocated inside the `update()` loop every frame (60 allocations/sec, garbage collector pressure).
+- Line 468: Passes `Player.COLLISION_RADIUS + 15` directly to `getEnemiesInRadius`.
+- Lines 472–479: **Zero narrowphase collision check**. Every enemy returned by `getEnemiesInRadius` immediately calls `this.player.takeDamage(enemy.damage)` and emits blood VFX regardless of actual distance to the player.
 
-### 1.2 Uncapped While-Loop & Accumulator Explosion Vulnerability
-- In `src/main.ts` lines 214–219:
+### 1.2 `src/core/SpatialHashGrid.ts` Broadphase Search Distance (Lines 130–169)
+```typescript
+  public queryRadius(
+    x: number,
+    y: number,
+    radius: number,
+    outIds: Int32Array | number[]
+  ): number {
+    const searchRadius = radius + this.maxEntityRadius;
+    const searchRadiusSq = searchRadius * searchRadius;
+...
+          if (dx * dx + dy * dy <= searchRadiusSq) {
+            if (count < maxCapacity) {
+              outIds[count++] = curr;
+            } else {
+              return count; // Buffer full
+            }
+          }
+```
+- `SpatialHashGrid` defaults `maxEntityRadius = config.maxEntityRadius ?? 32` (`SpatialHashGrid.ts:53`).
+- In `HordeManager.ts:68–75`, `SpatialHashGrid` is instantiated without overriding `maxEntityRadius`, so `this.maxEntityRadius = 32`.
+- When `queryRadius` is called with `radius = Player.COLLISION_RADIUS + 15` ($14.0 + 15 = 29.0$), `searchRadius` becomes $29.0 + 32 = 61.0\text{px}$!
+- Any enemy within $61.0\text{px}$ Euclidean distance is returned in `scratch`. Combined with the lack of narrowphase in `main.ts`, the player currently takes damage when enemies are up to $61.0\text{px}$ away.
+
+### 1.3 `src/core/entities/Player.ts` COLLISION_RADIUS Usages
+- Line 43: `public static readonly COLLISION_RADIUS = 14.0;`
+- Lines 63–68 (Constructor):
   ```typescript
-  this.accumulator += dt;
-  while (this.accumulator >= GrimHarvestGame.FIXED_TIMESTEP) {
-    this.step(GrimHarvestGame.FIXED_TIMESTEP);
-    this.accumulator -= GrimHarvestGame.FIXED_TIMESTEP;
+  this.bounds = {
+    x: startX - Player.COLLISION_RADIUS,
+    y: startY - Player.COLLISION_RADIUS,
+    width: Player.COLLISION_RADIUS * 2,
+    height: Player.COLLISION_RADIUS * 2,
+  };
+  ```
+- Lines 99–102 (`reset`):
+  ```typescript
+  this.bounds.x = startX - Player.COLLISION_RADIUS;
+  this.bounds.y = startY - Player.COLLISION_RADIUS;
+  this.bounds.width = Player.COLLISION_RADIUS * 2;
+  this.bounds.height = Player.COLLISION_RADIUS * 2;
+  ```
+- Lines 206–216 (`update`, arena bounds clamping):
+  ```typescript
+  if (this.arenaBounds) {
+    const r = Player.COLLISION_RADIUS;
+    this.position.x = Math.max(
+      this.arenaBounds.minX + r,
+      Math.min(this.arenaBounds.maxX - r, this.position.x)
+    );
+    this.position.y = Math.max(
+      this.arenaBounds.minY + r,
+      Math.min(this.arenaBounds.maxY - r, this.position.y)
+    );
   }
   ```
-- Compare this with `src/core/engine/GameEngine.ts` lines 141–150:
+- Lines 218–219 (`update`, AABB position sync):
   ```typescript
-  const clampedDt = Math.min(dt, this.fixedTimestep * this.maxSubSteps);
-  this.accumulator += clampedDt;
-
-  let steps = 0;
-  while (this.accumulator >= this.fixedTimestep && steps < this.maxSubSteps) {
-    this.tick(this.fixedTimestep);
-    this.accumulator -= this.fixedTimestep;
-    steps++;
-  }
+  this.bounds.x = this.position.x - Player.COLLISION_RADIUS;
+  this.bounds.y = this.position.y - Player.COLLISION_RADIUS;
   ```
-- **Finding**: In `src/main.ts`, there is **no `maxSubSteps` loop boundary** inside `tickFrame()`. If frame delta `dt` or `accumulator` is elevated (e.g. after garbage collection, tab inactivity, or when re-starting without zeroing `accumulator`), the while-loop iterates without upper bound. Furthermore, if `step()` execution time approaches or exceeds `FIXED_TIMESTEP` (0.01667s), `now - this.lastTime` in subsequent frames becomes larger than the time simulated, causing an unrecoverable CPU spiral of death (main thread freeze).
 
-### 1.3 Game Over Prompt Rendered Without Any Event Listener
-- In `src/ui/GothicHUD.ts` line 304–306:
-  ```typescript
-  if (actualState?.player && !actualState.player.isAlive) {
-    this.renderGameOverOverlay(ctx, actualWidth, actualHeight, actualState);
-  }
-  ```
-- In `src/ui/GothicHUD.ts` lines 924–928:
-  ```typescript
-  const promptPulse = 0.5 + 0.5 * Math.sin(this.lowHPPulseTimer);
-  ctx.font = GOTHIC_HUD_THEME.fontSubtitle;
-  ctx.fillStyle = `rgba(237, 229, 222, ${0.4 + 0.6 * promptPulse})`;
-  ctx.fillText('PRESS [SPACE] OR CLICK TO RESURRECT', width / 2, py + plaqueH - 30);
-  ```
-- In `src/input/KeyboardController.ts` lines 86–88 & lines 282–289:
-  - `Space` is mapped to action `'jump'` (legacy arcade mapping).
-  - When `!player.isAlive`, `Player.handleInput()` (lines 116 in `Player.ts`) immediately aborts with `if (!this.isAlive) return;`.
-- In `src/main.ts` lines 183–200 (`mount`):
-  - Canvas has no click listener attached.
-  - `KeyboardController` does not dispatch restart requests.
-- **Finding**: Despite the UI displaying `"PRESS [SPACE] OR CLICK TO RESURRECT"`, **zero event listeners exist** in the entire codebase for resurrecting/restarting the session upon Game Over.
+### 1.4 `tests/unit/PlayerAndLoot.test.ts` (Lines 63–65)
+```typescript
+const r = Player.COLLISION_RADIUS;
+expect(player.position.x).toBeLessThanOrEqual(1000 - r);
+expect(player.position.y).toBeLessThanOrEqual(1000 - r);
+```
+- The test reads `Player.COLLISION_RADIUS` dynamically; reducing it from `14.0` to `11.0` will not break this test.
 
-### 1.4 State Reset Inventory Across Subsystems
-- Direct inspection of all submodules reveals:
-  1. `Player` (`src/core/entities/Player.ts`): **Lacks `reset()` method**. `this.stats` values remain modified by passives.
-  2. `PlayerProgression` (`src/core/progression/PlayerProgression.ts` lines 101–106): Has `public reset(): void` (resets level to 1, currentXP to 0, totalXP to 0, recalculates xpToNextLevel; preserves registered listeners in `Set`).
-  3. `HordeManager` (`src/core/HordeManager.ts` lines 456–461): Has `public clear(): void` (despawns all active enemies, resets spatialGrid). However, `totalSpawned` and `totalKilled` counters are **not reset** by `clear()`.
-  4. `LootManager` (`src/core/systems/LootManager.ts` lines 265–271): Has `public clear(): void` (recycles all active items to free pool).
-  5. `WeaponManager` (`src/core/weapons/WeaponManager.ts` lines 211–214): Has `public clear(): void` (clears weapons map and projectile pool). Needs `simulationTime = 0` and starter weapon re-equipment.
-  6. `UpgradeSystem` (`src/core/systems/UpgradeSystem.ts` lines 324–328): Has `public reset(): void` (clears weapons, passives, evolvedWeapons). Needs starter weapon re-added.
-  7. `UpgradeModal` (`src/ui/UpgradeModal.ts` lines 63–73): Has `public close(): void` (removes window keydown and canvas mouse listeners).
-  8. `WaveDirector` (`src/core/systems/WaveDirector.ts` lines 454–461): Has `public reset(): void` (resets elapsedTime, spawnTimer, milestone triggers).
-  9. `Camera` (`src/render/Camera.ts` lines 85–97): Has `public reset(x, y): void` (resets coordinates, render offset, and clears screen shake).
-  10. `DarkFantasyVFX` (`src/render/vfx/DarkFantasyVFX.ts` lines 146–154): Has `public clear(): void` (deactivates all particles in pool).
-  11. `GothicHUD` (`src/ui/GothicHUD.ts` lines 148–168): Has `public reset(): void` (resets health/ghost bars, XP bar animations, timers, kill counters).
-  12. `KeyboardController` (`src/input/KeyboardController.ts` lines 219–243): Has `public reset(): void` (clears held and edge-latched keys).
+### 1.5 Sprite Dimensions in `src/render/sprites/DarkFantasySprites.ts`
+- Player: Canvas size $64 \times 64$, center $(32, 32)$ (`DarkFantasySprites.ts:93–94`). Robe silhouette width extends from $x = -14$ to $+12$, and height from $y = -22$ to $+20$ (`DarkFantasySprites.ts:249–258`). The core body silhouette radius is $r \approx 11.0\text{px}$.
+- Skeleton: Base radius in `EnemyTypes.ts` is `12` (calibrated: `11`). Cranium $r = 6$, ribcage $10 \times 7$.
+- Ghoul: Base radius in `EnemyTypes.ts` is `14` (calibrated: `13`). Torso ellipse radius $12.0 \times 7.5$.
+- Banshee: Base radius in `EnemyTypes.ts` is `16` (calibrated: `12`). Floating ghost torso.
+- Death Knight: Base radius in `EnemyTypes.ts` is `22` (calibrated: `18`). Plate armor bulk.
+
+### 1.6 Hardcoded Paddings in Weapons
+- `src/core/weapons/BoneSpear.ts:252`: `getEnemiesInRadius(p.x, p.y, p.radius + 14, this.scratchIds)` uses `+ 14` padding.
+- `src/core/weapons/SoulOrbiters.ts:200, 213`: `getEnemiesInRadius(px, py, this.orbitRadius + 28, ...)` followed by narrowphase `Math.abs(dist - this.orbitRadius) <= 26`.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Premise 1 (Missing Restart Orchestration)**: Because `GrimHarvestGame` lacked a centralized `restart()` lifecycle method, external attempts to reset the game (e.g. creating `new GrimHarvestGame(container)` or manual state manipulation) failed to cancel the pre-existing `requestAnimationFrame` loop.
-2. **Premise 2 (Concurrent Loops & Stale Clocks)**: When a previous loop is not cancelled via `cancelAnimationFrame` and loop generation tokens, multiple `tickFrame` callbacks run concurrently. Each callback advances the simulation and renders to the same canvas context.
-3. **Premise 3 (Accumulator Explosion Mechanism)**:
-   - When the player dies or is paused, time continues to elapse in the real world (`performance.now()`).
-   - If `lastTime` is not reset to `performance.now()` synchronously at the moment of restart, the very first RAF callback computes `dt = (now - lastTime) / 1000`.
-   - Even if clamped to 0.1s, 6 sub-steps are queued. If `step()` takes >16ms due to heavy entity allocation/culling, `now - lastTime` on the next frame is even larger.
-   - Because `main.ts` lacks `maxSubSteps` limiting, `while (this.accumulator >= FIXED_TIMESTEP)` runs without bound, hanging the browser thread in an infinite loop.
-4. **Premise 4 (Accumulator Safety Guard)**:
-   - Introducing `public static readonly MAX_SUB_STEPS = 5;` and capping loop execution (`while (this.accumulator >= FIXED_TIMESTEP && steps < MAX_SUB_STEPS)`) provides a mathematical ceiling on per-frame CPU time.
-   - If `steps >= MAX_SUB_STEPS`, discarding residual accumulator debt (`this.accumulator = 0`) guarantees the simulation will never spiral into deadlock.
-5. **Premise 5 (Zero-Leak Input Wiring)**:
-   - Creating bound handler references once (`this.onKeyDownBound`, `this.onCanvasClickBound`) and registering them during `mount()` (and unregistering in `destroy()`) prevents duplicate event listeners across any number of restarts.
-   - Checking `canResurrect()` with conditions (`!this.player.isAlive && !this.upgradeModal.getIsOpen() && this.deathTimer >= 0.5`) ensures:
-     a) Space key during active play never triggers restart.
-     b) Space key while selecting an upgrade card never triggers restart.
-     c) Accidental Space spamming upon death does not instantly dismiss the Game Over plaque (enforces a 500ms debounce buffer).
+Step-by-step deduction from observations to conclusions:
+
+1. **Premise 1 (Two-Phase Collision Architecture)**: Spatial partitioning systems like `SpatialHashGrid` are broadphase acceleration structures. By definition, `SpatialHashGrid.queryRadius(x, y, R)` must return any entity whose bounding circle could possibly intersect a query circle of radius $R$. Because entities have radii up to `maxEntityRadius = 32`, `queryRadius` returns all entities within Euclidean distance $R + 32$ (Observation 1.2).
+2. **Premise 2 (Root Cause of Invisible Damage)**: In `src/main.ts:468–475`, the caller passes $R = \text{Player.COLLISION\_RADIUS} + 15 = 29$, causing `SpatialHashGrid` to return any entity within $29 + 32 = 61\text{px}$. Because `main.ts` lacks a narrowphase distance check, any enemy returned in this 61px sphere instantly damages the player (Observation 1.1).
+3. **Premise 3 (Inadequacy of Simply Removing `+ 15`)**: If an engineer only removes `+ 15` and sets `Player.COLLISION_RADIUS = 11.0`, but omits the narrowphase check, `SpatialHashGrid.queryRadius` will still return all entities within $11.0 + 32 = 43.0\text{px}$. For a skeleton with $r = 11.0\text{px}$, true physical touch occurs at $d \le 11 + 11 = 22\text{px}$. An enemy at $d = 35\text{px}$ (13px of empty visual gap) would still deal damage.
+4. **Deduction 4 (Required Two-Phase Implementation)**: Contact damage resolution in `src/main.ts` must execute both phases:
+   - **Phase 1 (Broadphase)**: `getEnemiesInRadius(player.x, player.y, Player.COLLISION_RADIUS, scratch)` safely retrieves candidates in $O(1)$ grid buckets.
+   - **Phase 2 (Narrowphase)**: For each candidate enemy, compute $\Delta x^2 + \Delta y^2 \le (r_{\text{player}} + r_{\text{enemy}})^2$. Only candidates satisfying this exact touch condition trigger `player.takeDamage()`.
+5. **Deduction 5 (VFX Hygiene & I-Frames)**: Currently, `emitBloodBurst` and `emitBloodSplatter` fire unconditionally for every nearby enemy, even when `player.takeDamage` returns 0 due to the 0.5s invulnerability window (Observation 1.1). Guarding blood emissions with `if (dealt > 0)` eliminates confusing visual feedback during i-frames.
+6. **Deduction 6 (Garbage Collection Optimization)**: Replacing `const scratch = new Int32Array(32);` (allocated 60 times/sec in `main.ts:464`) with a member variable `private readonly damageScratch = new Int32Array(64);` on `GrimHarvestGame` eliminates heap allocation during the 60Hz loop.
 
 ---
 
 ## 3. Caveats
 
-1. **No Caveats on Root Cause**: The infinite loop and missing restart mechanism are 100% accounted for by the missing `restart()` method, uncapped while-loop, and lack of event wiring.
-2. **Touch/Mobile Restart**: While desktop focuses on `[Space]` and Canvas `click`, mobile touch users tap the screen, which synthesizes standard `click` events on the canvas element. Thus, wiring Canvas `click` inherently supports mobile touch resurrection without requiring extra touch-specific event logic.
-3. **Victory State**: Currently `WaveDirector` escalates continuously up to `ABYSSAL_SIEGE` (120s+). A formal `isVictory` flag or 5-minute survival threshold can be wired identically through `canResurrect()` (`(!this.player.isAlive || this.isVictory)`).
+1. **Boss / Crisis Units**: Currently, all enemies are spawned through `HordeManager` using `EnemyTypes.ts` archetypes (`skeleton`, `ghoul`, `banshee`, `death_knight`). There are currently no independent Boss entities with separate hurtboxes.
+2. **Enemy Flocking**: `HordeManager.ts:340–355` computes enemy-to-enemy soft separation using $Q = p.\text{radius} + I.\text{radius}$. Calibrating enemy radii in `EnemyTypes.ts` (e.g., Skeleton 12 $\to$ 11, Banshee 16 $\to$ 12, Death Knight 22 $\to$ 18) will slightly tighten enemy swarm density, which is desirable and matches visual silhouettes.
+3. **Weapon Radii**: `src/core/weapons/BoneSpear.ts:252` contains a `+ 14` padding when checking projectile hits. This is in weapon-to-enemy collision, not player hurtbox, but should also be calibrated in Milestone 1.
 
 ---
 
-## 4. Conclusion & Concrete Implementation Recommendations
+## 4. Conclusion & Concrete Recommendations
 
-### Recommendation 1: `Player.ts` — Add `public reset()` Method
-In `src/core/entities/Player.ts`, implement:
+### 4.1 Target Changes
+
+#### Change 1: `src/core/entities/Player.ts`
+- Line 43: Update `COLLISION_RADIUS`:
 ```typescript
-public reset(startX: number = 0, startY: number = 0): void {
-  this.position.x = startX;
-  this.position.y = startY;
-  this.velocity.x = 0;
-  this.velocity.y = 0;
-  this.bounds.x = startX - Player.COLLISION_RADIUS;
-  this.bounds.y = startY - Player.COLLISION_RADIUS;
-  this.bounds.width = Player.COLLISION_RADIUS * 2;
-  this.bounds.height = Player.COLLISION_RADIUS * 2;
+// BEFORE:
+public static readonly COLLISION_RADIUS = 14.0;
 
-  this.isAlive = true;
-  this.invulnerabilityTimer = 0;
-  this.facingAngle = 0;
-  this.facingDirection = 1;
+// AFTER:
+public static readonly COLLISION_RADIUS = 11.0;
+```
+*(All dependent bounds and arena boundary clamping in Player.ts automatically update to 11.0px).*
 
-  this.stats.maxHealth = 100;
-  this.stats.currentHealth = 100;
-  this.stats.healthRegen = DEFAULT_PLAYER_STATS.healthRegen;
-  this.stats.armor = 0;
-  this.stats.moveSpeed = 200;
-  this.stats.might = 1.0;
-  this.stats.area = 1.0;
-  this.stats.projSpeed = 1.0;
-  this.stats.cooldownReduction = 0.0;
-  this.stats.magnetRadius = 100;
-  this.stats.luck = 1.0;
+#### Change 2: `src/main.ts` Contact Damage & Zero-Garbage Scratch
+- Add private member to `GrimHarvestGame`:
+```typescript
+private readonly damageScratch = new Int32Array(64);
+```
+- Replace lines 463–479 in `src/main.ts`:
+```typescript
+// BEFORE:
+// 6. Contact Damage & Blood VFX
+const scratch = new Int32Array(32);
+const nearbyCount = this.hordeManager.getEnemiesInRadius(
+  this.player.position.x,
+  this.player.position.y,
+  Player.COLLISION_RADIUS + 15,
+  scratch
+);
 
-  this.progression.reset();
+for (let i = 0; i < nearbyCount; i++) {
+  const enemy = this.hordeManager.pool[scratch[i]];
+  if (enemy && enemy.active && enemy.isAlive) {
+    this.player.takeDamage(enemy.damage);
+    this.vfx.emitBloodBurst(this.player.position.x, this.player.position.y, 3);
+    this.vfx.emitBloodSplatter(this.player.position.x, this.player.position.y, 4);
+  }
+}
+
+// AFTER:
+// 6. Contact Damage & Blood VFX (Two-Phase: Broadphase Grid Query + Narrowphase Exact Circle Overlap)
+const px = this.player.position.x;
+const py = this.player.position.y;
+const pr = Player.COLLISION_RADIUS;
+const nearbyCount = this.hordeManager.getEnemiesInRadius(
+  px,
+  py,
+  pr,
+  this.damageScratch
+);
+
+for (let i = 0; i < nearbyCount; i++) {
+  const enemy = this.hordeManager.pool[this.damageScratch[i]];
+  if (enemy && enemy.active && enemy.isAlive) {
+    const dx = enemy.x - px;
+    const dy = enemy.y - py;
+    const touchDist = pr + enemy.radius;
+    if (dx * dx + dy * dy <= touchDist * touchDist) {
+      const dealt = this.player.takeDamage(enemy.damage);
+      if (dealt > 0) {
+        this.vfx.emitBloodBurst(px, py, 3);
+        this.vfx.emitBloodSplatter(px, py, 4);
+      }
+    }
+  }
 }
 ```
 
-### Recommendation 2: `HordeManager.ts` — Add `public reset()` Method
-In `src/core/HordeManager.ts`, implement:
+#### Change 3: `src/core/entities/EnemyTypes.ts` Calibration
+- Update `ENEMY_BASE_STATS` in lines 29–66 to match rendered silhouettes:
 ```typescript
-public reset(): void {
-  this.clear();
-  this.totalSpawned = 0;
-  this.totalKilled = 0;
-}
+// Skeleton: radius 11 (was 12)
+// Ghoul: radius 13 (was 14)
+// Banshee: radius 12 (was 16)
+// Death Knight: radius 18 (was 22)
 ```
-
-### Recommendation 3: `src/main.ts` — Overhaul `GrimHarvestGame` Lifecycle
-In `src/main.ts`:
-1. Add loop generation token, maximum substep constant, and death debounce timer:
-   ```typescript
-   public static readonly MAX_SUB_STEPS = 5;
-   private loopEpoch: number = 0;
-   public deathTimer: number = 0;
-   public isVictory: boolean = false;
-   private readonly onKeyDownBound: (e: KeyboardEvent) => void;
-   private readonly onCanvasClickBound: (e: MouseEvent) => void;
-   ```
-2. Bind handlers in constructor:
-   ```typescript
-   this.onKeyDownBound = this.handleKeyDown.bind(this);
-   this.onCanvasClickBound = this.handleCanvasClick.bind(this);
-   ```
-3. Update `start()` with generation token and accumulator guard:
-   ```typescript
-   public start(): void {
-     if (this.isRunning) return;
-     this.isRunning = true;
-     const currentEpoch = ++this.loopEpoch;
-     this.lastTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
-     this.accumulator = 0;
-
-     const tickFrame = (now: number) => {
-       if (!this.isRunning || this.loopEpoch !== currentEpoch) return;
-
-       const rawDt = (now - this.lastTime) / 1000;
-       const dt = Math.max(0, Math.min(rawDt, 0.1));
-       this.lastTime = now;
-
-       if (!this.isPaused && this.player.isAlive && !this.isVictory) {
-         this.accumulator += dt;
-         let steps = 0;
-         while (this.accumulator >= GrimHarvestGame.FIXED_TIMESTEP && steps < GrimHarvestGame.MAX_SUB_STEPS) {
-           this.step(GrimHarvestGame.FIXED_TIMESTEP);
-           this.accumulator -= GrimHarvestGame.FIXED_TIMESTEP;
-           steps++;
-         }
-         if (steps >= GrimHarvestGame.MAX_SUB_STEPS) {
-           this.accumulator = 0; // Prevent spiral of death
-         }
-       } else if (this.upgradeModal.getIsOpen()) {
-         this.upgradeModal.update(dt);
-       } else if (!this.player.isAlive || this.isVictory) {
-         this.deathTimer += dt;
-         this.vfx.update(dt); // Keep particle animations fluid during game over
-       }
-
-       this.render();
-
-       if (this.isRunning && this.loopEpoch === currentEpoch && typeof requestAnimationFrame !== 'undefined') {
-         this.animationFrameId = requestAnimationFrame(tickFrame);
-       }
-     };
-
-     if (typeof requestAnimationFrame !== 'undefined') {
-       this.animationFrameId = requestAnimationFrame(tickFrame);
-     }
-   }
-   ```
-4. Update `stop()`:
-   ```typescript
-   public stop(): void {
-     this.isRunning = false;
-     this.loopEpoch++;
-     if (this.animationFrameId !== null && typeof cancelAnimationFrame !== 'undefined') {
-       cancelAnimationFrame(this.animationFrameId);
-       this.animationFrameId = null;
-     }
-   }
-   ```
-5. Implement `restart()`:
-   ```typescript
-   public restart(): void {
-     // 1. Cancel in-flight RAF loops
-     this.stop();
-
-     // 2. Reset clock & lifecycle flags
-     this.isPaused = false;
-     this.isVictory = false;
-     this.elapsedTime = 0;
-     this.killCount = 0;
-     this.pendingLevelUps = 0;
-     this.deathTimer = 0;
-     this.accumulator = 0;
-     this.lastTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
-
-     // 3. Reset modal
-     this.upgradeModal.close();
-
-     // 4. Reset Player & Progression
-     this.player.reset(0, 0);
-
-     // 5. Reset Horde & Grid
-     this.hordeManager.reset();
-
-     // 6. Reset Loot Pool
-     this.lootManager.clear();
-
-     // 7. Reset Weapons
-     this.weaponManager.clear();
-     this.weaponManager.simulationTime = 0;
-     this.weaponManager.addWeapon('scythe', 1);
-
-     // 8. Reset Upgrade System
-     this.upgradeSystem.reset();
-     this.upgradeSystem.addWeapon('weapon_scythe', 1);
-
-     // 9. Reset Wave Director
-     this.waveDirector.reset();
-
-     // 10. Reset Camera
-     this.camera.reset(-GrimHarvestGame.VIRTUAL_WIDTH / 2, -GrimHarvestGame.VIRTUAL_HEIGHT / 2);
-     this.camera.update(0, 0, GrimHarvestGame.FIXED_TIMESTEP);
-
-     // 11. Reset VFX
-     this.vfx.clear();
-
-     // 12. Reset HUD
-     this.hud.reset();
-
-     // 13. Reset Keyboard
-     this.keyboard.reset();
-
-     // 14. Deploy initial swarm
-     this.spawnInitialSwarm();
-
-     // 15. Restart RAF loop
-     this.start();
-   }
-   ```
-6. Implement `canResurrect()`, `handleKeyDown`, `handleCanvasClick`:
-   ```typescript
-   public canResurrect(): boolean {
-     return (!this.player.isAlive || this.isVictory) &&
-            !this.upgradeModal.getIsOpen() &&
-            this.deathTimer >= 0.5;
-   }
-
-   private handleKeyDown(e: KeyboardEvent): void {
-     if (e.repeat) return;
-     if (e.code === 'Space' || e.key === ' ') {
-       if (this.canResurrect()) {
-         if (typeof e.preventDefault === 'function') {
-           e.preventDefault();
-         }
-         this.restart();
-       }
-     }
-   }
-
-   private handleCanvasClick(e: MouseEvent): void {
-     if (this.canResurrect()) {
-       if (typeof e.preventDefault === 'function') {
-         e.preventDefault();
-       }
-       this.restart();
-     }
-   }
-   ```
-7. Wire listeners in `mount(container)` and detach in `destroy()`:
-   ```typescript
-   public mount(container: HTMLElement): void {
-     let canvas = container.querySelector<HTMLCanvasElement>('canvas#game-canvas');
-     if (!canvas) {
-       canvas = document.createElement('canvas');
-       canvas.id = 'game-canvas';
-       canvas.width = GrimHarvestGame.VIRTUAL_WIDTH;
-       canvas.height = GrimHarvestGame.VIRTUAL_HEIGHT;
-       container.appendChild(canvas);
-     }
-     this.canvas = canvas;
-     this.ctx = canvas.getContext('2d');
-
-     this.touchPad.mount(container);
-     const isTouchDevice =
-       typeof window !== 'undefined' &&
-       ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-     this.touchPad.setVisible(isTouchDevice);
-
-     // Safe listener attachment
-     if (this.canvas) {
-       this.canvas.removeEventListener('click', this.onCanvasClickBound);
-       this.canvas.addEventListener('click', this.onCanvasClickBound);
-     }
-     if (typeof window !== 'undefined') {
-       window.removeEventListener('keydown', this.onKeyDownBound);
-       window.addEventListener('keydown', this.onKeyDownBound);
-     }
-   }
-
-   public destroy(): void {
-     this.stop();
-     if (this.canvas) {
-       this.canvas.removeEventListener('click', this.onCanvasClickBound);
-     }
-     if (typeof window !== 'undefined') {
-       window.removeEventListener('keydown', this.onKeyDownBound);
-     }
-     this.keyboard.detach();
-     this.upgradeModal.close();
-   }
-   ```
 
 ---
 
 ## 5. Verification Method
 
-### 5.1 Unit Test Suite (`tests/unit/restart.spec.ts`)
-Create a comprehensive test file `tests/unit/restart.spec.ts` verifying:
-1. **Full Subsystem Re-initialization**:
-   - Mutate `player` (take 80 damage, add 200 XP, level up to 3, move to `(500, 500)`).
-   - Spawn 100 horde enemies, kill 40 of them (`totalKilled = 40`).
-   - Spawn 50 loot items in `lootManager`.
-   - Add weapons (Lightning, Spear) and passives (Tome of Might) to `weaponManager` and `upgradeSystem`.
-   - Advance `waveDirector.elapsedTime` to 85s (Phase: Nightfall).
-   - Emit 150 blood particles in `vfx`.
-   - Call `game.restart()`.
-   - Assert:
-     - `player.isAlive === true`
-     - `player.position.x === 0 && player.position.y === 0`
-     - `player.stats.currentHealth === 100`
-     - `player.level === 1 && player.currentXP === 0`
-     - `hordeManager.getActiveCount() === 35` (initial wave)
-     - `hordeManager.totalKilled === 0`
-     - `lootManager.getActiveCount() === 0`
-     - `weaponManager.getEquippedCount() === 1`
-     - `weaponManager.getWeapon('scythe')?.rank === 1`
-     - `upgradeSystem.getWeaponSlotsCount() === 1`
-     - `upgradeSystem.getPassivesInventory().length === 0`
-     - `waveDirector.elapsedTime === 0`
-     - `game.elapsedTime === 0`
-     - `game.killCount === 0`
-     - `game.isPaused === false`
-     - `vfx.getActiveCount() === 0`
-2. **Spiral of Death & Infinite Loop Prevention**:
-   - Mock RAF `now` jumping by 15.0 seconds (`dt = 15.0`).
-   - Run frame tick.
-   - Assert `step()` is called at most `MAX_SUB_STEPS` (5) times and accumulator drops to 0 without hanging.
-3. **RAF Concurrency & Epoch Invalidation**:
-   - Verify `stop()` increments `loopEpoch` and cancels pending `animationFrameId`.
-   - Verify that any queued callback from a prior epoch aborts immediately.
-4. **Safe Event Triggering & Debounce**:
-   - Assert Space key does not restart when `player.isAlive === true`.
-   - Assert Space key does not restart when `deathTimer < 0.5`.
-   - Assert Space key triggers `restart()` when `!player.isAlive && deathTimer >= 0.5`.
-   - Assert Space key does not restart when `upgradeModal.getIsOpen() === true`.
-   - Assert Canvas click mirrors Space key resurrection behavior.
+How to independently verify these conclusions and future implementations:
 
-### 5.2 Commands to Run
-```bash
-# Run the complete unit test suite including the new restart specs
-npm test
-
-# Run Vitest directly on restart tests
-npx vitest run tests/unit/restart.spec.ts
-
-# TypeScript verification
-npx tsc --noEmit
-```
-
-### 5.3 Invalidation Conditions
-- Any test where `game.restart()` leaves active enemies from the prior session.
-- Any test where `accumulator` is not reset to 0 upon restart.
-- Any test where multiple concurrent RAF loops are detected.
-- Any test where pressing Space during active gameplay triggers an unexpected restart.
+1. **Automated Unit Tests**:
+   - Run `npm test` to ensure existing 376 tests pass.
+   - Run `npx vitest run tests/unit/PlayerAndLoot.test.ts`.
+2. **New Hitbox Precision Unit Suite (`tests/unit/hitbox_precision.spec.ts`)**:
+   Implement unit test with exact coordinate asserts:
+   - Player at $(0, 0)$, $r = 11.0$.
+   - Skeleton at $(23, 0)$, $r = 11.0$ (Separation = $1\text{px}$, distance = $23 > 22$): Assert `takeDamage` is NOT called; player HP remains 100.
+   - Skeleton at $(22, 0)$, $r = 11.0$ (Exact touch, distance = $22 = 22$): Assert `takeDamage` is called; player HP drops from 100 to 90.
+   - Phantom padding test: Enemy placed at distance $d = 26\text{px}$ (within old 61px phantom radius): Assert 0 damage.
+3. **Headless E2E Dodge Test**:
+   - `npx playwright test tests/e2e/hitbox_dodge.spec.ts` (in Milestone 3).
+4. **Invalidation Conditions**:
+   - If player takes damage when distance $d > r_p + r_e$, the narrowphase check failed.
+   - If player passes through enemies without taking damage when $d \le r_p + r_e$, the broadphase query radius was too small or narrowphase comparison inverted.

@@ -1,26 +1,21 @@
-## 2026-09-10T15:48:47Z
-You are explorer_m2_1 (role: Codebase Researcher / Explorer).
-Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1
+## 2026-09-11T02:40:27Z
 
-MANDATORY FIRST STEP:
-Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
-Also read:
+You are Explorer 1 for Milestone 2 (Agent 9): Camera Architecture Explorer.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1
+Project root: /Users/user/teamwork_projects/metal_slug_web
+
+Read the following documents:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
 - /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-- /Users/user/teamwork_projects/metal_slug_web/src/render/sprites/DarkFantasySprites.ts
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
 
 Mission:
-Investigate Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul):
-1. Examine `src/render/sprites/DarkFantasySprites.ts`:
-   - How sprites are currently generated, cached (offscreen canvas), and rendered.
-   - Current sprite resolution and caching mechanisms.
-2. Formulate high-fidelity procedural drawing design for **Player (Grim Sorcerer)**:
-   - Layered tattered cowl and hooded robe with dark crimson borders and shadow gradients.
-   - Ethereal bone scythe with purple runic glow and blade highlights.
-   - Glowing eye sockets / occult pupil pinpoints.
-   - Multi-frame walk/idle bobbing and directional flipping.
-3. Assess performance implications of procedural drawing and offscreen sprite atlas caching to maintain locked 60 FPS.
-
-Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md`.
-Update your `progress.md`.
-When complete, send a message to orchestrator with your findings.
+Investigate `src/render/Camera.ts` and camera logic:
+1. Analyze current deadzone implementation (deadzoneLeft = 35%, deadzoneRight = 44%, deadzoneTop = 30%, deadzoneBottom = 70%) and ratchet/forward-lock artifacts that pin the player on the left.
+2. Determine how to replace side-scroller deadzones with true omnidirectional top-down centered camera tracking.
+3. Design the smooth exponential damping filter ($k = 8.0$):
+   `targetX = player.x - viewportWidth / 2 + lookaheadX`
+   `currentX += (targetX - currentX) * (1 - Math.exp(-k * dt))`
+4. Verify screen shake trauma calculation and ensure shake offset is decoupled from tracking damping.
+5. Write your findings and mathematical implementation proposal to `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md`.
+6. Send a message to orchestrator when finished.

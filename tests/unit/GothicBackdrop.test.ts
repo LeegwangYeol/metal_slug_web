@@ -118,7 +118,7 @@ describe('GothicBackdrop Multi-Layer Parallax Engine (Milestone M2)', () => {
       expect(mockCtx.save).toHaveBeenCalled();
       expect(mockCtx.restore).toHaveBeenCalled();
       expect(mockCtx.globalAlpha).toBe(0.10);
-      expect(mockCtx.drawImage).toHaveBeenCalledWith(backdrop.mistCanvas, expect.any(Number), 0);
+      expect(mockCtx.drawImage).toHaveBeenCalledWith(backdrop.mistCanvas, expect.any(Number), expect.any(Number));
     });
 
     it('respects enableParallax = false toggle', () => {

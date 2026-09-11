@@ -1,47 +1,39 @@
-# BRIEFING — 2026-09-10T15:53:00Z
+# BRIEFING — 2026-09-11T02:44:15Z
 
 ## Mission
-Investigate minion sprite generation (Skeleton & Ghoul) in DarkFantasySprites.ts and formulate high-fidelity procedural Canvas2D designs and procedures.
+Investigate velocity lookahead (<= 40px, smooth damping) and backdrop parallax alignment in GothicBackdrop.ts to ensure seamless, jitter-free camera tracking.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Roles: investigation, synthesis
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 2 - High-Fidelity Dark Fantasy Graphics Overhaul
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 2 (Velocity Lookahead & Parallax Alignment)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- ALWAYS wait for explicit user approval before proceeding with implementation
-- Communicate with Claude via Rule Guide (Markdown) / COLLABORATION.md
-- Use File for reports, handoffs, analysis; Use Message for coordination
-- Handoff Protocol: 5 components (Observation, Logic Chain, Caveats, Conclusion, Verification Method)
+- ALWAYS wait for explicit user approval before proceeding with implementation.
+- Communicate with Claude via COLLABORATION.md.
+- Send messages to caller agent via send_message.
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: 2026-09-10T15:53:00Z
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: 2026-09-11T02:44:15Z
 
 ## Investigation State
-- **Explored paths**:
-  - `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`
-  - `src/render/sprites/DarkFantasySprites.ts`
-  - `src/render/DarkFantasyPalette.ts`
-  - `src/core/entities/Enemy.ts`, `src/core/entities/EnemyTypes.ts`
-  - `tests/unit/DarkFantasySprites.test.ts`, `tests/unit/ChallengerM2_2.test.ts`, `tests/unit/ChallengerDF_M2.test.ts`
+- **Explored paths**: `src/render/Camera.ts`, `src/core/entities/Player.ts`, `src/render/GothicBackdrop.ts`, `src/main.ts`, `tests/unit/ChallengerDF_M2.test.ts`, `tests/unit/GothicBackdrop.test.ts`.
 - **Key findings**:
-  - Existing minion sprites use primitive geometric shapes and flat colors without volumetric shading or anatomical features.
-  - Offscreen caching pre-renders 24 atlas entries per entity (4 frames × 2 facings × 3 flash states).
-  - Headless/Vitest mock contexts lack `createLinearGradient` / `createRadialGradient`, requiring safe runtime feature checks.
-  - Formulated full procedural designs and complete Canvas2D code for Skeleton (weathered ivory, curved ribs, segmented spine, crimson pinpoints, cracked calvaria, notched rusted blade) and Ghoul (feral hunched posture, necrotic gradients, pulsating boils with specular dots, jagged bone claws, tattered waistcloth).
-- **Unexplored areas**: None (investigation objective fully satisfied).
+  1. `Camera.update` currently accepts 3 arguments `(targetX, targetY, dt)` with no velocity or lookahead, retaining legacy side-scroller deadzones (35%-44% width, 30%-70% height).
+  2. Player velocity is continuous ($1800\text{px/s}^2$ accel, $2400\text{px/s}^2$ decel) and directly available at `this.player.velocity.x, this.player.velocity.y`.
+  3. Formulated subtle velocity lookahead bounded strictly by $|\vec{L}| \le 40.0\text{px}$ using $\vec{v} \cdot \min(40/s, 0.2)$ with exponential damping filter ($k_{\text{look}} = 5.0\text{s}^{-1}$) providing critically-damped second-order motion without jitter or rubber-band snapping.
+  4. Identified critical foreground mist flickering bug in `renderForegroundMist` due to `if (Math.abs(startY) > 4)` conditional and duplicate $y=0$ blitting.
+  5. Identified celestial sky vertical seam due to asymmetric gradient and cloud/mist edge puff clipping due to lack of toroidal wrapping.
+- **Unexplored areas**: None for this explorer scope. Full evidence chain and actionable code proposals documented in handoff.md.
 
 ## Key Decisions Made
-- Formulated 8-layer painter's ordering for both minions to guarantee visual depth.
-- Created concrete Canvas2D replacement procedures ready for implementation.
-- Synchronized `drawMaskedEntity` hit-flash silhouettes with new anatomical contours.
+- Designed backwards-compatible `Camera.update(targetX, targetY, dt, vx = 0, vy = 0)`.
+- Bounded lookahead magnitude to $\le 40\text{px}$ with mathematical proof.
+- Specified fixes for GothicBackdrop foreground mist flickering, sky gradient symmetry, and toroidal wrapping.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2/DISPATCH.md — Agent dispatch log
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2/BRIEFING.md — Situational awareness and state
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2/progress.md — Liveness heartbeat and progress tracking
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2/handoff.md — Final investigation handoff report
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2/handoff.md` — Final comprehensive investigation report

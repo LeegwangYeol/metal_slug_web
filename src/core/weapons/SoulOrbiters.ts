@@ -154,6 +154,10 @@ export class SoulOrbiters extends Weapon {
     }
   }
 
+  public getOrbRadius(): number {
+    return this.isEvolution ? 14.0 : 10.0;
+  }
+
   public update(
     dt: number,
     _pool?: ProjectilePool,
@@ -193,11 +197,12 @@ export class SoulOrbiters extends Weapon {
       this.skulls[i].y = sy;
     }
 
-    // Contact query around the orbital ring barrier
+    // Contact query around orbital skulls (Two-Phase: Broadphase + Narrowphase per orb)
+    const orbRadius = this.getOrbRadius();
     const nearby = this.hordeManager.getEnemiesInRadius(
       px,
       py,
-      this.orbitRadius + 28,
+      this.orbitRadius + 32,
       this.scratchIds
     );
 
@@ -206,13 +211,25 @@ export class SoulOrbiters extends Weapon {
       const enemy = this.hordeManager.pool[enemyId];
       if (!enemy || !enemy.active || !enemy.isAlive) continue;
 
-      const dx = enemy.x - px;
-      const dy = enemy.y - py;
-      const dist = Math.hypot(dx, dy) || 1;
+      let hitOrb = false;
+      for (let i = 0; i < count; i++) {
+        const skull = this.skulls[i];
+        const sdx = enemy.x - skull.x;
+        const sdy = enemy.y - skull.y;
+        const touchDist = orbRadius + enemy.radius;
+        if (sdx * sdx + sdy * sdy <= touchDist * touchDist + 1e-3) {
+          hitOrb = true;
+          break;
+        }
+      }
 
-      if (Math.abs(dist - this.orbitRadius) <= 26) {
+      if (hitOrb) {
         if (this.simulationTime - this.lastHitTimes[enemyId] >= hitCD) {
           this.lastHitTimes[enemyId] = this.simulationTime;
+
+          const dx = enemy.x - px;
+          const dy = enemy.y - py;
+          const dist = Math.hypot(dx, dy) || 1;
 
           let kbX = (dx / dist) * stats.knockback;
           let kbY = (dy / dist) * stats.knockback;

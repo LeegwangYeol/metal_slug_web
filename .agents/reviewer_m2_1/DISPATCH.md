@@ -1,29 +1,28 @@
-## 2026-09-10T15:59:44Z
-You are reviewer_m2_1 (role: High-Reliability Reviewer).
-Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1
+## 2026-09-11T02:50:28Z
+You are Reviewer 1 (Agent 13) for Milestone 2: Camera Overhaul & Cinematic Viewport Engine.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1
+Project root: /Users/user/teamwork_projects/metal_slug_web
 
-MANDATORY FIRST STEP:
-Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
-Also read:
+Read the following documents:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
 - /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
-- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_1/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2/handoff.md
 
-Review Mission:
-Evaluate Milestone 2 (High-Fidelity Dark Fantasy Graphics Overhaul):
-1. Examine code in `src/render/sprites/DarkFantasySprites.ts` and `tests/unit/DarkFantasySprites.spec.ts`.
-2. Verify visual fidelity elevation across all 5 archetypes:
-   - Player (Grim Sorcerer): Hooded cowl, layered flowing robes with crimson borders, ethereal bone scythe with purple runes, glowing eyes.
-   - Skeleton: Weathered ivory bone gradients, anatomic ribs, deep orbits with crimson ember pinpoints, skull fractures, rusted iron blade.
-   - Ghoul: Feral quadruped prowl, necrotic rotting flesh gradients, pulsating boils with specular highlights, bone talons, needle fangs with toxic bile.
-   - Banshee: Translucent spectral apparition, weeping veil, additive blending.
-   - Death Knight: Heavy obsidian plate armor, horned helm, gold/blood filigree, runic greatsword.
-3. Verify atlas caching invariants (120 cached canvases, zero heap allocations at runtime).
-4. Run verification commands:
-   - `npx vitest run tests/unit/DarkFantasySprites.spec.ts`
-   - `npm test`
+Review tasks:
+1. Examine code changes in:
+   - `src/render/Camera.ts`
+   - `src/render/GothicBackdrop.ts`
+   - `src/main.ts`
+   - `tests/unit/camera_tracking.spec.ts`
+2. Verify that:
+   - Legacy side-scroller deadzones (35%-44%) and forwardLock ratchet are completely eliminated.
+   - True centered omnidirectional player tracking is implemented (player rendered at viewport center in steady state).
+   - Exponential damping is implemented with k = 8.0.
+   - Velocity lookahead is strictly clamped to <= 40px and damped smoothly.
+   - Screen shake trauma is decoupled from tracking position and decays cleanly.
+3. Run verification commands:
    - `npx tsc --noEmit`
-
-Write your comprehensive evaluation in `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1/handoff.md`.
-Explicitly state your verdict as either `APPROVE` or `REQUEST_CHANGES`.
-When complete, send a message to orchestrator with your verdict.
+   - `npx vitest run tests/unit/camera_tracking.spec.ts`
+4. Document findings and state a clear verdict: **APPROVE** or **REQUEST_CHANGES** in `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1/handoff.md`.
+5. Send a message to orchestrator when finished.

@@ -1,52 +1,52 @@
-# BRIEFING — 2026-09-10T16:15:00Z
+# BRIEFING — 2026-09-11T02:58:15Z
 
 ## Mission
-Investigate Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish): overhaul particle effects in DarkFantasyVFX.ts, depth mist in GothicBackdrop.ts, and Vitest test design.
+Investigate Playwright reliability and deterministic execution of E2E tests: headless browser rendering nuances, requestAnimationFrame pacing in headless Chromium, reliable waiting strategies, and elimination of timing flakes for CI and local test execution.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Roles: Playwright Reliability & Flakiness Explorer / Codebase Researcher
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish)
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 3 (Playwright Reliability & Flakiness)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
 - Abide by communication guidelines and handoff protocol
 - Write only to own folder (.agents/explorer_m3_3/)
-- Verify all findings with exact line numbers and code references
+- Verify all findings with exact line numbers, code references, and commands
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: not yet
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: 2026-09-11T02:58:15Z
 
 ## Investigation State
 - **Explored paths**:
-  - `src/render/vfx/DarkFantasyVFX.ts`
-  - `src/render/GothicBackdrop.ts`
-  - `src/core/weapons/AbyssalLightning.ts`
-  - `src/core/weapons/CursedAura.ts`
-  - `src/main.ts`
-  - `tests/unit/DarkFantasyVFX.test.ts`
-  - `tests/unit/ChallengerM2_2.test.ts`
-  - `tests/unit/DarkFantasySprites.spec.ts`
+  - `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `.agents/orchestrator_hitbox_camera/SCOPE.md`
+  - `playwright.config.ts`, `index.html`, `src/main.ts`
+  - `src/render/Camera.ts`, `src/render/GothicBackdrop.ts`, `src/render/sprites/DarkFantasySprites.ts`, `src/render/vfx/DarkFantasyVFX.ts`
+  - `src/ui/GothicHUD.ts`, `src/input/KeyboardController.ts`
+  - `tests/e2e/game_initialization.spec.ts`, `tests/e2e/horde_survival.spec.ts`, `tests/e2e/restart_survival.spec.ts`, `tests/e2e/challenger_m4_restart_stress.spec.ts`, `tests/e2e/challenger_m4_2_stress.spec.ts`
+  - `tests/unit/hitbox_precision.spec.ts`, `tests/unit/camera_tracking.spec.ts`, `tests/unit/DarkFantasySprites.spec.ts`
 - **Key findings**:
-  - `DarkFantasyVFX.ts` currently lacks branching lightning arcs, true 2D swirling soul motes, directional elongated gore, and additive blending (`lighter`).
-  - `AbyssalLightning.ts` and `CursedAura.ts` dynamically allocate heap arrays (`.push` and `.splice`) rather than using zero-garbage pooling.
-  - `GothicBackdrop.ts` mist lacks true multi-frequency undulation and ignores `camY` in `renderForegroundMist`.
-  - Formulated full architecture for recursive lightning forks, cyan-purple dissipation, 2D swirling soul motes with soft additive blending, 3D tumbling bone shards, and multi-tier occult level-up/sigil seals.
-  - Formulated 3-layer depth mist pipeline with sliced-strip sinusoidal undulation and 2D camera tracking.
-  - Designed comprehensive 8-suite Vitest test plan for `tests/unit/DarkFantasyVFX.spec.ts`.
+  - Entire game is pure Canvas 2D (`CanvasRenderingContext2D`); 0 WebGL dependencies.
+  - `--disable-gpu` forces CPU software rasterization via Skia; offscreen lighting stencil composite operations (`destination-out`, `lighter`) have CPU overhead.
+  - Missing Chromium launch flags for headless CI: `--disable-background-timer-throttling`, `--disable-backgrounding-occluded-windows`, `--disable-renderer-backgrounding`.
+  - Game attaches only `window.__game` and `window.__GAME__`. `window.game` is missing; tests querying it time out.
+  - HUD is 100% canvas-rendered; zero DOM elements exist for health or XP. Tests must check state via `page.evaluate()` or sample pixel data at `(116, 29)`.
+  - Deterministic stepping harness (`setupDeterministicGame()`, `g.stop()`, manual `game.step(1/60)`, manual `game.render()`) reduces test duration from 35s to <300ms and guarantees 100% flake-free execution.
+  - Benchmark cold-start JIT spikes should exclude warmup frames (frames 1–5) from `maxFrameTimeMs`.
+  - Formulated comprehensive test architecture blueprints for `tests/e2e/hitbox_dodge.spec.ts` and `tests/e2e/camera_view.spec.ts`.
 - **Unexplored areas**: None remaining for this mission scope.
 
 ## Key Decisions Made
-- Maintained strict backward compatibility with 500-capacity constructor default.
-- Specified zero-allocation representation for lightning segments using `LIGHTNING_SEGMENT` particles.
-- Enforced canvas state hygiene (balanced `save`/`restore` and resetting `globalCompositeOperation` to `'source-over'`).
-- Documented full findings and specifications in `handoff.md`.
+- Authored comprehensive 5-component handoff report in `handoff.md`.
+- Recommended adding `(window as any).game = game;` to `src/main.ts`.
+- Recommended updating `playwright.config.ts` launch args with background throttling prevention flags.
+- Provided ready-to-use test blueprints for Milestone 3 E2E test authors.
 
 ## Artifact Index
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/DISPATCH.md` — record of incoming dispatch messages
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/BRIEFING.md` — persistent working memory
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/progress.md` — heartbeat and task status
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md` — structured 5-component handoff report
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/DISPATCH.md` — incoming dispatches
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/BRIEFING.md` — persistent memory
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/progress.md` — heartbeat and task log
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md` — comprehensive 5-component report

@@ -1,60 +1,41 @@
-# BRIEFING — 2026-09-10T15:32:45Z
+# BRIEFING — 2026-09-11T02:22:00Z
 
 ## Mission
-Investigate Milestone 1 (Restart State Engine & Lifecycle Architecture) in Grim Harvest: Undead Siege, focusing on main loop lifecycle, accumulator explosion prevention, entity state reinitialization, and safe event wiring.
+Investigate player contact damage logic, Player.COLLISION_RADIUS usages, hurtbox calibration (inner radius r = 11.0px, removing +15 phantom padding), and impacts on spatial queries and health deduction.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Roles: investigator, synthesizer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_1
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 1 (Restart State Engine & Lifecycle Architecture)
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 1 - Player Contact Damage & Hurtbox Calibration
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Do NOT modify source code files. Recommend concrete fix and implementation strategies.
-- Maintain progress.md as liveness heartbeat.
-- Handoff report in handoff.md with 5 sections: Observation, Logic Chain, Caveats, Conclusion, Verification Method.
-- Send results back to caller via send_message to recipient 16d4f03a-b906-4dcd-a7c3-e24f1752216b.
+- ALWAYS wait for explicit user approval before proceeding with implementation
+- Files for content delivery, Messages for coordination
+- Follow Handoff Protocol (5 components: Observation, Logic Chain, Caveats, Conclusion, Verification Method)
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: 2026-09-10T15:32:45Z
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: 2026-09-11T02:22:00Z
 
 ## Investigation State
-- **Explored paths**:
-  - `src/main.ts` (`GrimHarvestGame`)
-  - `src/core/entities/Player.ts` & `src/core/player/PlayerStats.ts` & `src/core/progression/PlayerProgression.ts`
-  - `src/core/HordeManager.ts` & `src/core/SpatialHashGrid.ts`
-  - `src/core/systems/LootManager.ts`
-  - `src/core/weapons/WeaponManager.ts`
-  - `src/core/systems/UpgradeSystem.ts` & `src/ui/UpgradeModal.ts`
-  - `src/core/systems/WaveDirector.ts`
-  - `src/render/Camera.ts`
-  - `src/render/vfx/DarkFantasyVFX.ts`
-  - `src/ui/GothicHUD.ts`
-  - `src/input/KeyboardController.ts`
-  - `src/core/engine/GameEngine.ts`
-  - Existing test suites: `tests/unit/*.test.ts`, `tests/e2e/*.spec.ts`
+- **Explored paths**: `src/main.ts`, `src/core/entities/Player.ts`, `src/core/SpatialHashGrid.ts`, `src/core/HordeManager.ts`, `src/core/entities/Enemy.ts`, `src/core/entities/EnemyTypes.ts`, `src/render/sprites/DarkFantasySprites.ts`, `src/core/weapons/` (BoneSpear, SoulOrbiters, ArcaneScythe, CursedAura, AbyssalLightning), `tests/unit/PlayerAndLoot.test.ts`, `tests/unit/SpatialHashGrid.test.ts`.
 - **Key findings**:
-  1. `GrimHarvestGame` lacks any `restart()`, `reset()`, or `destroy()` method.
-  2. The RAF loop in `src/main.ts` has an uncapped `while (this.accumulator >= FIXED_TIMESTEP)` without `maxSubSteps` limiting, leading directly to the spiral of death when deltas spike.
-  3. `lastTime` is not refreshed upon restart/unpause unless manually handled, causing massive frame delta explosions.
-  4. Neither Space key nor Canvas click has any listener wired to trigger restart/resurrection when in Game Over.
-  5. Subsystems have varying reset APIs: `HordeManager.clear()`, `LootManager.clear()`, `WeaponManager.clear()`, `UpgradeSystem.reset()`, `WaveDirector.reset()`, `Camera.reset()`, `DarkFantasyVFX.clear()`, `GothicHUD.reset()`, but `Player` lacks a top-level `reset()` method.
-  6. Re-instantiating `GrimHarvestGame` spawns concurrent RAF loops because the prior loop is never cancelled.
-- **Unexplored areas**:
-  - None within the Milestone 1 scope. Complete evidence chain established.
+  1. `src/main.ts:468` called `getEnemiesInRadius(..., Player.COLLISION_RADIUS + 15, scratch)`.
+  2. `SpatialHashGrid.queryRadius` adds `this.maxEntityRadius` (32) internally, expanding the broadphase search to 61px.
+  3. `src/main.ts:472-479` omitted narrowphase circle distance checks completely, damaging the player from up to 61px away!
+  4. Merely removing `+ 15` without adding narrowphase would still trigger damage at 43px. Narrowphase circle check `dx*dx + dy*dy <= (r_player + enemy.radius)^2` is mandatory.
+  5. Calibrating Player hurtbox to $r = 11.0\text{px}$ matches sorcerer sprite silhouette and reduces touch distance to $22.0\text{px}$ against skeletons.
+  6. Per-frame heap allocation `const scratch = new Int32Array(32);` in `main.ts:464` should be replaced with class member `damageScratch`.
+- **Unexplored areas**: None for M1 scope.
 
 ## Key Decisions Made
-- Formulated an airtight 15-step `restart()` lifecycle architecture.
-- Designed `loopEpoch` generation tokens to ensure zero concurrent RAF loops.
-- Designed `MAX_SUB_STEPS = 5` and accumulator debt-dumping guard.
-- Designed debounced, non-leaking Space and Canvas click resurrection handlers.
-- Drafted comprehensive unit test scenarios for `tests/unit/restart.spec.ts`.
+- Concluded investigation and produced comprehensive 5-component `handoff.md`.
+- Outlined precise before-and-after diffs for `src/main.ts`, `src/core/entities/Player.ts`, and `src/core/entities/EnemyTypes.ts`.
 
 ## Artifact Index
-- `.agents/explorer_m1_1/DISPATCH.md` — Inbound dispatch instructions
-- `.agents/explorer_m1_1/BRIEFING.md` — Persistent agent memory
-- `.agents/explorer_m1_1/progress.md` — Liveness heartbeat and task tracker
-- `.agents/explorer_m1_1/handoff.md` — Final 5-component report
+- handoff.md — Final 5-component handoff report
+- progress.md — Liveness heartbeat and step tracking
+- DISPATCH.md — Incoming messages and instructions log

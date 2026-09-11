@@ -1,46 +1,39 @@
-# Dispatch: Worker M3 (High-Resolution Neo Geo Pixel Art Sprites)
+## 2026-09-11T02:58:36Z
 
-## Mission
-Upgrade character, enemy, POW, and vehicle sprites from flat primitive "Atari" rectangles to high-resolution, detailed 16-color authentic Neo Geo pixel art in `src/render/sprites/ProceduralSpriteFactory.ts`.
+You are Worker 3 (Agent 20) for Milestone 3: Automated Playwright E2E Suite & Visual Proof.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3
+Project root: /Users/user/teamwork_projects/metal_slug_web
 
-## Working Directory
-/Users/user/src/fullmetalslug/.agents/worker_m3
+Read the following documents before starting:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_1/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md
 
-## Exclusive File Ownership
-- `src/render/sprites/ProceduralSpriteFactory.ts`
+MANDATORY INTEGRITY WARNING:
+DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-## Input References
-- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` (MANDATORY: read first)
-- `/Users/user/src/fullmetalslug/COLLABORATION.md`
-- `/Users/user/src/fullmetalslug/PROJECT.md`
-- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_2/handoff.md`
-- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_2/survey_report.md`
-
-## Instructions
-1. In `src/render/sprites/ProceduralSpriteFactory.ts`, introduce micro-primitive helper routines (`drawPixelCluster`, `drawContouredRect`, `drawBeveledPlate`, `drawRivet`, etc.) using standard 2D canvas context methods compatible with both headless Node and browser environments.
-2. Upgrade sprite generation with rich 16-color shaded pixel art:
-   - **Marco Rossi**: Red headband with fluttering ribbons, multi-tone blonde hair, 3-tone shaded skin, muscle definition, olive tactical vest with pockets and collar trim, ammo belt with brass cartridges, holster, combat boots.
-   - **Rebel Soldiers**: Stahlhelm helmets with metallic rim highlight, gas masks, uniform folds, webbing straps, detailed rifles and knives.
-   - **POW (Hostage)**: Untamed bushy beard, ripped yellow shorts, bare torso with anatomical muscle highlights, rope-bound wrists, and animated rescue wave.
-   - **Vehicles & Boss**: Riveted steel plates, panel lines, metallic rust/scratches, rotating turret barrels, dynamic smoke/exhaust.
-3. Crucial Requirement: Preserve ALL existing sprite cache keys (`player_idle_0..3`, `player_run_0..5`, `player_jump_rise`, `player_jump_fall`, `player_aim_0..7`, `soldier_rifle_idle`, etc.) so that existing unit tests (`tests/unit/render_components.test.ts`) continue to pass 100% green without breaking changes.
-4. Run `npm test` using `run_command` and confirm all render and sprite tests pass.
-5. Deliver `handoff.md` in your working directory with build & test output.
-
-## 2026-09-03T06:22:35Z
-You are worker_m3.
-Working directory: /Users/user/src/fullmetalslug/.agents/worker_m3
-Scope document: /Users/user/src/fullmetalslug/PROJECT.md
-Original user request: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
-Collaboration guide: /Users/user/src/fullmetalslug/COLLABORATION.md
-Dispatch instructions: /Users/user/src/fullmetalslug/.agents/worker_m3/DISPATCH.md
-
-Exclusive File Ownership:
-- src/render/sprites/ProceduralSpriteFactory.ts
-
-Task:
-1. Upgrade procedural sprites in src/render/sprites/ProceduralSpriteFactory.ts from primitive flat "Atari" blocks to high-resolution, detailed 16-color authentic Neo Geo pixel art.
-2. Introduce micro-primitive helper routines (drawPixelCluster, drawContouredRect, drawBeveledPlate, drawRivet, etc.).
-3. Rich detail for Marco Rossi, Rebel Soldiers, POW, Vehicles & Boss, Projectiles, Explosions, HUD.
-4. Preserve all existing sprite cache keys.
-5. Run npm test and write handoff.md.
+Scope & Implementation Tasks:
+1. `src/main.ts`:
+   - Ensure `(window as any).game = game;` is exposed alongside `__game` and `__GAME__` so test harnesses can inspect state cleanly.
+2. Implement `tests/e2e/hitbox_dodge.spec.ts`:
+   - An automated Playwright E2E test that drives the player weaving through enemies.
+   - Verifies that grazing enemies at near-miss distances (12–20px outside physical touch) deals ZERO damage to player health.
+   - Verifies that true physical collision cleanly registers damage and emits blood burst VFX.
+3. Implement `tests/e2e/camera_view.spec.ts`:
+   - An automated Playwright E2E test verifying that the camera angle is centered and comfortable.
+   - Captures high-resolution gameplay visual proof screenshots and saves them to:
+     - `artifacts/dark_fantasy/improved_camera_angle.png`
+     - `artifacts/dark_fantasy/hitbox_precision_dodge.png`
+   - Ensure each generated PNG image is strictly > 50KB.
+   - Assert in the test that both files exist and are > 50,000 bytes.
+4. Verification commands:
+   - Run `npx tsc --noEmit`
+   - Run `npm run build`
+   - Run `npx playwright test tests/e2e/hitbox_dodge.spec.ts tests/e2e/camera_view.spec.ts`
+   - Verify that all Playwright tests pass 100% cleanly.
+   - Verify screenshot file sizes in `artifacts/dark_fantasy/`.
+5. Write your completion report to `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m3/handoff.md`.
+6. Send a message to orchestrator when finished.

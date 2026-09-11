@@ -131,7 +131,7 @@ export class CursedAura extends Weapon {
     const nearbyCount = this.hordeManager.getEnemiesInRadius(
       px,
       py,
-      effectiveRadius,
+      effectiveRadius + 32,
       this.scratchIds
     );
 
@@ -141,9 +141,13 @@ export class CursedAura extends Weapon {
       const enemy = this.hordeManager.pool[enemyId];
       if (!enemy || !enemy.active || !enemy.isAlive) continue;
 
-      hits++;
       const dx = enemy.x - px;
       const dy = enemy.y - py;
+      const distSq = dx * dx + dy * dy;
+      const maxReach = effectiveRadius + enemy.radius;
+      if (distSq > maxReach * maxReach) continue;
+
+      hits++;
       const dist = Math.hypot(dx, dy) || 1;
       const kbX = (dx / dist) * stats.knockback;
       const kbY = (dy / dist) * stats.knockback;

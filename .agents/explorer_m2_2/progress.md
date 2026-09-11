@@ -1,13 +1,14 @@
-# Progress - explorer_m2_2
+# Progress — Explorer 2 (Milestone 2)
 
-Last visited: 2026-09-10T15:53:00Z
+Last visited: 2026-09-11T02:44:25Z
 
+## Status
 - [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Read ORIGINAL_REQUEST.md, COLLABORATION.md, and PROJECT.md
-- [x] Inspect src/render/sprites/DarkFantasySprites.ts (Skeleton & Ghoul rendering)
-- [x] Analyze current minion rendering mechanics, sprite canvas dimensions, frame counts, and animation states
-- [x] Formulate high-fidelity procedural designs for Skeleton and Ghoul
-- [x] Formulate concrete Canvas2D drawing procedures (curves, gradients, layer ordering)
-- [x] Compile comprehensive handoff.md in .agents/explorer_m2_2/
-- [x] Update BRIEFING.md with findings and decisions
-- [x] Send coordination message to orchestrator
+- [x] Read ORIGINAL_REQUEST.md, COLLABORATION.md, SCOPE.md
+- [x] Inspect Camera class and player velocity passing in Camera.update
+- [x] Design subtle velocity lookahead logic (<= 40px, normalized direction, speed scaling, damping)
+- [x] Inspect GothicBackdrop.ts parallax calculation and wrapping/offset math
+- [x] Analyze alignment, seams, flickering, wrapping artifacts under centered camera tracking
+- [x] Produce comprehensive handoff.md report
+- [x] Update BRIEFING.md and progress.md
+- [x] Ready to send completion message to orchestrator

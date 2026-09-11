@@ -1,141 +1,124 @@
-# Handoff Report — Milestone 3 Review & Adversarial Audit
+# Milestone 3 Review & Adversarial Critic Report: Automated Playwright E2E Suite & Visual Proof
 
-**Agent ID**: reviewer_m3_1  
-**Role**: High-Reliability Reviewer & Adversarial Critic  
-**Parent Agent ID**: 16d4f03a-b906-4dcd-a7c3-e24f1752216b  
-**Date**: 2026-09-11  
-**Project**: Grim Harvest: Undead Siege (`metal_slug_web`)  
-**Verdict**: **APPROVE**
+- **Agent**: Reviewer 1 (Agent 21), Milestone 3
+- **Roles**: reviewer, critic
+- **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_1`
+- **Project Root**: `/Users/user/teamwork_projects/metal_slug_web`
+- **Date**: 2026-09-11
+- **Verdict**: **APPROVE**
 
 ---
 
 ## 1. Observation
 
-### Codebase & Implementation Inspection
-1. **Dynamic Radial Lighting & Additive Bloom**:
-   - `src/render/vfx/DarkFantasyVFX.ts` (lines 1496–1855):
-     - `DynamicLightingEngine` pre-allocates a 960x540 offscreen buffer (`lightCanvas`, `vignetteCanvas`) and pre-baked radial stencils (`torchStencilCanvas` 512x512, `spellStencilCanvas` 256x256, `pointStencilCanvas` 128x128) via `initSurfaces()` (lines 1515–1569).
-     - Carving pass (lines 1592–1741): Fills ambient darkness (`rgba(8, 6, 12, curAmbient)` with `lightningFlash` flash attenuation), blits pre-baked vignette, switches to `globalCompositeOperation = 'destination-out'`, and carves:
-       - Warm amber player torch light (200px radial light with multi-frequency breathing flicker `5.0 * Math.sin(t * 7.3) + 2.5 * Math.cos(t * 19.1) + 1.5 * Math.sin(t * 31.7)` and `player.stats.area` scaling).
-       - Arcane Scythe arc illumination (`slash.radius * 1.25`, life fade).
-       - Abyssal lightning point lights.
-       - Expanding crimson shockwaves for Cursed Aura.
-       - Perimeter lights for Soul Orbiters.
-       - Shimmer lights for high-tier loot gems.
-     - Blits carved mask to main canvas via `source-over` (lines 1737–1740).
-     - Additive Bloom pass (lines 1743–1854): Sets `globalCompositeOperation = 'lighter'` on main canvas and renders warm amber torch bloom (`rgba(245, 158, 11, ...)`, `#f59e0b`), scythe violet/crimson bloom, lightning cyan/white incandescent core bloom, and cursed aura shockwave ring.
-     - Strictly restores `globalCompositeOperation = 'source-over'` at line 1852.
+### 1.1 Playwright E2E Test Suite Execution
+- Executed `npx playwright test tests/e2e/hitbox_dodge.spec.ts tests/e2e/camera_view.spec.ts`
+- **Verbatim Output**:
+  ```
+  Running 8 tests using 1 worker
 
-2. **Pre-Entity Contact Drop Shadows**:
-   - `src/render/vfx/DarkFantasyVFX.ts` (lines 1288–1446):
-     - `renderContactDropShadows()` renders grounded elliptical shadows beneath all entities:
-       - Player: `(18x7)` shadow with `rgba(0, 0, 0, 0.45)` at `player.position.y + 16`.
-       - Skeleton: `(14x5)` shadow at `ey + 14`.
-       - Ghoul: `(16x6)` shadow at `ey + 14`.
-       - Death Knight: `(24x9)` shadow at `ey + 22`.
-       - Banshee: Floating diffuse shadow at `ey + 18`, dynamically modulated with vertical bobbing `yBob = Math.sin(elapsedTime * 3.0) * 3.0`, scaling radius `1.0 + yBob * 0.05` and fading opacity `clamp(0.30 - yBob * 0.04)`.
-       - Soul Gems: Grounded elliptical shadow at `gy = item.position.y - camY + 8` (floor level), allowing gem sprite to bob vertically without detaching its ground shadow.
-     - Robust fallback paths when `ctx.ellipse` is unavailable (lines 1333–1337, 1358–1363, 1401–1406, 1435–1440).
-     - Frustum culling against camera viewport bounds.
+    ✓  1 [chromium] › tests/e2e/camera_view.spec.ts:76:3 › Milestone 3: Camera View Overhaul & Visual Proof Capture Suite › Camera Tracking: verifies centered player tracking, velocity lookahead <= 40px, and smooth arena clamping (211ms)
+    ✓  2 [chromium] › tests/e2e/camera_view.spec.ts:155:3 › Milestone 3: Camera View Overhaul & Visual Proof Capture Suite › Visual Proof 1: captures improved_camera_angle.png (>50KB, centered omnidirectional viewpoint, 360 horde, occult VFX, Gothic HUD) (336ms)
+    ✓  3 [chromium] › tests/e2e/camera_view.spec.ts:244:3 › Milestone 3: Camera View Overhaul & Visual Proof Capture Suite › Visual Proof 2: captures hitbox_precision_dodge.png (>50KB, grazing near-miss with 0 damage, tight hurtbox, active combat) (313ms)
+    ✓  4 [chromium] › tests/e2e/camera_view.spec.ts:351:3 › Milestone 3: Camera View Overhaul & Visual Proof Capture Suite › Visual Proof Audit: asserts both artifacts exist on disk, are valid 960x540 PNGs, and exceed 50,000 bytes (1ms)
+    ✓  5 [chromium] › tests/e2e/hitbox_dodge.spec.ts:70:3 › Milestone 3: Hitbox Precision & Near-Miss Dodge Verification Suite › Test 1: Live dynamic dodging weaves between enemies at near-miss distances with zero phantom damage (3.2s)
+    ✓  6 [chromium] › tests/e2e/hitbox_dodge.spec.ts:230:3 › Milestone 3: Hitbox Precision & Near-Miss Dodge Verification Suite › Test 2: Deterministic near-miss grazing (12-20px gap) deals strict ZERO damage across all archetypes (220ms)
+    ✓  7 [chromium] › tests/e2e/hitbox_dodge.spec.ts:331:3 › Milestone 3: Hitbox Precision & Near-Miss Dodge Verification Suite › Test 3: Physical circle-circle overlap cleanly inflicts contact damage and triggers blood VFX (211ms)
+    ✓  8 [chromium] › tests/e2e/hitbox_dodge.spec.ts:404:3 › Milestone 3: Hitbox Precision & Near-Miss Dodge Verification Suite › Test 4: Visual Proof — captures hitbox_precision_dodge.png (>50KB, close-quarters near-miss graze without damage) (315ms)
 
-3. **Ground Decal System**:
-   - `src/render/vfx/DarkFantasyVFX.ts` (lines 85–90, 136–154, 244–309, 356–393, 911–1022):
-     - Pre-allocated 500-slot circular ring buffer (`this.decals = new Array(500)`).
-     - Circular advancing: `decalHead = (decalHead + 1) % this.decalCapacity`.
-     - 4 archetypes supported:
-       - `BLOOD_SPLATTER`: radius 4–8, crimson color, 12.0s maxLife, 0.85 alpha, satellite micro-droplets.
-       - `BLOOD_POOL`: radius 12–18, coagulated crimson with bright core, 15.0s maxLife, 0.90 alpha.
-       - `LIGHTNING_SCORCH`: radius 18–24, dark core with 6 radial fracture spokes and fresh cyan glow (life < 1.0s), 10.0s maxLife.
-       - `SIGIL_SCORCH`: radius 28–36, concentric etched rings and 4 radial ticks, 12.0s maxLife.
-     - Multi-stage organic decay: Full opacity hold for initial 60% of lifespan (e.g. 10.0s for pool, 6.0s for lightning scorch, 7.0s for sigil scorch, 8.0s for splatter), followed by smooth linear fade over the remaining 4–5s.
-     - Frustum culling in `renderDecals()`.
+    8 passed (8.6s)
+  ```
+  Result: 8 tests passed cleanly in 8.6 seconds with zero failures.
 
-4. **Arcane Particle Effects**:
-   - `src/render/vfx/DarkFantasyVFX.ts` (lines 400–892, 1024–1286):
-     - 500-slot pre-allocated particle pool with O(1) swap-and-pop free list and FIFO oldest displacement under saturation (lines 168–198).
-     - **Branching Abyssal Lightning**: Midpoint displacement recursive subdivider (depth=3, lines 733–793) with perpendicular jitter, electric corona, bright white core, full-screen flash trigger, and automatic scorch decal stamping.
-     - **Swirling Necrotic Soul Motes**: Multi-harmonic 2D sinusoidal drift (`vx += (cos(life*7.5 + extra)*24.0 - vx*0.1)*dt`, `vy += (sin(life*5.0 + extra)*12.0 - 32.0)*dt`, inverted gravity `gravity = -32`), additive lighter halo + white core.
-     - **Bone Fragments**: 3D cosine tumble illusion (`tumbleW = max(1, s * (|cos(rot * 1.8)| * 0.85 + 0.3))`), 3 distinct archetypes (splinter, rib, vertebra with marrow), and ground bounce (`vy = -vy * 0.35`).
-     - **Death Gore**: Coordinated gore burst combining blood droplets, bone fragments, soul sparks, and ground blood pool.
-     - **Occult Runes**: Ceremonial ascension seal on level-up with dual counter-rotating hexagram rings, pulsing void eye core, and 12 rising soul motes; expanding crimson shockwave for sigils.
+### 1.2 Full Unit Test Suite & Typecheck Execution
+- `npx tsc --noEmit`: Exited with code 0 (zero TypeScript errors).
+- `npm run build`: Exited with code 0 (`dist/index.html` 1.37 kB, `dist/assets/index-BsOJa5ji.js` 179.71 kB).
+- `npm test`: Exited with code 0 (33 test files passed, 488 tests passed).
 
-5. **Atmospheric Mist**:
-   - `src/render/GothicBackdrop.ts` (lines 482–507, 513–551):
-     - Sub-layer A (Lower ground creeping mist at Parallax 0.40).
-     - Sub-layer B (Mid swirling mist at Parallax 0.65 with multi-harmonic sinusoidal undulation `14*sin(...) + 8*cos(...)`).
-     - Cinematic Foreground Depth Mist in `renderForegroundMist` (Parallax 1.15).
+### 1.3 Hitbox Dodge E2E Implementation (`tests/e2e/hitbox_dodge.spec.ts`)
+- **Test 1 (Dynamic Slalom Weaving, lines 70–225)**:
+  - Dispatches player at `(0, -220)` with downward keyboard drive `page.keyboard.down('KeyS')` and closed-loop lateral weaving (`KeyA` / `KeyD`).
+  - Navigates through 6 staggered enemy gates spanning $y = -150$ to $y = 200$.
+  - Continuous assertion checks: `state.health === 100`, `state.invulnerabilityTimer === 0`, `state.isAlive === true`.
+  - Boundary traversal confirmed: `finalReport.py > 200` (>420px vertical descent).
+  - Minimum clearance observed: `minSeparationObserved >= 12.0` and `<= 20.0`, confirming strict near-miss grazing with zero damage.
+- **Test 2 (Deterministic Grazing Across All Archetypes, lines 230–326)**:
+  - Iterates through `skeleton` ($r=11$), `ghoul` ($r=13$), `banshee` ($r=12$), `death_knight` ($r=18$), and `necromancer` ($r=14$).
+  - Evaluates both $+15\text{px}$ air gap (legacy phantom damage trigger band) and $+1.0\text{px}$ razor-edge air gap over 20 simulation frames at 60Hz.
+  - Verifies `currentHealth === 100`, `invulnerabilityTimer === 0`, and `vfx.getActiveCount() === 0`.
+- **Test 3 (Physical Circle Collision Damage & Blood VFX, lines 331–399)**:
+  - Positions skeleton at $\text{touchDist} - 2.0\text{px} = 20.0\text{px}$ (2px physical circle penetration).
+  - Steps 1 simulation frame at 60Hz.
+  - Verifies damage deducted: `initialHp = 100`, `postHp = 90` ($100 - \text{skeletonDamage}$).
+  - Verifies invulnerability window: `postInvuln > 0.45` and `<= 0.5`.
+  - Verifies blood burst VFX: `postVfx > 0`.
+- **Test 4 (Visual Proof Screenshot Capture, lines 404–485)**:
+  - Captures `artifacts/dark_fantasy/hitbox_precision_dodge.png`.
 
-6. **Visual Layer Ordering in `src/main.ts`**:
-   - Lines 507–586 strictly enforce depth hierarchy:
-     1. Backdrop (`backdrop.render()`)
-     2. Ground VFX & Decals (`vfx.renderDecals()`, `vfx.renderGround()`)
-     3. Pre-Entity Contact Drop Shadows (`vfx.renderContactDropShadows()`)
-     4. Loot Items (`DarkFantasySprites.drawLoot()`)
-     5. Horde Enemies (`DarkFantasySprites.drawEnemy()`)
-     6. Player Sorcerer (`DarkFantasySprites.drawPlayer()`)
-     7. Occult Weapon Effects (`weaponManager.render()`)
-     8. Air VFX (`vfx.renderAir()`)
-     9. Foreground Atmospheric Mist (`backdrop.renderForegroundMist()`)
-     10. Dynamic Radial Lighting & Additive Bloom (`vfx.lighting.render()`)
-     11. Gothic HUD Overlay (`hud.render()`)
-     12. Upgrade Modal Overlay (`upgradeModal.render()`)
+### 1.4 Camera View E2E Implementation (`tests/e2e/camera_view.spec.ts`)
+- **Test 1 (Centered Tracking & Clamping, lines 76–150)**:
+  - Verifies stationary player at origin maps to screen center: `stationaryScreenX ≈ 480`, `stationaryScreenY ≈ 270`.
+  - Verifies high-speed movement velocity lookahead: `lookaheadRight > 0` and `<= 40.0` (`lookaheadMax`).
+  - Verifies arena edge clamping: `maxCameraX <= boundsMaxX - viewportWidth`, `maxCameraY <= boundsMaxY - viewportHeight`.
+- **Test 2 (Visual Proof 1, lines 155–239)**:
+  - Captures `artifacts/dark_fantasy/improved_camera_angle.png` with 360-degree horde wave, occult weaponry, soul gems, torchlight carving, and Gothic HUD.
+- **Test 3 (Visual Proof 2, lines 244–346)**:
+  - Captures `artifacts/dark_fantasy/hitbox_precision_dodge.png` with near-miss grazing enemies (14px air gap), scythe sweep, blood burst VFX, and full health bar.
+- **Test 4 (Visual Proof Invariant Audit, lines 351–385)**:
+  - Validates file existence on disk, PNG magic header (`89 50 4E 47 0D 0A 1A 0A`), dimensions $960 \times 540$, and size $> 50,000$ bytes.
 
-7. **Verification Tool Outputs**:
-   - `npx vitest run tests/unit/DarkFantasyVFX.spec.ts`:
-     ```
-     Test Files  1 passed (1)
-          Tests  34 passed (34)
-       Duration  492ms
-     ```
-   - `npm test`:
-     ```
-     Test Files  25 passed (25)
-          Tests  319 passed (319)
-       Duration  4.71s
-     ```
-   - `npx tsc --noEmit`:
-     ```
-     Exit code: 0 (0 errors)
-     ```
-   - `npm run build`:
-     ```
-     vite v6.4.3 building for production...
-     ✓ 34 modules transformed.
-     ✓ built in 449ms
-     ```
+### 1.5 Disk Artifact Verification
+- Commands executed:
+  ```bash
+  ls -lh artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+  file artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+  ```
+- Observed:
+  - `hitbox_precision_dodge.png`: 224,896 bytes (220 KB), PNG 960x540, 8-bit/color RGB.
+  - `improved_camera_angle.png`: 239,011 bytes (233 KB), PNG 960x540, 8-bit/color RGB.
+  - Both files exceed 50KB / 50,000 bytes by more than $4.4\times$.
+  - Both visual images inspected via `view_file` confirm authentic, high-quality rendering matching dark fantasy horde survival aesthetics.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Dual-Pass Offscreen Lighting Architecture**: Rendering radial darkness and additive bloom directly on the main canvas causes color clipping, blend mode bleed, and excessive draw calls. By pre-allocating an offscreen 960x540 buffer with pre-baked stencils, carving lights via `destination-out`, blitting the darkness mask once via `source-over`, and following with a secondary `lighter` additive bloom pass, the system achieves vibrant illumination with zero dynamic allocations and strict composite hygiene.
-2. **Visual Grounding via Contact Drop Shadows**: Floating sprites on flat flagstone surfaces lack depth. Rendering grounded elliptical contact shadows beneath every entity prior to drawing the sprites—with height-modulated diffuse scaling for Banshees and fixed floor grounding for floating Soul Gems—creates a convincing 3D spatial grounding.
-3. **Bounded Memory & Zero Garbage**: Dynamic particle and decal creation in 60Hz frame loops generates garbage collection stalls. Pre-allocating a 500-slot particle pool with swap-and-pop free list and FIFO displacement, along with a 500-slot circular ring buffer for decals, ensures zero heap allocations during gameplay.
-4. **Numerical Hygiene & Robust Fallbacks**: Division by zero on coincident coordinates or zero-length direction vectors is guarded via `len || 1` and `Math.max(dist, 1e-6)`. Tests confirm that extreme $dt \in \{0, 10, -1\}$ produce zero NaNs or Infinities. Robust fallbacks exist for headless environments without DOM canvas support and for contexts lacking native `ctx.ellipse`.
-5. **Integrity & Authenticity**: Thorough inspection of `src/render/vfx/DarkFantasyVFX.ts`, `src/render/GothicBackdrop.ts`, `src/main.ts`, and `tests/unit/DarkFantasyVFX.spec.ts` confirms that all features are implemented with genuine algorithmic logic (recursive midpoint displacement, sinusoidal physics, circular buffers, dual-pass canvas operations) and zero hardcoded test facades, dummy mocks, or shortcuts.
+1. **Integrity and Anti-Cheating Assessment**:
+   - Inspected `src/main.ts:465-487` for contact damage checking logic. Broadphase uses `getEnemiesInRadius(..., Player.COLLISION_RADIUS + 32, ...)` and narrowphase strictly evaluates `distSq <= contactDist * contactDist + 1e-3` where `contactDist = Player.COLLISION_RADIUS + enemy.radius`.
+   - Grep search for `playwright` or `NODE_ENV` in `src/` yielded zero hits. There are no test bypasses, no hardcoded responses, and no mock facades.
+   - Global exposure in `src/main.ts:613-622` exposes `window.game = game`, allowing standard E2E inspection without modifying core gameplay logic during test execution.
+2. **Near-Miss Dodge Verification**:
+   - The legacy bug was caused by an arbitrary `+ 15` padding in `src/main.ts:468`.
+   - In `hitbox_dodge.spec.ts`, Test 1 physically maneuvers the player between approaching enemy gates with real keyboard events (`KeyS`, `KeyA`, `KeyD`), traveling over 420px through the course while holding clearance in the $[12.0, 20.0]\text{px}$ band. Player health remains at 100 throughout.
+   - Test 2 mathematically confirms that across all 5 enemy archetypes, 15px separation (the exact distance where the bug used to trigger) and 1px separation inflict 0 damage and produce 0 blood particles over 20 frames.
+   - Therefore, the claim that near-miss grazing deals zero damage is genuinely verified.
+3. **Physical Collision & Blood VFX Verification**:
+   - In Test 3, placing an enemy 2px into circle intersection immediately deals 10 damage ($100 \to 90$), sets the invulnerability timer to 0.5s, and triggers `DarkFantasyVFX.emitBloodBurst` and `emitBloodSplatter`, generating active particles in the particle pool.
+   - Therefore, physical contact damage and blood burst VFX are genuinely verified.
+4. **Camera Tracking & Visual Proof Verification**:
+   - In `camera_view.spec.ts`, Test 1 confirms centered player coordinates at `(480, 270)` on a $960 \times 540$ canvas, confirms lookahead is bounded to $\le 40.0\text{px}$, and confirms viewport bounds clamping.
+   - Tests 2, 3, and 4 verify that `improved_camera_angle.png` and `hitbox_precision_dodge.png` exist, are valid $960 \times 540$ PNGs, and exceed 50KB.
+   - Visual inspection of both images confirms centered, comfortable top-down framing with 360-degree visibility, occult VFX, and clear HUD.
+5. **Conclusion Support**:
+   - All criteria set forth in `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, and `SCOPE.md` are completely satisfied with zero regressions.
 
 ---
 
 ## 3. Caveats
 
-1. **Headless Environment Canvas Fallback**: When run under Node.js test runners where `document.createElement('canvas')` is unavailable, `safeCreateOffscreenCanvas` returns `null` and the lighting pass gracefully falls back to direct radial gradients or mocks. Full offscreen buffer testing was validated using mock contexts with comprehensive spy assertions.
-2. **Parallel CPU Contention During Full Test Suite**: In test suites with heavy numerical benchmark loops (such as 1,200 enemies at 60Hz), high parallel thread contention across 25 simultaneous test files can cause minor transient scheduling jitter. When executed individually, benchmarks pass with overwhelming margin (e.g. 1.09ms vs 8.0ms threshold).
+- In Test 2 and Test 3 of `hitbox_dodge.spec.ts`, the player's weapon manager is cleared before the geometric contact check. This is standard testing practice in combat games to isolate hitbox collision from auto-cleaving weapons (e.g. Arcane Scythe), ensuring test enemies survive to test collision mechanics.
+- No other caveats.
 
 ---
 
 ## 4. Conclusion
 
-The implementation of Milestone 3 (**Dynamic Lighting, Rich VFX & Atmospheric Polish**) is exceptionally well-engineered, robust, and completely satisfies all functional and architectural specifications:
-- Dynamic Radial Lighting with dual-pass offscreen buffer (`destination-out` + `lighter`), warm amber player torch flicker, and dynamic spell flashes is fully verified.
-- Contact Drop Shadows for Player (18x7), Skeletons (14x5), Ghouls (16x6), Death Knights (24x9), Banshees (height-modulated diffuse), and Soul Gems (floor-grounded) are operational.
-- Ground Decal 500-slot circular ring buffer supports all 4 archetypes with organic 10–15s multi-stage decay.
-- Arcane particles (branching abyssal lightning with midpoint displacement, swirling necrotic soul motes, bone fragments with 3D tumble and bounce, occult seals) are verified.
-- 3-layer atmospheric mist in `GothicBackdrop.ts` (0.40, 0.65, 1.15 parallax) creates immersive depth.
-- Visual layer ordering in `src/main.ts` is strictly compliant.
-- All 34 tests in `DarkFantasyVFX.spec.ts` pass, all 319 unit tests across 25 suites pass, `npx tsc --noEmit` reports 0 errors, and `npm run build` succeeds cleanly.
+- **Verdict**: **APPROVE**
+- Milestone 3 implementation is robust, complete, and thoroughly tested.
+- Playwright E2E tests genuinely verify near-miss dodge (0 damage at 12–20px), physical contact damage with blood burst VFX, centered camera tracking, and screenshot generation.
 - Zero integrity violations detected.
-
-**Verdict**: **APPROVE**
+- All 8 Playwright E2E tests and all 488 unit tests pass 100% green.
+- Artifacts `improved_camera_angle.png` (233 KB) and `hitbox_precision_dodge.png` (220 KB) exist on disk and exceed the 50KB requirement.
 
 ---
 
@@ -143,26 +126,28 @@ The implementation of Milestone 3 (**Dynamic Lighting, Rich VFX & Atmospheric Po
 
 To independently reproduce and verify this review:
 
-1. **Verify DarkFantasyVFX Specification Suite**:
+1. **Run Playwright E2E Tests**:
    ```bash
-   npx vitest run tests/unit/DarkFantasyVFX.spec.ts
+   npx playwright test tests/e2e/hitbox_dodge.spec.ts tests/e2e/camera_view.spec.ts
    ```
-   *Verification condition*: 34 passed out of 34 tests.
+   *Expected output*: 8 passed in ~8s.
 
-2. **Verify Full Project Test Suite**:
+2. **Verify Screenshot Artifacts on Disk**:
+   ```bash
+   ls -lh artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+   file artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+   ```
+   *Expected output*: Both exist, PNG 960x540, sizes > 219KB (> 50KB).
+
+3. **Run TypeScript Check & Production Build**:
+   ```bash
+   npx tsc --noEmit
+   npm run build
+   ```
+   *Expected output*: Exit code 0, 0 errors.
+
+4. **Run Complete Unit Suite**:
    ```bash
    npm test
    ```
-   *Verification condition*: 25 test files passed, 319 passed out of 319 tests.
-
-3. **Verify TypeScript Compilation**:
-   ```bash
-   npx tsc --noEmit
-   ```
-   *Verification condition*: Exit code 0, 0 type errors.
-
-4. **Verify Production Bundle Build**:
-   ```bash
-   npm run build
-   ```
-   *Verification condition*: Exit code 0, production bundle created in `dist/`.
+   *Expected output*: 33 test files passed, 488 tests passed.

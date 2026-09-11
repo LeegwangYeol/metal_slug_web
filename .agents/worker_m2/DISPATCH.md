@@ -1,58 +1,51 @@
-## 2026-09-04T01:59:10Z
+## 2026-09-11T02:44:47Z
 
-You are Worker M2.
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2/
-Your workspace root is: /Users/user/teamwork_projects/metal_slug_web/
+You are Worker 2 (Agent 12) for Milestone 2: Camera Overhaul & Cinematic Viewport Engine.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2
+Project root: /Users/user/teamwork_projects/metal_slug_web
 
-MANDATORY FIRST STEP: Read the authoritative user request at:
-/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-Also read the scope document and Explorer M2 blueprint:
-- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen2/PROJECT.md
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2/handoff.md
+Read the following documents before starting:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_1/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_2/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2_3/handoff.md
 
-Exclusively Owned Files for Milestone 2:
-- src/core/entities/allies/AllyTypes.ts
-- src/core/entities/allies/AllyNPC.ts
-- src/core/entities/allies/AllyKiBlast.ts
-- src/core/entities/allies/AllyManager.ts
-- src/core/weapons/WeaponTypes.ts
-- src/core/weapons/ShotgunWeapon.ts
-- src/core/weapons/LaserGunWeapon.ts
-- src/core/weapons/RocketLauncherWeapon.ts
-- src/core/weapons/WeaponManager.ts
-- src/core/weapons/ProjectileManager.ts
-- src/core/entities/items/ItemPickup.ts
-- src/core/player/PlayerController.ts
-- tests/unit/allies_system.test.ts
-- tests/unit/diverse_weapons_items.test.ts
+MANDATORY INTEGRITY WARNING:
+DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-Task Instructions:
-Implement the complete Milestone 2 feature set strictly according to the architecture blueprint in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m2/handoff.md`:
-1. `src/core/weapons/WeaponTypes.ts`:
-   - Add SHOTGUN, LASER_GUN, ROCKET_LAUNCHER to `WeaponType` and `WEAPON_CONFIGS`.
-   - Add WEAPON_SHOTGUN, WEAPON_LASER, WEAPON_ROCKET, MEDKIT, SHIELD to `ItemDropType` and update `POW_LOOT_TABLE`.
-2. Dedicated Weapon Implementations:
-   - `src/core/weapons/ShotgunWeapon.ts`: 7-pellet fan spread (+-14 degrees), 680 px/s velocity, 2.0 damage per pellet, 0.18s lifetime, kinetic knockback impulse (160 px/s horizontal).
-   - `src/core/weapons/LaserGunWeapon.ts`: 1200 px/s continuous beam, piercing without termination, per-target 0.1s tick immunity map, 1.2 damage per tick.
-   - `src/core/weapons/RocketLauncherWeapon.ts`: Homing rocket (220 to 650 px/s acceleration, 3.5 rad/s steering toward nearest enemy), 48px explosive AOE blast (8.0 * (1 - d/48) damage falloff).
-3. Integration in `src/core/weapons/WeaponManager.ts` and `ProjectileManager.ts`:
-   - Wire up firing, ammo pools, and item pickups for new weapons.
-   - Guard against friendly fire on ALLY_NPC and ALLY_PROJECTILE.
-4. Items & Player Integration:
-   - `src/core/entities/items/ItemPickup.ts`: Standalone entity supporting floating/bouncing and all ItemDropTypes, maintaining backwards compatibility with PowEntity.ts.
-   - `src/core/player/PlayerController.ts`: Add `public shieldCharges: number = 0;`, implement 2-hit damage absorption in `takeDamage()`, handle Medkit (heal/lives) and Shield pickups.
-5. Autonomous Ally NPC System:
-   - `src/core/entities/allies/AllyTypes.ts`: States, configs, contracts.
-   - `src/core/entities/allies/AllyKiBlast.ts`: Friendly energy projectile (520 px/s, 3.5 damage, ignores player/ally).
-   - `src/core/entities/allies/AllyNPC.ts`: Autonomous Hyakutaro Ichimonji companion. Autonomous follow/locomotion, threat-weighted target acquisition within 380px radius without player input, 0.35s ki charge, ki blast firing, celebrate state.
-   - `src/core/entities/allies/AllyManager.ts`: Lifecycle management.
-6. Comprehensive Unit Tests:
-   - `tests/unit/diverse_weapons_items.test.ts`: Test Shotgun spread/knockback, Laser piercing/tick immunity, Rocket homing/blast AOE, Medkit heal/lives, Shield 2-hit absorption.
-   - `tests/unit/allies_system.test.ts`: Test autonomous state transitions, tethering locomotion, target acquisition with 0 player input, ki blast emission, damage resolution (3.5 damage), friendly fire safety.
-7. Verification:
-   - Run `npx tsc --noEmit` (must have 0 errors).
-   - Run `npx vitest run tests/unit/allies_system.test.ts tests/unit/diverse_weapons_items.test.ts`.
-   - Run `npx vitest run` (ensure all tests pass 100% green, 0 regressions).
-8. Write detailed handoff report to:
-   /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2/handoff.md
-9. Send completion message to parent with summary and artifact path.
+Scope & Implementation Tasks:
+1. `src/render/Camera.ts`:
+   - Eliminate legacy side-scroller deadzones (35%-44% width, 30%-70% height) and any forwardLock ratchet behavior.
+   - Implement true centered top-down tracking:
+     In steady-state, target camera positions the player at exact screen center $(viewportWidth / 2, viewportHeight / 2)$.
+   - Implement smooth exponential damping with $k = 8.0$:
+     `currentX += (idealX - currentX) * (1 - Math.exp(-8.0 * dt))`
+     `currentY += (idealY - currentY) * (1 - Math.exp(-8.0 * dt))`
+   - Implement subtle velocity lookahead bounded by $\le 40\text{px}$:
+     Extend `update(targetX, targetY, dt, vx: number = 0, vy: number = 0)`.
+     Scale lookahead with player velocity smoothly, clamp magnitude to $\le 40\text{px}$, and damp lookahead offset with $k = 5.0$ to ensure zero snapping on direction reversal or sudden stop.
+   - Decouple screen shake: shake trauma decays smoothly, added only to `renderX = x + shakeX`, `renderY = y + shakeY`.
+   - Maintain map boundary clamping (e.g. $-2000$ to $+2000$ or configured stage bounds) without hard-snapping.
+2. `src/main.ts`:
+   - Pass player velocity in camera update:
+     `this.camera.update(this.player.position.x, this.player.position.y, dt, this.player.velocity.x, this.player.velocity.y)`.
+3. `src/render/GothicBackdrop.ts`:
+   - Align parallax layers with centered camera:
+     - In `renderForegroundMist`, remove flickering conditions (`if (Math.abs(startY) > 4)`) and ensure smooth continuous 2D modular wrapping.
+     - Ensure vertical gradient transitions smoothly without sharp seams when moving in world coordinates.
+4. Unit Tests in `tests/unit/camera_tracking.spec.ts`:
+   - Implement all 6 comprehensive test suites designed in `explorer_m2_3/handoff.md`:
+     - Test 1: Steady-state player centering at $(W/2, H/2)$.
+     - Test 2: Exponential damping ($k = 8.0$) smooth non-overshooting convergence.
+     - Test 3: Sudden 180-degree velocity reversal smoothly transitions without jarring jumps.
+     - Test 4: Velocity lookahead strictly bounded by $\le 40\text{px}$.
+     - Test 5: World boundary limits clamp camera smoothly without out-of-bounds void exposure.
+     - Test 6: Screen shake trauma decays smoothly to 0 without permanent camera drift.
+5. Verification commands:
+   - Run `npx tsc --noEmit`
+   - Run `npm test`
+   Ensure 100% green tests across all test files.
+6. Write your completion report to `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2/handoff.md`.
+7. Send a message to orchestrator when finished.

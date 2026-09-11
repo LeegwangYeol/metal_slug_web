@@ -1,24 +1,26 @@
-## 2026-09-08T05:57:52Z
-You are the Final Challenger subagent (teamwork_preview_challenger) for Milestone M5 (Full Verification Gate).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m5_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+## 2026-09-10T19:16:14Z
+You are challenger_m5_1 (role: Adversarial Verifier / Challenger).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m5_1
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m5_1/handoff.md
 
-MISSION & EMPIRICAL AUDIT:
-Perform project-wide empirical stress testing:
-1. Verify 164-key baseline invariant in `ProceduralSpriteFactory` over 1,000 invocations.
-2. Verify that `KeyX` (jump) and `KeyU` (ultimate) have zero input collisions and execute as specified.
-3. Verify that all visual screenshots in `artifacts/expansion/` are non-empty, non-trivial PNG files with high color entropy.
-4. Run full project test commands:
-   - `npm run build`
-   - `npx vitest run`
-   - `npx playwright test`
-5. Provide an explicit verdict: APPROVE or REQUEST_CHANGES.
-6. Write your report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m5_1/handoff.md`
-   and call `send_message` to parent.
+Mission:
+Adversarially challenge and verify Git remote sync, working tree integrity, and build reproducibility for Milestone 5:
+1. Git Remote & Commit Integrity:
+   - Assert `git status --porcelain` has zero unstaged/untracked core project files.
+   - Assert `git rev-parse HEAD` strictly equals `git rev-parse origin/main`.
+   - Assert remote tracking branch `origin/main` has commit `ae833f7e8e948324c8b92d73c4de4c0cc98f7d43`.
+2. Build Reproducibility:
+   - Run `rm -rf dist && npm run build`. Assert build exits with 0 and creates `dist/index.html` and `dist/assets/index-*.js`.
+   - Run `npx tsc --noEmit` and assert 0 errors.
+3. Unit Test Flakiness Stress Test:
+   - Run `npm test` twice or with multiple threads to stress concurrency; assert 100% test pass rate without flaky failures.
+
+Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m5_1/handoff.md`.
+Explicitly state your verdict: APPROVE or REQUEST_CHANGES.
+When complete, send a message to orchestrator with your verdict.

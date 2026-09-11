@@ -1,144 +1,187 @@
-# Handoff Report — reviewer_m2_1 (Milestone M2 High-Fidelity Graphics Review)
+# Milestone 2 Review & Adversarial Challenge Report: Camera Overhaul & Cinematic Viewport Engine
+
+**Agent**: Reviewer 1 (Agent 13)  
+**Roles**: Reviewer, Adversarial Critic  
+**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_1`  
+**Date**: 2026-09-11T02:52:20Z  
+**Verdict**: **APPROVE**  
+**Overall Risk Assessment**: **LOW**
+
+---
 
 ## 1. Observation
-- **Reviewed Source Files**:
-  - `src/render/sprites/DarkFantasySprites.ts` (1,753 lines total; +1,283 additions replacing primitive vector shapes)
-  - `tests/unit/DarkFantasySprites.spec.ts` (546 lines, 22 unit tests across 6 suites)
-  - `tests/unit/DarkFantasySprites.test.ts` (189 lines, 11 tests)
-  - `tests/unit/ChallengerDF_M2.test.ts` (413 lines, 8 empirical tests)
-  - `.agents/worker_m2_1/handoff.md`
 
-- **Visual Archetype Architectural Details Observed in Source**:
-  1. **Player (Grim Sorcerer)**:
-     - Peaked cowl & deep hood (`DarkFantasySprites.ts:521-551`) with void hood recess (`#040306`) and crimson border highlight (`PALETTE.BLOOD_CRIMSON.FLASH`).
-     - Multi-layered flowing robe with ragged tattered hem (`DarkFantasySprites.ts:463-487`), drapery pleat contours (`DarkFantasySprites.ts:489-497`), inner dark tunic underlay (`DarkFantasySprites.ts:452-461`), and dark crimson borders with lapels (`DarkFantasySprites.ts:499-520`).
-     - Ethereal bone scythe (`DarkFantasySprites.ts:368-450`): calcified weathered ivory bone haft, dark leather grip wrappings, pommel spur, curved scythe blade with arcane violet gradient (`PALETTE.CURSED_ARCANE.AURA / VIOLET`), purple runic blade inscriptions, razor specular edge, and tip glint.
-     - Triple-layered glowing occult eyes (`DarkFantasySprites.ts:558-599`): radial shadow void, violet corona, arcane iris sockets, and dual piercing white pupil pinpoints.
-     - Soft grounded contact drop shadow (`DarkFantasySprites.ts:353-366`).
-  2. **Skeleton (The Cursed Legionnaire)**:
-     - Weathered ivory bone gradients (`DarkFantasySprites.ts:717-726`, radial ivory shades: `POLISHED`, `BLEACHED`, `WEATHERED`, `SHADOW`).
-     - Anatomic ribcage (`DarkFantasySprites.ts:640-675`): 4 distinct curved rib pairs, sternum plate, thoracic shadow, and segmented T1–L4 vertebrae column (`DarkFantasySprites.ts:634-639`).
-     - Deep orbits with crimson pinpoints & corona (`DarkFantasySprites.ts:757-773`).
-     - Cracked skull hairline filigree (`DarkFantasySprites.ts:774-787`) and hinged mandible with walking chatter (`DarkFantasySprites.ts:794-802`).
-     - Notched rusted iron blade (`DarkFantasySprites.ts:805-871`): linear gradient rust, central fuller groove, iron crossguard, jagged edge notches, and rust pitting stains.
-  3. **Ghoul (The Feral Necrophage)**:
-     - Feral quadruped prowl posture (`DarkFantasySprites.ts:874-900, 1079-1108`): crawl/lunge offsets, distal limbs, emaciated flank ribs.
-     - Necrotic rotting flesh gradients (`DarkFantasySprites.ts:902-929`): multi-stop linear gradient (`#384c24`, `CORE`, `#2d3033`, `DARK`) and subcutaneous bruised undertones (`rgba(66, 18, 34, 0.35)`).
-     - Pulsating boils with specular wet highlights (`DarkFantasySprites.ts:988-1024`): dynamic `boilPulse`, necrotic cores, bright corona, and pure white specular glints (`rgba(255, 255, 255, 0.95)`).
-     - Elongated bone claws & talons (`DarkFantasySprites.ts:1079-1108`): 3 curved talons with dried blood-dipped tips.
-     - Snapping maw with needle fangs (`DarkFantasySprites.ts:1040-1053`) and dripping toxic bile strand with falling bead (`DarkFantasySprites.ts:1054-1066`).
-  4. **Banshee (The Spectral Apparition)**:
-     - Translucent spectral apparition (`DarkFantasySprites.ts:1150-1226`): multi-stop cyan-to-purple alpha gradients, gossamer veil highlights, and undulating wisps.
-     - Weeping mourning veil & hood (`DarkFantasySprites.ts:1227-1252`) with wailing mouth cavity (`DarkFantasySprites.ts:1276-1280`) and weeping cyan spectral tears (`DarkFantasySprites.ts:1266-1274`).
-     - Additive blending (`DarkFantasySprites.ts:1130-1149, 1282-1290`): `globalCompositeOperation = 'lighter'` for spectral glow corona and luminous soul scream emission, strictly restored to `'source-over'`.
-  5. **Death Knight (The Obsidian Executioner)**:
-     - Heavy obsidian plate armor (`DarkFantasySprites.ts:1339-1418`): articulated greaves, sabatons, cuirass with sternal ridge, and massive flared spiked pauldrons (`DarkFantasySprites.ts:1437-1465`).
-     - Horned helm (`DarkFantasySprites.ts:1466-1540`): sweeping demonic horns, specular bevel, and glowing crimson visor slit with additive laser glare.
-     - Gold & blood filigree (`DarkFantasySprites.ts:1419-1435, 1454-1460`): antique gold filigree on breastplate and pauldrons with central occult blood sigil.
-     - Two-handed runic executioner greatsword (`DarkFantasySprites.ts:1542-1605`): steel blade gradient, fuller, gold pommel, wire hilt, and etched glowing blood runes.
+### 1.1 Source Code Inspections
+1. **`src/render/Camera.ts`**:
+   - **Elimination of Legacy Deadzones**:
+     Lines 93–96 define symmetrical centered references (`Math.floor(this.viewportWidth * 0.5)`). In `update(targetX, targetY, dt, vx, vy)` (lines 150–211), legacy deadzone margins (`viewportWidth * 0.35` / `0.44`) have been completely replaced with ideal centered tracking:
+     ```typescript
+     const idealTargetX = targetX - this.viewportWidth / 2 + this.lookaheadX;
+     const idealTargetY = targetY - this.viewportHeight / 2 + this.lookaheadY;
+     ```
+   - **Forward-Lock Ratchet Elimination**:
+     Line 53 defaults `this.forwardLock = false;`, and line 83 sets `this.forwardLock = options.forwardLock ?? false;`. In top-down mode, forward locking is inactive unless explicitly re-enabled via `setForwardLock(true)`.
+   - **Continuous-Time Exponential Damping Filter ($k = 8.0\,\text{s}^{-1}$)**:
+     Lines 184–191 implement:
+     ```typescript
+     if (this.smoothSpeed > 0 && dt > 0) {
+       const alpha = 1 - Math.exp(-this.smoothSpeed * dt);
+       this.x += (clampedTargetX - this.x) * alpha;
+       this.y += (clampedTargetY - this.y) * alpha;
+     } else {
+       this.x = clampedTargetX;
+       this.y = clampedTargetY;
+     }
+     ```
+   - **Bounded Velocity Lookahead with Damping ($k = 5.0\,\text{s}^{-1}$)**:
+     Lines 134–144 (`computeLookahead`) enforce:
+     ```typescript
+     const speed = Math.hypot(vx, vy);
+     if (speed <= 0.01) return { x: 0, y: 0 };
+     const leadDist = Math.min(this.lookaheadMax, speed * 0.20);
+     return { x: (vx / speed) * leadDist, y: (vy / speed) * leadDist };
+     ```
+     Lines 161–168 damp the lookahead vector towards `targetLook` using `1 - Math.exp(-this.lookaheadSpeed * dt)`.
+   - **Decoupled Screen Shake Trauma**:
+     Lines 226–247 (`updateShake`) compute quadratic decay `progress * progress` into temporary additive offsets `shakeOffsetX` and `shakeOffsetY`. Lines 209–210 assign:
+     ```typescript
+     this.renderX = Math.round(this.x + this.shakeOffsetX);
+     this.renderY = Math.round(this.y + this.shakeOffsetY);
+     ```
+     `this.x` and `this.y` are never modified by screen shake offsets.
+   - **Arena Boundary Clamping**:
+     Lines 175–182 and 274–282 clamp coordinates using `Math.max(this.bounds.minX, this.bounds.maxX - this.viewportWidth)`.
 
-- **Verbatim CLI Verification Results**:
-  1. `npx vitest run tests/unit/DarkFantasySprites.spec.ts`:
-     ```
-     RUN  v3.2.7 /Users/user/src/fullmetalslug
+2. **`src/main.ts`**:
+   - Lines 108–114 instantiate `Camera` with `viewportWidth: 960, viewportHeight: 540, forwardLock: false, smoothSpeed: 8.0`.
+   - Lines 365–366 reset and update the camera to origin `(0, 0, 0)` upon game reset.
+   - Lines 490–496 invoke `this.camera.update(this.player.position.x, this.player.position.y, dt, this.player.velocity.x, this.player.velocity.y)`.
 
-     stdout | tests/unit/DarkFantasySprites.spec.ts > DarkFantasySprites Comprehensive Specification Suite (Milestone M2) > Suite 6: Performance & 60Hz Frame Budget Validation > executes 1,000 entity draw pass in under 5.0ms (locked 60Hz frame budget)
-     [DarkFantasySprites.spec] 1,000 Entities Cached Blit Duration: 0.571ms
+3. **`src/render/GothicBackdrop.ts`**:
+   - Line 99 sets `skyGrad.addColorStop(1, PALETTE.ABYSSAL_VOID.DEEP);` for vertical tiling symmetry.
+   - Lines 153–162 implement toroidal wrapping for off-canvas cloud ellipses.
+   - Lines 541–550 replace the conditional $y=0$ double-draw pass with a unified continuous 2D modular grid wrapping loop with `globalAlpha = 0.10`.
 
-      ✓ tests/unit/DarkFantasySprites.spec.ts (22 tests) 403ms
+4. **`tests/unit/camera_tracking.spec.ts`**:
+   - Contains 23 tests across 6 suites covering steady-state centering, exponential convergence, direction reversal, velocity lookahead bounds, boundary clamping, and shake trauma decay.
 
-      Test Files  1 passed (1)
-           Tests  22 passed (22)
-     ```
-  2. `npm test` (Full 22-File Test Suite):
-     ```
-     Test Files  22 passed (22)
-          Tests  269 passed (269)
-       Duration  3.55s
-     ```
-  3. `npx tsc --noEmit`:
-     - Clean exit code 0, 0 type errors.
-  4. `npm run build`:
-     ```
-     vite v6.4.3 building for production...
-     ✓ 34 modules transformed.
-     dist/index.html                  1.37 kB │ gzip:  0.61 kB
-     dist/assets/index-BcbvGMUQ.js  157.88 kB │ gzip: 42.54 kB │ map: 549.44 kB
-     ✓ built in 213ms
-     ```
+### 1.2 Tool Execution Results
+- `npx tsc --noEmit`: Exit code 0 (0 compilation errors).
+- `npx vitest run tests/unit/camera_tracking.spec.ts`: 23 passed (100% green in 32ms).
+- `npx vitest run tests/unit/GothicBackdrop.test.ts`: 8 passed (100% green in 5ms).
+- `npx vitest run tests/unit/ChallengerRestartEngine_M1_1.test.ts`: 9 passed (100% green in 199ms).
+- `npm run build`: Production build succeeded in 227ms without errors (`dist/assets/index-DbShMWRL.js`).
+- Full test suite execution: All 32 test suites and 467 unit tests pass cleanly.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Visual Fidelity Verification**:
-   - Examining `DarkFantasySprites.ts` against the milestone requirements confirms that all 5 target archetypes have received authentic multi-layered procedural vector implementations.
-   - The implementations use layered canvas operations, bespoke color stops from `PALETTE`, organic Bézier/quadratic curves, dynamic frame-based physics (bobs, crawls, strides, breathing, sway), and directional flipping.
-   - Each archetype possesses every specific requested characteristic (e.g., Player's bone scythe and purple runes; Skeleton's anatomic ribcage, skull fractures, and rusted notched blade; Ghoul's quadruped crawl, boils with specular highlights, fangs, and toxic bile; Banshee's additive blending, wisps, and weeping tears; Death Knight's obsidian plate, gold filigree, horned helm, and blood runic greatsword).
+1. **Elimination of Side-Scroller Deadzone Hysteresis**:
+   - *Observation*: In `Camera.ts:170–171`, target calculation is `targetX - viewportWidth / 2`.
+   - *Deduction*: In steady state ($v = 0, \text{lookahead} = 0$), the camera target is precisely $P_x - W/2, P_y - H/2$.
+   - *Deduction*: When rendered via `worldToScreen(P_x, P_y)`, screen coordinates evaluate to $P_x - (P_x - W/2) = W/2 = 480\text{px}$ and $P_y - (P_y - H/2) = H/2 = 270\text{px}$. The player is exactly centered with $360^\circ$ isotropic reaction space.
 
-2. **Atlas Caching Invariants & Runtime Performance**:
-   - The permutation space is: $5 \text{ archetypes} \times 4 \text{ frames} \times 2 \text{ facings} \times 3 \text{ flash states} = 120$ unique surfaces.
-   - During `DarkFantasySprites.initialize()`, exactly 120 canvas instances are pre-rendered into `DarkFantasySprites.cache` with precomputed origin offsets.
-   - In `drawPlayer` and `drawEnemy`, runtime execution queries `getCachedEntry` and directly invokes `ctx.drawImage(entry.canvas, screenX - entry.originX, screenY - entry.originY)`.
-   - In benchmark testing, drawing 1,000 active entities executes in **0.571ms**, occupying less than 6% of the 10.0ms benchmark budget and well within the 16.6ms 60Hz frame budget.
-   - Zero heap objects or arrays are instantiated in the hot loop, ensuring zero GC pressure.
+2. **Continuous-Time Exponential Damping Invariants**:
+   - *Observation*: `alpha = 1 - Math.exp(-k * dt)` where $k = 8.0$.
+   - *Deduction*: For any finite positive $\Delta t$, $\alpha \in (0, 1)$. Because $\alpha < 1$, the update step $x \mathrel{+}= (x_{\text{target}} - x) \alpha$ can never cross or overshoot $x_{\text{target}}$.
+   - *Deduction*: Under large lag spikes (e.g. $\Delta t = 1.0\text{s}$), $\alpha \approx 0.99966$, causing smooth asymptotic approach without explosion or NaN.
+   - *Deduction*: When $\Delta t \le 0$, the `else` branch snaps directly to target without division by zero.
 
-3. **Integrity & Headless Robustness**:
-   - No hardcoded test responses or facade stubs exist.
-   - All tests trace actual canvas operations (`operations` recording array) or invoke real methods.
-   - Defensive fallback wrappers (`safeLinearGradient`, `safeRadialGradient`, `safeBezierCurveTo`) prevent exceptions in non-browser or mock environments where gradient or curve APIs may be missing or return null.
-   - All `save()` and `restore()` calls are strictly balanced (balance = 0) with no premature stack underflows, and `globalCompositeOperation` is guaranteed to restore to `'source-over'`.
-   - Masked flash states (`white` and `crimson`) use matching silhouette geometry to ensure accurate feedback during combat damage events.
+3. **Lookahead Boundedness and Smoothing**:
+   - *Observation*: `computeLookahead` computes $(v / s) \cdot \min(40.0, s \cdot 0.20)$.
+   - *Deduction*: The target lookahead vector norm is bounded by $\min(40.0, \dots) \le 40.0\text{px}$.
+   - *Deduction*: The exponential damping on lookahead ($k = 5.0$) forms a convex combination of vectors of norm $\le 40.0\text{px}$. By the triangle inequality, $\|\vec{L}(t)\| \le 40.0\text{px}$ holds strictly for all $t$. Rapid velocity reversals yield a smooth transition without visual popping.
 
----
+4. **Trauma Decoupling & Coordinate Integrity**:
+   - *Observation*: `updateShake` only sets `shakeOffsetX` and `shakeOffsetY`, which are added strictly at the final render stage (`renderX = Math.round(x + shakeOffsetX)`).
+   - *Deduction*: Base world tracking coordinates `x` and `y` are isolated from stochastic shake noise. When `shakeTimer` reaches zero, offsets become zero and render coordinates snap back to base tracking coordinates with zero permanent drift.
 
-## 3. Adversarial Review & Stress-Testing
-
-### Challenge Summary
-- **Overall risk assessment**: LOW
-- **Integrity Status**: PASS (Zero integrity violations; no hardcoded test shortcuts, no facades).
-
-### Challenges & Stress Test Results
-1. **Challenge 1: Frame Modulo & Out-of-Range Handling**:
-   - *Assumption*: `frame` values passed to `getSpriteKey` are positive integers 0..3.
-   - *Stress Test*: What if `frame` is negative or large?
-   - *Result*: `frame % 4` is used. In `drawPlayer` and `drawEnemy`, `frame` is computed from `Math.floor(elapsedTime * 8) % 4` or `Math.floor(timer * 8) % 4`, which are non-negative. Even if negative, `getCachedEntry` lazily generates and caches the permutation without throwing.
-2. **Challenge 2: Headless Environment & Missing Document**:
-   - *Assumption*: Browser DOM with `document.createElement('canvas')` is available.
-   - *Stress Test*: When `typeof document === 'undefined'`, does the engine crash?
-   - *Result*: `DarkFantasySprites.initialize()` detects `document === undefined` and sets `initialized = true` safely. `drawPlayer` and `drawEnemy` fall back to inline vector rendering using `ctx.save()/restore()`, verified by Suite 5 headless test.
-3. **Challenge 3: Unknown Enemy Type String**:
-   - *Assumption*: `enemy.type` matches known strings.
-   - *Stress Test*: What if `enemy.type` is unexpected or undefined?
-   - *Result*: `DarkFantasySprites.ts:1665` safely parses and defaults to `'skeleton'`, preventing undefined key lookups or crashes.
-4. **Challenge 4: Canvas State Stack Leakage**:
-   - *Assumption*: Nested `save()` calls might not be restored if a drawer errors.
-   - *Stress Test*: Suite 2 asserts that after generating all 120 entries, context stack depth is strictly 0 and `globalCompositeOperation` is `'source-over'`.
+5. **Integrity Violation Analysis**:
+   - *Observation*: No mock or hardcoded returns matching test inputs exist in `Camera.ts`, `GothicBackdrop.ts`, or `main.ts`. Real mathematical formulas are used throughout.
+   - *Deduction*: The implementation contains zero integrity violations.
 
 ---
 
-## 4. Caveats
-- No caveats. All 22 test suites (269 tests) pass cleanly. Production build and TypeScript type-check pass with zero warnings or errors.
+## 3. Adversarial Challenges & Stress Testing
+
+| Challenge | Hypothesis / Stress Scenario | Test Result | Status |
+|---|---|---|---|
+| **Lag Spike Stability** | Simulate frame lag spike of $\Delta t = 1.0\text{s}$ with $k = 8.0$. | Camera approaches target to within 0.14px without overshoot or NaN (`tests/unit/camera_tracking.spec.ts:204–218`). | **PASS** |
+| **Zero & Negative $\Delta t$** | Pass $\Delta t = 0$ or negative $\Delta t$ during tick. | Code routes to `else` branch, setting position to target with zero NaN generation. | **PASS** |
+| **Extreme Velocity (20,000px/s)** | Player teleports or moves at $20,000\text{px/s}$ diagonally. | Lookahead vector norm strictly clamped to $\le 40.0001\text{px}$ (`tests/unit/camera_tracking.spec.ts:318–359`). | **PASS** |
+| **Rapid Direction Reversal** | Sudden reversal from $+200\text{px/s}$ to $-200\text{px/s}$ at 60Hz. | Max single-frame delta $< 15\text{px}$, second difference $< 5\text{px}$ (`tests/unit/camera_tracking.spec.ts:224–269`). | **PASS** |
+| **Massive Trauma Shake Drift** | Apply intensity 60, duration 0.8s shake; advance past expiry. | Post-shake drift is identically $0.000\text{px}$ (`tests/unit/camera_tracking.spec.ts:506–532`). | **PASS** |
+| **Degenerate Stage Bounds** | Arena size smaller than viewport ($maxX - minX < W$). | `Math.max(minX, maxX - W)` prevents inverted clamp bounds. Camera clamps safely to `minX`. | **PASS** |
+| **Integrity Audit** | Search for test-sniffing or facade implementations. | Zero hardcoded shortcuts; pure algorithmic continuous-time implementation. | **PASS** |
 
 ---
 
-## 5. Conclusion & Verdict
-- **Verdict**: **`APPROVE`**
-- Milestone 2 procedural sprite rendering achieves exceptional dark fantasy visual fidelity across all 5 archetypes, maintains strict caching invariants (120 pre-baked surfaces), and delivers high-performance 60Hz blitting with zero runtime memory allocations.
+## 4. Quality Review Summary
+
+### 4.1 Verified Claims
+| Claim | Verification Method | Result |
+|---|---|---|
+| Legacy deadzones & forward-lock eliminated | Code review of `Camera.ts:170–171`, `Camera.ts:53`; verified by `camera_tracking.spec.ts` | **PASS** |
+| True centered omnidirectional player tracking | Inspected `Camera.worldToScreen()` output; stationary player renders at `(480, 270)` | **PASS** |
+| Exponential damping $k = 8.0$ | Verified mathematical filter `1 - exp(-k * dt)` in `Camera.ts:186` | **PASS** |
+| Velocity lookahead clamped $\le 40\text{px}$ | Verified `Math.min(40, speed * 0.20)` and $k = 5.0$ damping; tested up to $20,000\text{px/s}$ | **PASS** |
+| Decoupled screen shake trauma | Verified `renderX = Math.round(x + shakeOffsetX)`; verified zero drift | **PASS** |
+| Clean TypeScript compilation | Executed `npx tsc --noEmit` $\to$ Exit code 0 | **PASS** |
+| Clean test suite execution | Executed `npx vitest run tests/unit/camera_tracking.spec.ts` $\to$ 23 passed | **PASS** |
+| Production build success | Executed `npm run build` $\to$ Success in 227ms | **PASS** |
+
+### 4.2 Coverage Gaps & Unverified Items
+- **Coverage Gaps**: None. All core requirements, edge cases, and call sites in `main.ts` were examined.
+- **Unverified Items**: None.
 
 ---
 
-## 6. Verification Method
-- Independent reproduction commands:
-  ```bash
-  cd /Users/user/teamwork_projects/metal_slug_web
-  npx vitest run tests/unit/DarkFantasySprites.spec.ts
-  npm test
-  npx tsc --noEmit
-  npm run build
-  ```
-- Invalidation conditions:
-  - Any failure in `tests/unit/DarkFantasySprites.spec.ts` or the full test suite (`npm test`).
-  - TypeScript compilation errors (`npx tsc --noEmit`).
-  - Cache size other than 120 entries upon initialization.
-  - Draw time for 1,000 entities exceeding 5.0ms.
+## 5. Caveats
+
+- **Stage Perimeter Behavior**: When the player approaches within $480\text{px}$ of the stage boundary ($-2000$ or $+2000$), the camera top-left position is clamped to $[\text{minX}, \text{maxX} - W]$. Consequently, the player moves off-center toward the screen edge as intended when exploring the map perimeter.
+- No other caveats.
+
+---
+
+## 6. Conclusion
+
+The code delivered by Worker 2 for Milestone 2 fully satisfies all functional, architectural, and cinematic requirements:
+1. Symmetrical centered tracking completely replaces legacy side-scroller deadzones.
+2. Continuous-time exponential damping ($k = 8.0$) and bounded velocity lookahead ($\le 40\text{px}$, $k = 5.0$) provide smooth, jitter-free camera motion.
+3. Screen shake trauma is decoupled from camera tracking, guaranteeing zero post-trauma drift.
+4. Seamless parallax rendering in `GothicBackdrop.ts` eliminates vertical gradient seams and foreground mist flicker.
+5. All 23 unit tests in `tests/unit/camera_tracking.spec.ts` pass, all 32 test files in the project pass, TypeScript type checking passes with 0 errors, and the production build compiles cleanly.
+
+**Verdict**: **APPROVE**
+
+---
+
+## 7. Verification Method
+
+To independently reproduce the verification results:
+```bash
+# 1. Type check
+npx tsc --noEmit
+
+# 2. Camera tracking unit test suite
+npx vitest run tests/unit/camera_tracking.spec.ts
+
+# 3. Gothic backdrop unit test suite
+npx vitest run tests/unit/GothicBackdrop.test.ts
+
+# 4. Challenger restart unit test suite
+npx vitest run tests/unit/ChallengerRestartEngine_M1_1.test.ts
+
+# 5. Full regression test suite
+npx vitest run --maxConcurrency=4
+
+# 6. Production build
+npm run build
+```
+
+**Invalidation Conditions**:
+- Stationary player rendering at any screen coordinate other than $(480, 270) \pm 0.01\text{px}$ away from stage boundaries.
+- Any velocity vector generating lookahead magnitude $> 40.0\text{px}$.
+- Any permanent coordinate drift following screen shake trauma.
+- Any TypeScript type errors or test suite failures.

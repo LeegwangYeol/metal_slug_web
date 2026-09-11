@@ -1,198 +1,192 @@
-# Handoff Report — reviewer_m2_2
+# Milestone 2 Review & Adversarial Critic Report: Camera Overhaul & Cinematic Viewport Engine
+
+**Agent**: Reviewer 2 (Agent 14)  
+**Roles**: Reviewer, Adversarial Critic  
+**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2`  
+**Date**: 2026-09-11T02:53:30Z  
+**Verdict**: **APPROVE**  
+**Overall Risk Assessment**: **LOW**  
+**Integrity Status**: **CLEAN (0 Integrity Violations)**
+
+---
 
 ## 1. Observation
 
-### Codebase & Files Examined
-- `/Users/user/teamwork_projects/metal_slug_web/src/render/sprites/DarkFantasySprites.ts` (1,753 lines)
-- `/Users/user/teamwork_projects/metal_slug_web/tests/unit/DarkFantasySprites.spec.ts` (546 lines, 22 tests across 6 suites)
-- `/Users/user/teamwork_projects/metal_slug_web/tests/unit/DarkFantasySprites.test.ts` (189 lines, 11 tests)
-- `/Users/user/teamwork_projects/metal_slug_web/tests/unit/ChallengerM2_2.test.ts` (562 lines, 12 tests)
-- `/Users/user/teamwork_projects/metal_slug_web/src/core/entities/Player.ts` (lines 47, 106, 181-182: `facingDirection: 1 | -1`)
-- `/Users/user/teamwork_projects/metal_slug_web/src/core/entities/Enemy.ts` (lines 40, 106: `facingRight: boolean`)
-
-### Specific Architectural Implementations Observed
-
-1. **Headless Node / Browser Fallback Safety**:
-   - `DarkFantasySprites.ts` lines 38–41:
-     ```ts
-     if (typeof document === 'undefined') {
-       this.initialized = true;
-       return;
+### 1.1 Source Code Verification
+1. **`src/render/Camera.ts`**:
+   - **Centered Viewport Tracking**:
+     Lines 170–173 compute ideal target top-left position:
+     ```typescript
+     const idealTargetX = targetX - this.viewportWidth / 2 + this.lookaheadX;
+     const idealTargetY = targetY - this.viewportHeight / 2 + this.lookaheadY;
+     ```
+     At steady state ($v = 0, \text{lookahead} = 0$), player $(P_x, P_y)$ renders at screen coordinates $(480, 270)$ on a $960 \times 540$ viewport. Legacy side-scroller deadzone margins ($0.35$ and $0.44$) and forward lock ratchet have been replaced by symmetrical centering with `forwardLock = false` by default.
+   - **Continuous Exponential Damping**:
+     Lines 184–191:
+     ```typescript
+     if (this.smoothSpeed > 0 && dt > 0) {
+       const alpha = 1 - Math.exp(-this.smoothSpeed * dt);
+       this.x += (clampedTargetX - this.x) * alpha;
+       this.y += (clampedTargetY - this.y) * alpha;
+     } else {
+       this.x = clampedTargetX;
+       this.y = clampedTargetY;
      }
      ```
-   - `safeLinearGradient` (lines 106–130) and `safeRadialGradient` (lines 132–158):
-     Inspects `typeof ctx.createLinearGradient === 'function'` and `typeof grad.addColorStop === 'function'` inside `try/catch` blocks, gracefully setting `ctx.fillStyle = fallbackColor` if the gradient subsystem is unmocked or throws.
-   - `safeBezierCurveTo` (lines 160–176): Falls back from `bezierCurveTo` to `quadraticCurveTo`, and finally to `lineTo` if cubic bezier curves are unsupported.
-   - `drawPlayer` (lines 1642–1650) and `drawEnemy` (lines 1687–1703):
-     When `getCachedEntry(...)` returns `null` (e.g. running in Node.js where `document === 'undefined'`), execution cleanly falls back to immediate vector rendering within a localized `ctx.save()` / `ctx.restore()` transform envelope.
+     With default $k = 8.0\,\text{s}^{-1}$, the filter is unconditionally stable, monotonically non-overshooting, and framerate-independent.
+   - **Velocity Lookahead Clamping & Smoothing**:
+     Lines 134–144 (`computeLookahead`) enforce:
+     ```typescript
+     const speed = Math.hypot(vx, vy);
+     if (speed <= 0.01) return { x: 0, y: 0 };
+     const leadDist = Math.min(this.lookaheadMax, speed * 0.20);
+     return { x: (vx / speed) * leadDist, y: (vy / speed) * leadDist };
+     ```
+     Strictly clamping the magnitude $\|\vec{L}\| \le 40.0\text{px}$. Lines 161–168 smoothly damp lookahead transitions with $k = 5.0\,\text{s}^{-1}$.
+   - **Decoupled Screen Shake Trauma**:
+     Lines 226–247 (`updateShake`) compute quadratic decay. Lines 209–210:
+     ```typescript
+     this.renderX = Math.round(this.x + this.shakeOffsetX);
+     this.renderY = Math.round(this.y + this.shakeOffsetY);
+     ```
+     Base tracking coordinates `this.x` and `this.y` are decoupled from stochastic shake offsets, preventing permanent drift.
+   - **Boundary Clamping & Frustum Invariants**:
+     Lines 175–182 and 274–282 clamp target and position to $[\text{minX}, \text{maxX} - W] \times [\text{minY}, \text{maxY} - H]$.
 
-2. **Directional Flipping Without Canvas Clipping**:
-   - In `generateSpriteEntry` (lines 186–200):
-     ```ts
-     const dims = this.getDimensions(type);
-     const canvas = document.createElement('canvas');
-     canvas.width = dims.w;
-     canvas.height = dims.h;
-     const ctx = canvas.getContext('2d');
-     if (!ctx) return null;
-
-     ctx.save();
-     ctx.translate(dims.ox, dims.oy);
-     if (!facingRight) {
-       ctx.scale(-1, 1);
+2. **`src/render/GothicBackdrop.ts`**:
+   - **Symmetrical Vertical Sky Gradient**:
+     Lines 96–101:
+     ```typescript
+     const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+     skyGrad.addColorStop(0, PALETTE.ABYSSAL_VOID.DEEP);
+     skyGrad.addColorStop(0.5, PALETTE.ABYSSAL_VOID.MID);
+     skyGrad.addColorStop(1, PALETTE.ABYSSAL_VOID.DEEP);
+     ```
+     Because $y = 0$ and $y = H$ share the identical `DEEP` color stop, vertical tiling produces zero visible seams or horizontal banding.
+   - **Toroidal Cloud Wrapping**:
+     Lines 153–162 in `createCloudSurface` wrap off-canvas cloud ellipses across horizontal boundaries ($cx - \text{radX} < 0 \implies cx + W$, $cx + \text{radX} > W \implies cx - W$), eliminating clipped edges when tiled.
+   - **Continuous 2D Foreground Mist Wrapping**:
+     Lines 541–550 in `renderForegroundMist`:
+     ```typescript
+     const startX = -((((camX * 1.15 + elapsedTime * 35.0) % W) + W) % W);
+     const startY = -((((camY * 0.35 + Math.sin(elapsedTime * 0.6) * 10) % H) + H) % H);
+     ctx.globalAlpha = 0.10;
+     for (let x = startX; x < vw; x += W) {
+       for (let y = startY; y < vh; y += H) {
+         ctx.drawImage(this.mistCanvas, x, y);
+       }
      }
      ```
-   - Dimensions are symmetric:
-     - `player`: `{ w: 64, h: 64, ox: 32, oy: 32 }`
-     - `skeleton`: `{ w: 40, h: 40, ox: 20, oy: 20 }`
-     - `ghoul`: `{ w: 44, h: 44, ox: 22, oy: 22 }`
-     - `banshee`: `{ w: 48, h: 48, ox: 24, oy: 24 }`
-     - `death_knight`: `{ w: 64, h: 64, ox: 32, oy: 32 }`
-   - Because translation to the exact center `(dims.ox, dims.oy)` precedes `ctx.scale(-1, 1)`, the horizontal flipping is centered about x = 0, bounding all geometry within `[-dims.ox, +dims.ox]`.
-   - In blitting (`ctx.drawImage(entry.canvas, screenX - entry.originX, screenY - entry.originY)`), the anchor remains strictly centered on `(screenX, screenY)` for both left and right facings with zero horizontal displacement or edge clipping.
+     The previous conditional $y=0$ double-draw pass (which doubled opacity to 0.20 and popped whenever $|startY| > 4$) has been replaced by a single, uniform 2D modular grid wrapping pass at `globalAlpha = 0.10`.
 
-3. **Damage Flash Mask Generation (Normal, Crimson, White)**:
-   - `DarkFantasySprites.ts` lines 200–223:
-     - `flash === 'white'`: calls `drawMaskedEntity(ctx, type, frame, '#ffffff')`.
-     - `flash === 'crimson'`: calls `drawMaskedEntity(ctx, type, frame, PALETTE.BLOOD_CRIMSON.FLASH)`.
-     - `flash === 'normal'`: dispatches to the corresponding full procedural vector drawer (`drawPlayerVector`, `drawSkeletonVector`, `drawGhoulVector`, `drawBansheeVector`, `drawDeathKnightVector`).
-   - `drawMaskedEntity` (lines 235–346) computes identical per-frame animation bobbing (`bob`, `legOffset`, `crawl`, `lunge`, `stompDrop`, `legStride`) and fills the exact silhouette with `maskColor`.
-   - Enemy flash state mapping in `drawEnemy` (lines 1677–1682):
-     - `enemy.flashTimer > 0.05` -> `'white'`
-     - `enemy.flashTimer > 0` -> `'crimson'`
-     - `enemy.flashTimer <= 0` -> `'normal'`
-   - Player flash state mapping in `drawPlayer` (lines 1633–1636):
-     - `player.invulnerabilityTimer > 0` -> rapid toggle between `'white'` and `'crimson'` at 24Hz (`Math.floor(player.invulnerabilityTimer * 24) % 2 === 0 ? 'white' : 'crimson'`).
+3. **`src/main.ts`**:
+   - Lines 490–496 pass player velocity $(v_x, v_y)$ to `this.camera.update()`.
+   - Lines 365–366 cleanly snap camera position to $(0, 0)$ with $dt = 0$, ensuring immediate centering at $(-480, -270)$ upon game start/restart.
+   - Lines 529–608 maintain strict visual render layering: Backdrop $\to$ Ground VFX $\to$ Contact Shadows $\to$ Loot $\to$ Horde $\to$ Player $\to$ Weapons $\to$ Air VFX $\to$ Foreground Mist $\to$ Dynamic Lighting $\to$ HUD $\to$ Modals.
 
-4. **Composite Operations Hygiene**:
-   - `DarkFantasySprites.ts` lines 1132, 1148 (Banshee glow corona):
-     ```ts
-     ctx.save();
-     ctx.globalCompositeOperation = 'lighter';
-     ...
-     ctx.fill();
-     ctx.restore();
-     ctx.globalCompositeOperation = 'source-over';
-     ```
-   - Lines 1283, 1289 (Banshee soul scream emission):
-     ```ts
-     ctx.save();
-     ctx.globalCompositeOperation = 'lighter';
-     ...
-     ctx.restore();
-     ctx.globalCompositeOperation = 'source-over';
-     ```
-   - Lines 1527, 1540 (Death Knight visor glare):
-     ```ts
-     ctx.save();
-     ctx.globalCompositeOperation = 'lighter';
-     ...
-     ctx.restore();
-     ctx.globalCompositeOperation = 'source-over';
-     ```
-   - Lines 1597, 1604 (Death Knight runic greatsword blood runes):
-     ```ts
-     ctx.save();
-     ctx.globalCompositeOperation = 'lighter';
-     ...
-     ctx.restore();
-     ctx.globalCompositeOperation = 'source-over';
-     ```
-   - Every additive blending block isolates changes using `save()` / `restore()` AND guarantees restoration by explicitly assigning `ctx.globalCompositeOperation = 'source-over'`.
-
-5. **Integrity & Authenticity Audit**:
-   - Zero hardcoded test outputs or environment bypasses (`process.env.NODE_ENV`, `vitest`, etc.) are present in `DarkFantasySprites.ts`.
-   - All 5 dark fantasy entity vector drawers contain genuine, high-detail anatomical modeling (cranial sutures, sternum plates, 4 curved rib pairs, segmented vertebrae, mottled necrotic gradients, boiling cysts with specular wet dots, weeping gossamer veils, obsidian armor with antique gold filigree, and blood-etched executioner greatswords).
-
-### Independent Command Executions & Results
-1. `npx vitest run tests/unit/DarkFantasySprites.spec.ts`:
-   ```
-   RUN  v3.2.7 /Users/user/src/fullmetalslug
-   [DarkFantasySprites.spec] 1,000 Entities Cached Blit Duration: 0.735ms
-    ✓ tests/unit/DarkFantasySprites.spec.ts (22 tests) 576ms
-
-    Test Files  1 passed (1)
-         Tests  22 passed (22)
-      Duration  1.17s
-   ```
-
-2. `npm test`:
-   ```
-   Test Files  22 passed (22)
-        Tests  269 passed (269)
-     Duration  3.96s
-   ```
-   (All 22 test suites passed, including all existing suites, challenger suites, and restart engine tests).
-
-3. `npx tsc --noEmit`:
-   ```
-   Exit code: 0 (Zero type errors)
-   ```
-
-4. `npm run build`:
-   ```
-   > fullmetalslug@1.0.0 build
-   > tsc -b && vite build
-   vite v6.4.3 building for production...
-   ✓ 34 modules transformed.
-   dist/index.html                  1.37 kB │ gzip:  0.61 kB
-   dist/assets/index-BcbvGMUQ.js  157.88 kB │ gzip: 42.54 kB │ map: 549.44 kB
-   ✓ built in 210ms
-   ```
+### 1.2 Independent Verification Results
+- **Unit Test Suite (`npm test`)**:
+  - `Test Files: 33 passed (33)`
+  - `Tests: 488 passed (488)`
+  - 100% green execution across all test suites, including:
+    - `tests/unit/camera_tracking.spec.ts` (23 tests passed)
+    - `tests/unit/ChallengerM2_CameraAdversarial.test.ts` (21 tests passed)
+    - `tests/unit/GothicBackdrop.test.ts` (8 tests passed)
+    - `tests/unit/ChallengerDF_M2.test.ts` (8 tests passed)
+    - `tests/unit/ChallengerRestartEngine_M1_1.test.ts` (9 tests passed)
+    - `tests/unit/hitbox_precision.spec.ts` (33 tests passed)
+- **TypeScript Static Verification (`npx tsc --noEmit`)**:
+  - Exit code 0, 0 compilation errors.
+- **Production Bundle Build (`npm run build`)**:
+  - Exit code 0, built in 226ms (`dist/assets/index-DbShMWRL.js`, 179.70 kB).
 
 ---
 
 ## 2. Logic Chain
 
-1. **Premise 1: Robust Headless Compatibility**
-   - Observations show `DarkFantasySprites` checks `typeof document === 'undefined'` at entry points, and provides defensive wrappers for `createLinearGradient`, `createRadialGradient`, and `bezierCurveTo`.
-   - When running in Node.js test harnesses without a DOM, calls to `drawPlayer` and `drawEnemy` automatically divert to the direct vector fallback routines without throwing, as verified in `Suite 5` test `"executes safe headless vector fallback when document is undefined"`.
+1. **Top-Down Centering Invariant**:
+   - *Observation*: `idealTargetX = targetX - viewportWidth / 2 + lookaheadX`.
+   - *Deduction*: When $v_x = 0$, `lookaheadX = 0`, and camera converges to $P_x - W/2$.
+   - *Deduction*: World-to-screen transform yields $P_x - (P_x - W/2) = W/2 = 480\text{px}$. The player is reliably centered across all quadrants, eliminating deadzone hysteresis and forward-scroller bias.
 
-2. **Premise 2: Coordinate Transformation Invariance**
-   - The canvas coordinate space in `generateSpriteEntry` translates to `(dims.ox, dims.oy)` prior to horizontal scaling `ctx.scale(-1, 1)`.
-   - Because `dims.ox = dims.w / 2`, the symmetry line is the canvas center. Drawing coordinates that range between `[-dims.ox, +dims.ox]` remain within `[0, dims.w]` under inversion.
-   - At runtime, blit offsets `(screenX - entry.originX, screenY - entry.originY)` ensure that left and right facing entities preserve the identical center anchor point.
+2. **Damping Stability & Non-Overshoot Guarantee**:
+   - *Observation*: `alpha = 1 - Math.exp(-8.0 * dt)`.
+   - *Deduction*: For any $\Delta t > 0$, $\alpha \in (0, 1)$. The update step is a convex linear interpolation between $x(t)$ and $x_{\text{target}}$.
+   - *Deduction*: Overshoot is mathematically impossible ($\Delta x \cdot (x_{\text{target}} - x(t)) \ge 0$). Large $\Delta t$ lag spikes (e.g. $\Delta t = 1.0\text{s}$) yield $\alpha \approx 0.9997$, asymptotically approaching target in a single step without numerical blowup or NaN.
 
-3. **Premise 3: Damage Flash Fidelity & State Segregation**
-   - Flash states are isolated in the cache key `${type}_${frame % 4}_${facingRight ? 'right' : 'left'}_${flash}`.
-   - The flash state cleanly separates normal procedural textured rendering from white/crimson masked silhouettes.
-   - Flash timers are accurately mapped from `Enemy.flashTimer` (> 0.05 -> white, > 0 -> crimson, <= 0 -> normal) and `Player.invulnerabilityTimer`, fully satisfying the gothic damage feedback specification.
+3. **Lookahead Boundedness & Continuity**:
+   - *Observation*: `leadDist = Math.min(40.0, speed * 0.20)`.
+   - *Deduction*: The target lookahead vector norm is bounded by $40.0\text{px}$.
+   - *Deduction*: With exponential damping ($k = 5.0\,\text{s}^{-1}$), sudden 180-degree velocity reversals transition continuously. Empirical tests confirm frame acceleration jerk is strictly $< 4.0\text{px}$ and max frame delta $< 10.0\text{px}$.
 
-4. **Premise 4: Canvas Composite Hygiene**
-   - Four distinct code paths utilize `globalCompositeOperation = 'lighter'` for spectral/runic effects.
-   - In 100% of these occurrences, the operation is enclosed within a `save()` / `restore()` block and followed immediately by an explicit assignment `ctx.globalCompositeOperation = 'source-over'`.
-   - `Suite 2` of `DarkFantasySprites.spec.ts` empirically asserts that across all 120 generated canvas contexts, `ctx.globalCompositeOperation === 'source-over'`.
+4. **Visual Pipeline Parallax Continuity**:
+   - *Observation*: Backdrop canvas modular wrapping uses `-(((val % W) + W) % W)`.
+   - *Deduction*: For all $camX, camY \in [-2000, 2000]$, start offsets lie strictly in $(-W, 0]$ and $(-H, 0]$.
+   - *Deduction*: With step sizes $W$ and $H$, loop bounds $x < vw$ and $y < vh$ cover $[0, vw] \times [0, vh]$ without boundary gaps. Symmetrical gradient color stops and toroidal cloud rendering prevent seam artifacts.
 
-5. **Premise 5: High Performance 60Hz Budget**
-   - Pre-caching exactly $5 \times 4 \times 2 \times 3 = 120$ offscreen canvases bounds memory allocation to a static set.
-   - Blitting 1,000 entities takes ~0.735ms in vitest execution, which is well below the 5.0ms target and leaves over 15.8ms for simulation, particles, and HUD in a 60Hz frame.
+5. **Integrity Violation Analysis**:
+   - No hardcoded test responses or bypasses exist in `Camera.ts` or `GothicBackdrop.ts`.
+   - All damping, lookahead, and tile wrapping routines implement genuine mathematical logic.
+   - Tests execute real simulation loops with rigorous assertions.
 
 ---
 
 ## 3. Caveats
 
-- **No caveats.** The implementation adheres strictly to TypeScript strict mode, exhibits zero memory leaks across sustained churn, and introduces zero regressions against existing tests.
+- **Stage Perimeter Deceleration**: Within $480\text{px}$ of world bounds ($-2000$ or $+2000$), camera movement halts smoothly at boundary limits while player continues towards the edge. This is desired boundary clamping behavior.
+- **Offscreen Canvas Fallback in Node.js**: In headless Node environments without browser DOM canvases, `GothicBackdrop` gracefully falls back to dark void filling (`PALETTE.ABYSSAL_VOID.DEEP`) to prevent crashes during unit testing.
 
 ---
 
 ## 4. Conclusion
 
-**Verdict: APPROVE**
+The Milestone 2 camera overhaul and cinematic viewport engine are completely implemented, mathematically sound, regression-free, and thoroughly verified.
+- Viewport tracking is centered, smooth, and reactive.
+- Parallax backdrop rendering is seamless across 360-degree camera movement.
+- All 33 test files (488 unit tests) pass 100% green.
+- Production build succeeds with zero errors.
 
-The Milestone 2 DarkFantasySprites implementation delivered by `worker_m2_1` is thoroughly engineered, visually exceptional, and architecturally resilient.
-- Headless fallbacks are safe and crash-proof.
-- Directional flipping is geometrically centered without canvas clipping.
-- Damage flash masks accurately sync with entity animation frames across white, crimson, and normal states.
-- Composite operations maintain strict hygiene with zero blend-mode leakage.
-- No integrity violations, shortcuts, or hardcoded cheating exist.
+**Verdict**: **APPROVE**
 
 ---
 
 ## 5. Verification Method
 
-To independently reproduce this verification:
-1. `cd /Users/user/teamwork_projects/metal_slug_web`
-2. `npx vitest run tests/unit/DarkFantasySprites.spec.ts` (Asserts 22 passing tests)
-3. `npm test` (Asserts 22 test files, 269 passing tests)
-4. `npx tsc --noEmit` (Asserts exit code 0, 0 type errors)
-5. `npm run build` (Asserts clean Vite production bundle)
+### 5.1 Commands to Verify
+```bash
+# 1. Full Unit Test Suite (assert 33 test files, 488 tests pass 100% green)
+npm test
+
+# 2. Camera Specification Suite
+npx vitest run tests/unit/camera_tracking.spec.ts
+
+# 3. Adversarial Camera Stress Suite
+npx vitest run tests/unit/ChallengerM2_CameraAdversarial.test.ts
+
+# 4. Backdrop Parallax Suite
+npx vitest run tests/unit/GothicBackdrop.test.ts
+npx vitest run tests/unit/ChallengerDF_M2.test.ts
+
+# 5. TypeScript Compilation Check
+npx tsc --noEmit
+
+# 6. Production Bundle Build
+npm run build
+```
+
+### 5.2 Files Inspected
+- `src/render/Camera.ts`
+- `src/render/GothicBackdrop.ts`
+- `src/main.ts`
+- `tests/unit/camera_tracking.spec.ts`
+- `tests/unit/ChallengerM2_CameraAdversarial.test.ts`
+- `tests/unit/GothicBackdrop.test.ts`
+- `tests/unit/ChallengerDF_M2.test.ts`
+- `tests/unit/ChallengerRestartEngine_M1_1.test.ts`
+
+### 5.3 Invalidation Conditions
+- Player rendering at a screen coordinate other than $(480, 270) \pm 0.01\text{px}$ when stationary and unconstrained.
+- Velocity lookahead magnitude exceeding $40.0\text{px}$.
+- Viewport boundaries peeking past $[-2000, 2000]$.
+- Screen shake trauma causing permanent camera coordinate drift.
+- Any failing unit test or production build compilation failure.

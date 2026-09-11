@@ -1,16 +1,17 @@
 # Progress Log - explorer_m3_3
 
-- Last visited: 2026-09-10T16:15:30Z
+- Last visited: 2026-09-11T02:58:25Z
 - Current status: Investigation completed successfully. Handoff report generated and verified.
 - Tasks:
-  - [x] Create DISPATCH.md, BRIEFING.md, progress.md
-  - [x] Read ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md
-  - [x] Read & analyze DarkFantasyVFX.ts, GothicBackdrop.ts, AbyssalLightning.ts, CursedAura.ts, main.ts
-  - [x] Analyze existing test suites (vitest run 24 passed, 285 tests green)
-  - [x] Investigate ChallengerM2_2 invariant constraints and DarkFantasySprites.spec.ts architecture
-  - [x] Formulate architecture for branching abyssal lightning arcs, swirling necrotic soul motes, visceral gore/bone, and occult runes
-  - [x] Formulate multi-layered undulating mist architecture for GothicBackdrop.ts
-  - [x] Design comprehensive Vitest test plan for tests/unit/DarkFantasyVFX.spec.ts (8 test suites)
+  - [x] Record new dispatch in DISPATCH.md
+  - [x] Initialize BRIEFING.md for Milestone 3 Playwright Reliability & Flakiness Explorer
+  - [x] Read ORIGINAL_REQUEST.md, COLLABORATION.md, .agents/orchestrator_hitbox_camera/SCOPE.md, playwright.config.ts
+  - [x] Investigate existing Playwright tests in `tests/e2e/`
+  - [x] Investigate canvas rendering (2D vs WebGL), requestAnimationFrame loop in `src/` (main.ts, Game.ts, etc.)
+  - [x] Investigate headless Chromium vs headful nuances (rAF throttling, timers, WebGL flags, display hardware acceleration)
+  - [x] Analyze reliable waiting strategies (window.game readiness, DOM element assertions, canvas pixel sampling / frame counters, input dispatch synchronization)
+  - [x] Identify timing flakes, race conditions, and CI execution bottlenecks
+  - [x] Synthesize recommendations and hardening steps
   - [x] Write handoff.md in .agents/explorer_m3_3/
-  - [x] Update BRIEFING.md
+  - [x] Update BRIEFING.md with final investigation state
   - [x] Send completion message to orchestrator

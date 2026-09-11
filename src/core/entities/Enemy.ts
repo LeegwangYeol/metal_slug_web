@@ -26,7 +26,7 @@ export class Enemy {
   public pushVx: number = 0;
   public pushVy: number = 0;
 
-  public radius: number = 12;
+  public radius: number = 11;
   public hp: number = 25;
   public maxHp: number = 25;
   public speed: number = 65;
@@ -38,6 +38,22 @@ export class Enemy {
   public flashTimer: number = 0;
   public behaviorTimer: number = 0;
   public facingRight: boolean = true;
+
+  private _pos = { x: 0, y: 0 };
+
+  public get collisionRadius(): number {
+    return this.radius;
+  }
+
+  public set collisionRadius(val: number) {
+    this.radius = val;
+  }
+
+  public get position(): { x: number; y: number } {
+    this._pos.x = this.x;
+    this._pos.y = this.y;
+    return this._pos;
+  }
 
   constructor(id: number) {
     this.id = id;

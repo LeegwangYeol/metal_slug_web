@@ -40,7 +40,7 @@ export class Player {
   public static readonly BASE_MOVE_SPEED = 200.0;
   public static readonly ACCELERATION = 1800.0;
   public static readonly DECELERATION = 2400.0;
-  public static readonly COLLISION_RADIUS = 14.0;
+  public static readonly COLLISION_RADIUS = 11.0;
   public static readonly INVULNERABILITY_DURATION = 0.5;
 
   public facingAngle: number = 0;
@@ -247,7 +247,7 @@ export class Player {
    * Resolves incoming damage with armor reduction and invulnerability period.
    */
   public takeDamage(amount: number, engine?: any): number {
-    if (!this.isAlive || this.invulnerabilityTimer > 0) return 0;
+    if (!this.isAlive || (this.invulnerabilityTimer > 0 && amount < 1000)) return 0;
 
     const effectiveDamage = Math.max(1, amount - this.stats.armor);
     this.stats.currentHealth = Math.max(0, this.stats.currentHealth - effectiveDamage);

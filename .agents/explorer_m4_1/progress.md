@@ -1,17 +1,14 @@
-# Progress: Milestone 4 Explorer
+# Progress — explorer_m4_1
 
-Last visited: 2026-09-11T03:50:30+09:00
+Last visited: 2026-09-11T04:31:00Z
 
 ## Status
-Complete
-
-## Tasks
 - [x] Initialized DISPATCH.md and BRIEFING.md
-- [x] Read ORIGINAL_REQUEST.md
-- [x] Read COLLABORATION.md, PROJECT.md
-- [x] Read playwright.config.ts, tests/e2e/horde_survival.spec.ts, src/main.ts
-- [x] Investigate Playwright configuration & runner environment (preview port 4173, hooks)
-- [x] Investigate player death, deathDebounceTimer, restart triggers (Spacebar, click), invariants
-- [x] Formulate restart_survival.spec.ts blueprint
-- [x] Write handoff.md report (5-component Handoff Protocol)
-- [x] Send message to orchestrator parent
+- [x] Read foundational documents (ORIGINAL_REQUEST.md, COLLABORATION.md, SCOPE.md, GATE_STATUS.md)
+- [x] Run `npx tsc --noEmit` (PASSED: exit code 0, 0 errors)
+- [x] Run `npx vitest run` (PASSED: 33 test files, 488 tests passed, 0 failed)
+- [x] Run `npx playwright test` (PASSED: 26 tests passed across all 7 test files)
+- [x] Run `npm run build` (PASSED: production bundle dist/assets/index-BsOJa5ji.js 179.71 kB)
+- [x] Inspect git status and file modifications (verified src/, tests/, and 8 visual PNG artifacts >50KB)
+- [x] Write handoff.md report (/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/handoff.md)
+- [x] Send completion message to parent orchestrator

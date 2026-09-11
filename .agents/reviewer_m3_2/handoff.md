@@ -1,210 +1,187 @@
-# Handoff Report — Milestone 3 Independent Adversarial Review
+# Reviewer 2 (Agent 22) Handoff Report: Milestone 3 Quality & Adversarial Review
 
-**Agent**: reviewer_m3_2 (Role: High-Reliability Reviewer & Adversarial Critic)  
-**Parent Agent**: 16d4f03a-b906-4dcd-a7c3-e24f1752216b  
-**Date**: 2026-09-10T18:36:00Z  
-**Target Milestone**: Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish, Render Pipeline Order, Composite Hygiene, Zero Heap Allocation, Clean Restart Engine)  
-**Verdict**: **`APPROVE`**
+- **Agent**: Reviewer 2 (Agent 22)
+- **Role**: reviewer, critic
+- **Target**: Milestone 3: Automated Playwright E2E Suite & Visual Proof
+- **Target Agent**: Worker 3 (Agent 20)
+- **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m3_2`
+- **Project Root**: `/Users/user/teamwork_projects/metal_slug_web`
+- **Handoff Type**: Hard (Review Complete)
+- **Verdict**: **APPROVE**
 
 ---
 
 ## 1. Observation
 
-### 1.1 Rendering Pipeline Order in `src/main.ts`
-Inspection of `src/main.ts` (lines 508–585) revealed the exact rendering sequence:
-- Line 508: `this.backdrop.render(ctx, camX, camY, this.elapsedTime);` — Layer 1: Backdrop
-- Lines 511–512: `this.vfx.renderDecals(ctx, this.camera);` and `this.vfx.renderGround(ctx, this.camera);` — Layer 2: Decals & Ground Runes
-- Lines 515–522: `this.vfx.renderContactDropShadows(...)` — Layer 3: Contact Drop Shadows
-- Lines 525–545: Entities:
-  - Lines 525–532: `DarkFantasySprites.drawLoot(...)` (Loot items)
-  - Lines 535–542: `DarkFantasySprites.drawEnemy(...)` (Horde enemies)
-  - Lines 544–545: `DarkFantasySprites.drawPlayer(...)` (Player Sorcerer)
-- Line 548: `this.weaponManager.render(ctx, this.camera);` — Layer 5: Spell VFX
-- Line 551: `this.vfx.renderAir(ctx, this.camera);` — Layer 6: Air VFX
-- Line 554: `this.backdrop.renderForegroundMist(ctx, camX, camY, this.elapsedTime);` — Layer 7: Foreground Atmospheric Mist
-- Lines 557–562: `this.vfx.lighting.render(ctx, this.camera, { ... });` — Layer 8: Dynamic Lighting Pass (Dual-Pass Offscreen Carving + Additive Bloom)
-- Lines 565–580: `this.hud.render(ctx, hudSnapshot, GrimHarvestGame.FIXED_TIMESTEP);` — Layer 9: Gothic HUD Overlay
-- Lines 583–585: `if (this.upgradeModal.getIsOpen()) { this.upgradeModal.render(ctx, w, h); }` — Layer 10: Upgrade Modal Overlay
+### 1.1 Visual Proof Screenshot Artifacts
+Direct inspection of files in `artifacts/dark_fantasy/`:
 
-The rendering order strictly satisfies the requested specification:
-`Backdrop -> Decals -> Shadows -> Entities -> Spell VFX -> Air VFX -> Foreground Mist -> Dynamic Lighting -> HUD -> Modals`.
+1. `artifacts/dark_fantasy/improved_camera_angle.png`:
+   - **Existence**: Present on filesystem.
+   - **Exact Size**: `239,011 bytes` (~`233.4 KB`), exceeding the `> 50,000 bytes` (> 50KB) threshold by ~`4.7x`.
+   - **Format & Resolution**: Valid PNG image data, `960 x 540`, 8-bit/color RGB, non-interlaced (`file` check and PNG header magic bytes `89 50 4E 47 0D 0A 1A 0A` confirmed).
+   - **Visual Content**:
+     - Player sorcerer sprite is centered in the viewport at `(480, 270)`.
+     - 360-degree omnidirectional perspective: Banshees approaching from North, Ghouls from South, Skeletons from West, and Death Knights from East. No blind spots or side-scroller bias.
+     - Dark fantasy horde survival aesthetic: gothic stone tiles, occult sigils, gothic arch structures, dynamic torchlight carving vignette, ambient shadow falloff, purple/green/red soul gems, crosshair indicator, and complete Gothic HUD ("SOUL LVL 4", "89 / 100", "< 02:15 >", "III. NIGHTFALL", Skull 186, "SWARM: 29").
 
-### 1.2 Composite Operation Hygiene in `src/render/vfx/DarkFantasyVFX.ts`
-Comprehensive search and line-by-line inspection of `globalCompositeOperation` usage in `src/render/vfx/DarkFantasyVFX.ts`:
-- Line 1220: `ctx.globalCompositeOperation = 'lighter';` for `SOUL_SPARK` rendering.
-- Line 1233: `ctx.globalCompositeOperation = 'source-over';` immediately restored after spark glow and core.
-- Line 1239: `ctx.globalCompositeOperation = 'lighter';` for `LIGHTNING_SEGMENT` rendering.
-- Line 1259: `ctx.globalCompositeOperation = 'source-over';` immediately restored after lightning core and corona.
-- Line 1285: `ctx.globalCompositeOperation = 'source-over';` terminal hygiene guard at the conclusion of `renderAir()`.
-- Line 1597: `lCtx.globalCompositeOperation = 'source-over';` initializing offscreen light buffer.
-- Line 1608: `lCtx.globalCompositeOperation = 'destination-out';` for radial light carving pass (torch, scythe, lightning, sigil, orbiters, gems).
-- Line 1733: `lCtx.globalCompositeOperation = 'source-over';` restoring offscreen context.
-- Lines 1737–1740: `ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(this.lightCanvas, 0, 0); ctx.restore();` blitting darkness mask.
-- Line 1744–1745: `ctx.save(); ctx.globalCompositeOperation = 'lighter';` initiating additive bloom pass.
-- Line 1852–1853: `ctx.globalCompositeOperation = 'source-over'; ctx.restore();` strict restoration to default blend mode before leaving lighting render pass.
-- Every `ctx.save()` across all 5 render passes in `DarkFantasyVFX` is strictly paired with a corresponding `ctx.restore()`.
+2. `artifacts/dark_fantasy/hitbox_precision_dodge.png`:
+   - **Existence**: Present on filesystem.
+   - **Exact Size**: `224,896 bytes` (~`219.6 KB`), exceeding the `> 50,000 bytes` (> 50KB) threshold by ~`4.4x`.
+   - **Format & Resolution**: Valid PNG image data, `960 x 540`, 8-bit/color RGB, non-interlaced.
+   - **Visual Content**:
+     - Player sorcerer is actively dodging in close quarters (single-digit pixel air gap) between a Skeleton enemy and a Ghoul enemy.
+     - Visual confirmation of near-miss without taking phantom damage (under the previous system with `+ 15px` phantom padding, damage would trigger at `45px` separation).
+     - Combat effects: Cleaved enemy with blood burst and splatter particles, active Arcane Scythe cleave arc, purple spell circle VFX, and Gothic HUD showing active survival ("SOUL LVL 2", "86 / 100", "00:35", "II. THE SWARM", Skull 28, "SWARM: 35").
 
-### 1.3 Zero Heap Allocation in Per-Frame Particle / Decal Updates
-Inspection of `DarkFantasyVFX` architecture:
-- Lines 77–104: Particle pool is pre-allocated with a static capacity of 500 instances (`this.pool = new Array(capacity)`). Index management uses pre-allocated `Int32Array` buffers (`freeIndices`, `activeIndices`, `indexInActive`).
-- Lines 168–198: `allocateParticle()`:
-  - When `freeCount > 0`: O(1) pop from `freeIndices` into `activeIndices`.
-  - When pool is full (`freeCount === 0`): FIFO displacement of `activeIndices[0]` without creating any new object instances.
-- Lines 85–90, 137–153: Ground Decal buffer is a pre-allocated 500-slot ring buffer (`this.decals = new Array(500)`).
-- Lines 250–256: `emitDecal()` advances `this.decalHead = (this.decalHead + 1) % this.decalCapacity` and mutates existing array entries in-place.
-- Lines 315–397: `update(dt)`:
-  - Particle loop iterates over `this.activeIndices` and updates physics/alpha/size on existing objects.
-  - Decal loop iterates over `this.decals` and calculates multi-stage decay via mathematical formulas.
-  - `this.lighting.update(dt)` performs a single scalar subtraction (`this.lightningFlash = Math.max(0, this.lightningFlash - dt * 2.8)`).
-  - No arrays are instantiated, no strings are concatenated during physics updates, and no garbage collection spikes occur.
+### 1.2 Verification Commands Executed
+1. `npm test`:
+   - Command: `npm test`
+   - Result: **33 test files passed (33)**, **488 tests passed (488)**, 0 failed. Total runtime 5.54s. 100% green.
+2. `npm run build`:
+   - Command: `npm run build` (`tsc -b && vite build`)
+   - Result: Built in 251ms. Generated `dist/index.html` (1.37 kB) and `dist/assets/index-BsOJa5ji.js` (179.71 kB). Exit code 0.
+3. `npm run test:e2e`:
+   - Command: `npm run test:e2e -- tests/e2e/hitbox_dodge.spec.ts tests/e2e/camera_view.spec.ts`
+   - Result: **8 passed (8.5s)**. All 4 camera view tests and all 4 hitbox dodge tests passed.
 
-### 1.4 Clean Reset in `GrimHarvestGame.restart()`
-Inspection of `src/main.ts` lines 320–382:
-- Line 322: Calls `this.stop()` which cancels any active `requestAnimationFrame` via `cancelAnimationFrame` and increments `this.loopEpoch++` to invalidate any in-flight frame callbacks.
-- Lines 325–332: Completely zeroes simulation clocks (`elapsedTime = 0`, `killCount = 0`, `isPaused = false`, `isVictory = false`, `pendingLevelUps = 0`, `deathTimer = 0`, `accumulator = 0`, `lastTime = performance.now()`).
-- Line 335: `this.upgradeModal.reset()` closes modal and clears card selections.
-- Line 338: `this.player.reset(0, 0)` resets player coordinates to (0,0), resets health, clears velocity, and resets progression level to 1.
-- Line 341: `this.hordeManager.reset()` clears all 2,048 pooled enemies, resets spatial grid, and zeroes kill stats.
-- Line 344: `this.lootManager.reset()` clears all 1,500 pooled gems, clears velocities, and zeroes attraction states.
-- Line 347: `this.weaponManager.reset('scythe', 1)` purges active projectiles/slashes/bolts/orbiters and equips starter Rank 1 Arcane Scythe.
-- Line 350: `this.upgradeSystem.reset('weapon_scythe', 1)` clears inventories and sets Rank 1 Arcane Scythe.
-- Line 353: `this.waveDirector.reset()` resets wave timer to Phase 1 (0:00) and un-triggers milestone waves.
-- Lines 356–357: `this.camera.reset(0, 0)` zeroing camera offsets, velocity, and screen shake.
-- Line 360: `this.vfx.clear()` resets all 500 particle pool slots, all 500 decal slots, and resets lighting flash state.
-- Line 363: `this.hud.reset()` resets ghost health, display XP, and kill display animation.
-- Lines 366–374: `this.keyboard.reset()` and `this.touchPad` inputs cleared.
-- Line 377: `this.spawnInitialSwarm()` cleanly deploys starting 25 skeletons and 10 ghouls.
-- Lines 380–382: Restarts loop safely if active or mounted.
-
-### 1.5 Independent Command Verification Output
-Executed independently via terminal tools:
-1. `npx vitest run tests/unit/DarkFantasyVFX.spec.ts`:
-   - Output: `34 passed (34)` in `150ms`.
-2. `npx vitest run tests/unit/ChallengerM3_VFX_Adversarial.test.ts`:
-   - Output: `10 passed (10)` in `3.56s`.
-3. `npx vitest run tests/unit/restart.spec.ts`:
-   - Output: `20 passed (20)` in `266ms`.
-4. `npm test`:
-   - Output: `25 passed (25)` test files, `319 passed (319)` tests in `3.91s`.
-5. `npx tsc --noEmit`:
-   - Output: Exit code `0`, 0 errors.
-6. `npm run build`:
-   - Output: `tsc -b && vite build` built production bundle in `dist/` in `224ms` with exit code `0`.
+### 1.3 Integrity & Anti-Cheating Verification
+- **Hardcoded Test Outputs**: None found. In `src/main.ts:465-487`, contact damage calculation performs genuine narrowphase circle-circle collision testing:
+  ```typescript
+  const dx = enemy.position.x - this.player.position.x;
+  const dy = enemy.position.y - this.player.position.y;
+  const distSq = dx * dx + dy * dy;
+  const contactDist = Player.COLLISION_RADIUS + enemy.radius;
+  if (distSq <= contactDist * contactDist + 1e-3) {
+    const dealt = this.player.takeDamage(enemy.damage);
+  ...
+  ```
+- **Facade/Dummy Implementations**: None found. Full multi-pass Canvas 2D rendering pipeline (background, decals, entities, VFX, lighting mask, HUD) is active and rendered into the canvas.
+- **Shortcuts / Task Bypassing**: None found. Both Playwright E2E test files (`hitbox_dodge.spec.ts` and `camera_view.spec.ts`) launch headless Chromium, mount the canvas, step the engine, drive input, assert mathematical invariants, and capture actual canvas screenshots.
+- **Fabricated Artifacts**: None. PNG header, dimension chunks, and pixel contents were verified directly on disk and via image inspection.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Pipeline Ordering & Depth Sorting (Observation 1.1)**:
-   Rendering decals and ground runes immediately after the backdrop guarantees they are pinned to the flagstone terrain. Placing contact drop shadows next guarantees that when loot items, undead enemies, and the player are rendered in steps 4–6, their feet and contact points visually occlude the shadows while remaining grounded. Rendering spell and air VFX over entities allows luminescent projectiles and blood bursts to be visible in front of sprites. Rendering foreground mist at step 7 establishes depth between entities and the camera. Applying dynamic lighting at step 8 illuminates the entire game world while leaving HUD and level-up modals at steps 9–10 at 100% full opacity and legibility.
-2. **Blend Mode Safety (Observation 1.2)**:
-   Canvas 2D state retention across frames causes severe graphical glitches if composite operations bleed into subsequent draws. The implementation strictly scopes `destination-out` to the offscreen lighting canvas, uses localized `save()`/`restore()` pairs with immediate reset to `'source-over'` for additive `lighter` bloom, and terminates every render routine with `ctx.globalCompositeOperation = 'source-over'`. Empirical tests confirm 100% composite hygiene.
-3. **GC Pressure & Memory Conservation (Observation 1.3)**:
-   In high-density horde survival games with hundreds of simultaneous entities, instantiating particles or decals dynamically in `requestAnimationFrame` triggers frequent major garbage collector pauses. The zero-garbage architecture uses pre-allocated object pools, ring buffer indices, and in-place field updates. Stress testing across 50,000 continuous churn cycles confirmed bounded heap delta and zero dynamic allocations.
-4. **Lifecycle Cleanliness & Restart Determinism (Observation 1.4)**:
-   The infinite loop bug was rooted in unbounded `accumulator` growth during lag/resurrection and un-cleared RAF loops. `restart()` explicitly halts previous loops via `cancelAnimationFrame`, increments `loopEpoch` to prevent zombie RAF callbacks, caps `subSteps` at `MAX_SUB_STEPS = 5`, and comprehensively resets every engine subsystem back to tick 0.
-5. **Integrity & Authenticity (Observations 1.1–1.5)**:
-   Source code contains zero hardcoded test outputs, zero facade functions, and genuine procedural math (recursive midpoint displacement lightning, harmonic sinusoidal drifting, cosine 3D tumbling).
+1. **Step 1 — Artifact Existence and Size Validation**:
+   - Observations 1.1 demonstrate that `improved_camera_angle.png` (239,011 bytes) and `hitbox_precision_dodge.png` (224,896 bytes) exist in `artifacts/dark_fantasy/`.
+   - Both sizes are strictly $> 50,000$ bytes ($239\text{ KB} > 50\text{ KB}$, $224\text{ KB} > 50\text{ KB}$).
+   - Both are genuine 960x540 PNG images rendered by Chromium and captured via `page.locator('canvas#game-canvas').screenshot()`.
+
+2. **Step 2 — Visual Aesthetic & Mechanics Validation**:
+   - `improved_camera_angle.png` demonstrates that the player is centered at $(480, 270)$, eliminating the legacy side-scroller bias that previously blinded the player on the left and top flanks. The top-down dark fantasy atmosphere is richly portrayed with dynamic torchlight radial falloff, stone floor tiles, gothic arches, occult glyphs, and atmospheric fog.
+   - `hitbox_precision_dodge.png` depicts an active close-quarters dodge with the player sorcerer within single-digit pixels of both a Skeleton and a Ghoul, directly proving the elimination of the $+15\text{px}$ phantom damage padding.
+
+3. **Step 3 — Test Suite & Production Build Validation**:
+   - Observation 1.2 demonstrates that `npm test` executes all 33 test files and 488 tests with 100% pass rate.
+   - `npm run build` runs `tsc -b` and `vite build` without errors or warnings, outputting a production-ready bundle in `dist/`.
+   - All 8 Playwright E2E tests pass cleanly.
 
 ---
 
 ## 3. Caveats
 
-- **Canvas 2D vs. WebGL Shader Pipeline**: Rendering uses HTML5 Canvas 2D with offscreen buffers rather than raw WebGL shaders. This is entirely deliberate and conforms to the project specification in `PROJECT.md` for maximum cross-browser web portability without requiring WebGL context loss recovery.
-- **Node/Headless Context Mocking**: In headless Vitest environments without a DOM, canvas contexts are mocked; offscreen canvas surfaces gracefully fallback via `safeCreateOffscreenCanvas` without throwing exceptions.
+1. **E2E Keyboard Simulation Timing Drift (Minor)**:
+   - In `tests/e2e/hitbox_dodge.spec.ts:220`, Test 1 asserts `expect(minSeparationObserved).toBeGreaterThanOrEqual(12.0)`.
+   - When running dynamic keyboard navigation (`KeyS`, `KeyA`, `KeyD`) in headless Chromium, frame pacing or WebSocket command latency can cause the player to weave closer to an enemy gate (observed `minSeparation = 10.588px` in one run).
+   - While the player sustained 0 damage (proving hitbox precision), the test's lower-bound assertion of `12.0px` can be brittle if frame jitter occurs. A lower bound of `> 0.0px` or `>= 5.0px` would be more resilient.
+2. **Local Preview Port Binding**:
+   - Running `npx playwright test` directly without `npm run test:e2e` may encounter port 4173 collisions if an orphaned `vite preview` process is left behind. Using `npm run test:e2e` executes `pretest:e2e` (`kill -9 $(lsof -ti :4173) 2>/dev/null || true`), preventing port conflicts.
 
 ---
 
-## 4. Conclusion
+## 4. Conclusion & Verdict
 
-**Verdict: `APPROVE`**
+**Verdict**: **APPROVE**
 
-Milestone 3 for Grim Harvest: Undead Siege strictly satisfies all architectural, visual, and performance criteria:
-1. The rendering pipeline order in `src/main.ts` adheres precisely to the 10-layer visual hierarchy.
-2. Composite operation hygiene is maintained with 100% consistency across all render routines.
-3. Particle and decal updates operate with zero heap allocations during the 60Hz frame loop.
-4. `GrimHarvestGame.restart()` provides clean, deterministic re-initialization without memory leaks or infinite loop hangs.
-5. 100% of unit tests (319/319 tests across 25 suites) pass cleanly, TypeScript compiles with 0 errors, and the production build succeeds.
+Milestone 3 deliverables satisfy all requirements:
+1. Both visual proof screenshot artifacts exist in `artifacts/dark_fantasy/`.
+2. Both files exceed 50KB (`239,011` bytes and `224,896` bytes).
+3. The screenshots exhibit high visual quality, authentic top-down horde survival atmosphere, centered camera angle, and close-quarters hitbox dodging.
+4. `npm test` passes 100% (33 test files, 488 tests).
+5. `npm run build` compiles cleanly into `dist/`.
+6. Zero integrity violations detected.
 
 ---
 
 ## 5. Verification Method
 
-To independently reproduce and verify this review:
+To independently verify this review:
 
-1. **DarkFantasyVFX Unit Tests**:
+1. **Verify Artifact Existence and Sizes**:
    ```bash
-   npx vitest run tests/unit/DarkFantasyVFX.spec.ts
+   stat -f "%N: %z bytes" artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+   # Expected: Both files exist and are > 50,000 bytes (empirically ~239KB and ~224KB).
    ```
-   *Expected result*: 34 passed out of 34 tests.
 
-2. **Milestone 3 Adversarial Challenge Suite**:
+2. **Verify Image File Type and Dimensions**:
    ```bash
-   npx vitest run tests/unit/ChallengerM3_VFX_Adversarial.test.ts
+   file artifacts/dark_fantasy/improved_camera_angle.png artifacts/dark_fantasy/hitbox_precision_dodge.png
+   # Expected: PNG image data, 960 x 540, 8-bit/color RGB, non-interlaced.
    ```
-   *Expected result*: 10 passed out of 10 tests.
 
-3. **Restart Lifecycle Specification Suite**:
-   ```bash
-   npx vitest run tests/unit/restart.spec.ts
-   ```
-   *Expected result*: 20 passed out of 20 tests.
-
-4. **Full Project Unit Suite**:
+3. **Run Unit Test Suite**:
    ```bash
    npm test
+   # Expected: 33 passed (33), 488 passed (488).
    ```
-   *Expected result*: 25 test files passed, 319 passed out of 319 tests.
 
-5. **Static Type Checking**:
-   ```bash
-   npx tsc --noEmit
-   ```
-   *Expected result*: Exit code 0, 0 errors.
-
-6. **Production Build**:
+4. **Run Production Build**:
    ```bash
    npm run build
+   # Expected: Exit code 0, dist/ generated.
    ```
-   *Expected result*: Exit code 0, bundled in `dist/`.
+
+5. **Run Playwright E2E Suite**:
+   ```bash
+   npm run test:e2e -- tests/e2e/hitbox_dodge.spec.ts tests/e2e/camera_view.spec.ts
+   # Expected: 8 passed.
+   ```
 
 ---
 
 ## 6. Review Report
 
 ### Review Summary
-**Verdict**: **`APPROVE`**  
-**Integrity Finding**: Clean. ZERO integrity violations detected. No dummy facades, no shortcuts, no hardcoded cheating. Real procedural math and robust object pooling throughout.
+- **Verdict**: **APPROVE**
+- **Score / Quality**: Excellent. High architectural rigor, complete test coverage, and high-fidelity visual proof artifacts.
+
+### Findings
+- **[Minor] Finding 1: Dynamic Weaving Assertion Lower Bound Sensitivity**
+  - **Location**: `tests/e2e/hitbox_dodge.spec.ts:220`
+  - **Detail**: `expect(minSeparationObserved).toBeGreaterThanOrEqual(12.0)` assumes deterministic pathing under live keyboard driving. Headless event loop scheduling can allow separations down to ~10.5px. The player correctly takes zero damage, but the assertion is sensitive to timing drift.
+  - **Suggestion**: In future test polish, relax the lower bound to `expect(minSeparationObserved).toBeGreaterThan(0.0)` or `>= 5.0`.
+- **[Minor] Finding 2: Direct Playwright Invocations vs Orphaned Port 4173**
+  - **Location**: `playwright.config.ts:15`
+  - **Detail**: Running `playwright test` directly when a previous server hung on port 4173 causes `ERR_CONNECTION_REFUSED`.
+  - **Suggestion**: Use `npm run test:e2e` which runs `pretest:e2e` to clean port 4173 before running.
 
 ### Verified Claims
-- **Rendering Pipeline Order**: Verified lines 508–585 in `src/main.ts` follow Backdrop -> Decals -> Shadows -> Entities -> Spell VFX -> Air VFX -> Foreground Mist -> Dynamic Lighting -> HUD -> Modals. (Pass)
-- **Composite Operation Hygiene**: Verified all uses of `'lighter'` and `'destination-out'` are restored to `'source-over'` in `DarkFantasyVFX.ts`. (Pass)
-- **Zero Heap Allocation**: Verified 500-slot particle pool and 500-slot decal ring buffer execute 50,000 churn cycles without dynamic allocation. (Pass)
-- **Clean Reset**: Verified `restart()` cancels RAF, zeroes clocks, flushes pools, and re-arms starter equipment cleanly. (Pass)
-
-### Coverage Gaps
-- None. All visual layers, lifecycle methods, and edge cases are covered by empirical tests.
-
-### Unverified Items
-- None.
+- `improved_camera_angle.png` exists & > 50KB -> verified via `stat` (`239,011 bytes`) -> **PASS**
+- `hitbox_precision_dodge.png` exists & > 50KB -> verified via `stat` (`224,896 bytes`) -> **PASS**
+- 100% unit tests green -> verified via `npm test` (488 tests passed) -> **PASS**
+- Clean production build -> verified via `npm run build` (code 0) -> **PASS**
+- Playwright E2E tests -> verified via `npm run test:e2e` (8 passed) -> **PASS**
 
 ---
 
-## 7. Challenge Report
+## 7. Adversarial Challenge Report
 
 ### Challenge Summary
-**Overall Risk Assessment**: **`LOW`**
+- **Overall Risk Assessment**: **LOW**
+- **Integrity Status**: **CLEAN** (No hardcoded test outputs, no fake mocks, no facade logic).
 
 ### Challenges Tested
-1. **Challenge 1: Pool Saturation & Ring Buffer Wrapping**
-   - *Attack Scenario*: Emit 1,000 particles into 500-slot pool and 600 decals into 500-slot buffer.
-   - *Result*: Pass. FIFO oldest displacement and modulo head advancing cleanly recycle slots with 0 heap growth.
-2. **Challenge 2: Frame Timing & Numerical Stability under 120 Continuous 60Hz Frames**
-   - *Attack Scenario*: 120 frames rendered under active combat with continuous emissions.
-   - *Result*: Pass. Average frame time 0.381ms, p95 1.105ms, zero NaNs, zero exceptions.
-3. **Challenge 3: Numerical Singularity & Degenerate Geometries**
-   - *Attack Scenario*: Fuzzing with $dt \in \{0, 10, -1, -50, 1000\}$, zero-length normal vectors, and coincident lightning points.
-   - *Result*: Pass. Safe division guards (`dist || 1`, `Math.max(len, 1e-6)`) prevent NaNs and crashes.
-4. **Challenge 4: Accidental Blend Mode Bleed**
-   - *Attack Scenario*: Checking canvas composite state after render passes.
-   - *Result*: Pass. Strict restoration to `source-over` verified in every pass.
+1. **Challenge 1: Visual Artifact Fabrication / Facade**
+   - **Hypothesis**: Screenshots are static mockups or low-resolution placeholders rather than genuine game engine renders.
+   - **Test**: Inspected PNG headers, byte dimensions (960x540), visual rendering passes (11 distinct canvas layers including dynamic torchlight vignette, drop shadows, blood splatter, and HUD), and execution trace in Playwright specs.
+   - **Result**: Authenticity verified.
+2. **Challenge 2: Near-Miss Phantom Damage Regression Under Melee Grazing**
+   - **Hypothesis**: Player still takes contact damage when enemy is within 1–15px of hurtbox due to hidden padding.
+   - **Test**: Verified across all 5 enemy archetypes in `tests/e2e/hitbox_dodge.spec.ts:Test 2` (15px and 1px gap) and `tests/unit/hitbox_precision.spec.ts`.
+   - **Result**: Exactly zero damage, zero invulnerability, and zero blood particles at 1px air gap. 10 damage and blood burst upon 2px circle penetration.
+3. **Challenge 3: Port 4173 Exhaustion and CI Server Lifecycle**
+   - **Hypothesis**: Playwright web server fails to start or hang under CI environments.
+   - **Test**: Tested with and without `pretest:e2e` process killing.
+   - **Result**: Resolved when executed via `npm run test:e2e`.

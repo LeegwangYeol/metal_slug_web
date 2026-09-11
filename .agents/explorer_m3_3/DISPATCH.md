@@ -25,3 +25,22 @@ Investigate Milestone 3 (Dynamic Lighting, Rich VFX & Atmospheric Polish):
 Write your report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md`.
 Update your `progress.md`.
 When complete, send a message to orchestrator with your findings.
+
+## 2026-09-11T02:54:04Z
+You are Explorer 3 for Milestone 3 (Agent 19): Playwright Reliability & Flakiness Explorer.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3
+Project root: /Users/user/teamwork_projects/metal_slug_web
+
+Read the following documents:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
+- /Users/user/teamwork_projects/metal_slug_web/playwright.config.ts
+
+Mission:
+Investigate reliability and deterministic execution of E2E tests:
+1. Check headless browser rendering nuances (WebGL vs 2D canvas context, requestAnimationFrame pacing in headless Chromium).
+2. Recommend reliable waiting strategies (e.g. waiting for `window.game` or canvas ready, checking health bar elements, ensuring steady frame rates).
+3. Ensure tests run reliably in both headless CI mode (`npx playwright test`) and local runs without timing flakes.
+4. Write your recommendations and hardening steps to `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m3_3/handoff.md`.
+5. Send a message to orchestrator when finished.

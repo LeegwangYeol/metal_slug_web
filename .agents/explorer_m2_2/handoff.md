@@ -1,801 +1,594 @@
-# Handoff Report: High-Fidelity Procedural Minion Designs (Skeleton & Ghoul)
+# Milestone 2 Investigation Report: Velocity Lookahead & Parallax Alignment
 
-**Agent**: `explorer_m2_2` (Codebase Researcher / Explorer)  
-**Milestone**: Milestone 2 — High-Fidelity Dark Fantasy Graphics Overhaul  
-**Target File for Overhaul**: `src/render/sprites/DarkFantasySprites.ts`  
-**Date**: 2026-09-10T15:53:00Z  
+**Agent**: `explorer_m2_2` (Role: Velocity Lookahead & Parallax Alignment Explorer)  
+**Date**: 2026-09-11  
+**Target Files**: `src/render/Camera.ts`, `src/render/GothicBackdrop.ts`, `src/main.ts`  
+**Project Root**: `/Users/user/teamwork_projects/metal_slug_web`  
+**Milestone**: M2 (Camera Overhaul & Cinematic Viewport)  
 
 ---
 
 ## 1. Observation
 
-### 1.1 Current Architecture & Pipeline in `src/render/sprites/DarkFantasySprites.ts`
-- **Offscreen Caching Pipeline** (`DarkFantasySprites.ts:23-89`):
-  - Pre-renders offscreen canvases into a static cache `Map<string, SpriteAtlasEntry>`.
-  - Cache key format: `${type}_${frame % 4}_${facingRight ? 'right' : 'left'}_${flash}` (`DarkFantasySprites.ts:33`).
-  - Total combinations per minion: 4 walk frames × 2 horizontal facings (right/left via `ctx.scale(-1, 1)`) × 3 damage flash states (`'normal'`, `'white'`, `'crimson'`) = 24 entries per archetype.
-  - In browser runtime, `generateSpriteEntry` creates an `HTMLCanvasElement`, renders the vector art once, and caches it. During gameplay rendering (`drawEnemy`), it blits the pre-rendered canvas via `ctx.drawImage` with zero garbage collection overhead.
-  - In headless/Node test environments where `typeof document === 'undefined'`, `drawEnemy` falls back to direct vector drawing (`DarkFantasySprites.ts:628-643`).
-- **Current Minion Dimensions** (`DarkFantasySprites.ts:91-104`):
-  - `skeleton`: `{ w: 36, h: 36, ox: 18, oy: 18 }`
-  - `ghoul`: `{ w: 44, h: 44, ox: 22, oy: 22 }`
-- **Current Skeleton Vector Routine** (`DarkFantasySprites.ts:325-384`):
-  ```typescript
-  // Bleached Ivory Skull: Flat semicircle + jaw rectangle
-  ctx.arc(0, -8, 6.5, Math.PI, 0); ctx.lineTo(4, -3); ctx.lineTo(-4, -3);
-  // Eye Sockets: 2 flat 2x2.5px black rectangles with 1px crimson dots
-  ctx.fillRect(-3, -7, 2, 2.5); ctx.fillRect(1, -7, 2, 2.5);
-  // Ribs & Spine: 1 vertical line + 3 horizontal straight 1.5px lines
-  ctx.moveTo(0, 0); ctx.lineTo(0, 6);
-  ctx.moveTo(-4, 1); ctx.lineTo(4, 1); ...
-  // Legs: 2 straight lines from spine; no pelvis or kneecaps
-  ctx.moveTo(-2, 6); ctx.lineTo(-2 + legOffset, 16);
-  // Rusted Blade: Single flat rectangle (2.5x18) with flat crossguard (7x2)
-  ctx.fillRect(6, -11, 2.5, 18);
-  ```
-- **Current Ghoul Vector Routine** (`DarkFantasySprites.ts:386-434`):
-  ```typescript
-  // Mottled Necrotic Flesh Torso: Single flat dark green ellipse
-  ctx.ellipse(-2, 1 + crawl, 11, 8, -0.2, 0, Math.PI * 2);
-  // Spinal Bone Spurs: 2 simple triangular polygons
-  // Snapping Head: Single solid circle arc(7, -2 + crawl, 6)
-  // Malevolent Bile Eye: Single green dot arc(9, -3 + crawl, 1.5)
-  // Dripping Bile: Single static circle arc(7, 4 + crawl, 1.8)
-  // Claws: Two 2px straight stroke lines moveTo/lineTo
-  // Waistcloth: Completely missing
-  ```
-- **Damage Flash Constraints** (`tests/unit/ChallengerM2_2.test.ts:215-251`):
-  - Unit tests assert exact flash thresholds:
-    - `flashTimer > 0.05` → `'white'` (`#ffffff`).
-    - `0 < flashTimer <= 0.05` → `'crimson'` (`PALETTE.BLOOD_CRIMSON.FLASH` = `#e53e3e`).
-    - `flashTimer <= 0` → `'normal'` (procedural drawing must NOT leave `ctx.fillStyle` as `#ffffff` or `#e53e3e`).
-  - Silhouettes in `drawMaskedEntity` (`DarkFantasySprites.ts:163-244`) must closely match the procedural silhouette.
+### 1.1 Current Architecture in `src/render/Camera.ts`
+1. **Method Signature and Tracking Logic**:
+   - `Camera.update` currently accepts only 3 arguments:
+     ```typescript
+     // src/render/Camera.ts:102
+     public update(targetX: number, targetY: number, dt: number): void
+     ```
+   - It possesses **no velocity parameters** (`vx`, `vy`), nor internal lookahead state.
+2. **Legacy Side-Scroller Deadzones**:
+   - Lines 76–79:
+     ```typescript
+     this.deadzoneLeft = Math.floor(this.viewportWidth * 0.35);
+     this.deadzoneRight = this.viewportWidth >= 960 ? Math.floor(this.viewportWidth * 0.44) : Math.floor(this.viewportWidth * 0.45);
+     this.deadzoneTop = Math.floor(this.viewportHeight * 0.30);
+     this.deadzoneBottom = Math.floor(this.viewportHeight * 0.70);
+     ```
+   - Lines 107–120:
+     ```typescript
+     // Horizontal Deadzone Tracking
+     const screenTargetX = targetX - this.x;
+     if (screenTargetX > this.deadzoneRight) {
+       targetCamX = targetX - this.deadzoneRight;
+     } else if (screenTargetX < this.deadzoneLeft && !this.forwardLock) {
+       targetCamX = targetX - this.deadzoneLeft;
+     }
+
+     // Vertical Deadzone Tracking
+     const screenTargetY = targetY - this.y;
+     if (screenTargetY > this.deadzoneBottom) {
+       targetCamY = targetY - this.deadzoneBottom;
+     } else if (screenTargetY < this.deadzoneTop) {
+       targetCamY = targetY - this.deadzoneTop;
+     }
+     ```
+   - This binds the player to between 35% and 44% horizontally ($336\text{px}$ to $422\text{px}$ on a $960\text{px}$ screen) and 30% to 70% vertically ($162\text{px}$ to $378\text{px}$ on a $540\text{px}$ screen).
+   - In a 360-degree top-down horde survival game, this legacy side-scroller bias severely obscures approaching threats from the left and behind, and introduces an 86px horizontal deadzone "slop" before camera tracking engages upon turning.
+3. **Smooth Interpolation**:
+   - Lines 123–130:
+     ```typescript
+     if (this.smoothSpeed > 0 && dt > 0) {
+       const t = Math.min(1, dt * this.smoothSpeed);
+       this.x += (targetCamX - this.x) * t;
+       this.y += (targetCamY - this.y) * t;
+     } else {
+       this.x = targetCamX;
+       this.y = targetCamY;
+     }
+     ```
+4. **Screen Shake & Sub-pixel Quantization**:
+   - Lines 148–149:
+     ```typescript
+     this.renderX = Math.round(this.x + this.shakeOffsetX);
+     this.renderY = Math.round(this.y + this.shakeOffsetY);
+     ```
+   - `renderX` and `renderY` are explicitly rounded using `Math.round`, ensuring crisp integer canvas rasterization without fractional blit blur.
+
+---
+
+### 1.2 Kinematic Properties in `src/core/entities/Player.ts`
+1. **Velocity and Acceleration**:
+   - Line 36:
+     ```typescript
+     public position: Vector2D;
+     public velocity: Vector2D = vec2(0, 0);
+     ```
+   - Lines 40–42:
+     ```typescript
+     public static readonly BASE_MOVE_SPEED = 200.0;
+     public static readonly ACCELERATION = 1800.0;
+     public static readonly DECELERATION = 2400.0;
+     ```
+   - Lines 171–177:
+     ```typescript
+     if (len > 0) {
+       this.velocity.x = this.approach(this.velocity.x, targetVx, Player.ACCELERATION * dt);
+       this.velocity.y = this.approach(this.velocity.y, targetVy, Player.ACCELERATION * dt);
+     } else {
+       this.velocity.x = this.approach(this.velocity.x, 0, Player.DECELERATION * dt);
+       this.velocity.y = this.approach(this.velocity.y, 0, Player.DECELERATION * dt);
+     }
+     ```
+   - Player velocity is continuous, non-instantaneous, and directly accessible via `this.player.velocity.x` and `this.player.velocity.y`.
+   - Speed magnitude: $|v| \in [0, 350]\text{px/s}$ (base 200, buffed up to 350).
+2. **Current Update Call in `src/main.ts`**:
+   - Line 490:
+     ```typescript
+     // 7. Camera Tracking
+     this.camera.update(this.player.position.x, this.player.position.y, dt);
+     ```
+   - Passing `this.player.velocity.x` and `this.player.velocity.y` is immediately feasible without any additional kinematic calculations.
+
+---
+
+### 1.3 Parallax Layering & Offset Calculation in `src/render/GothicBackdrop.ts`
+
+`GothicBackdrop.ts` renders 7 distinct layers in `render()` plus 1 foreground pass in `renderForegroundMist()`.
+
+1. **Layer 0: Celestial Sky & Blood Moon Eclipse (Parallax 0.02)**:
+   - Lines 374–384:
+     ```typescript
+     const W = 1024;
+     const H = 540;
+     const startX = -(((camX * 0.02) % W + W) % W);
+     const startY = -(((camY * 0.02) % H + H) % H);
+     for (let x = startX; x < vw; x += W) {
+       for (let y = startY; y < vh; y += H) {
+         ctx.drawImage(this.skyCanvas, x, y);
+       }
+     }
+     ```
+   - **Observation**: `createSkySurface` (lines 96–101) creates an asymmetric vertical linear gradient from top (`DEEP` `#08060c`) to bottom (`SLATE` `#171326`). When $camY < 0$, $startY$ jumps toward $-H$, placing Tile 1's bottom (`SLATE`) directly adjacent to Tile 2's top (`DEEP`) on screen. This manifests as a visible horizontal color seam across the celestial sky.
+2. **Layer 1: Drifting Storm Clouds (Parallax 0.05 + Wind Drift)**:
+   - Lines 389–396:
+     ```typescript
+     const W = 1920;
+     const startX = -((((camX * 0.05 + elapsedTime * 14.0) % W) + W) % W);
+     for (let x = startX; x < vw; x += W) {
+       ctx.drawImage(this.cloudCanvas, x, 0);
+     }
+     ```
+   - **Observation**: In `createCloudSurface` (lines 140–152), cloud #0 is generated at $cx = (0 \cdot 53) \% 1920 = 0$ with $radX = 80$. The left half of this puff ($[-80, 0]$) is clipped off at the canvas edge and is **not wrapped** to $x = 1920 - 80 = 1840$. As clouds drift across the screen, a flat, sliced edge of this puff passes by.
+3. **Layer 2: Distant Graveyard Skyline Silhouette (Parallax 0.15)**:
+   - Lines 398–406:
+     ```typescript
+     const W = 1920;
+     const startX = -((((camX * 0.15) % W) + W) % W);
+     const horizonY = vh * 0.35;
+     for (let x = startX; x < vw; x += W) {
+       ctx.drawImage(this.skylineCanvas, x, horizonY);
+     }
+     ```
+   - **Observation**: Skyline is fixed to $horizonY = vh \times 0.35 = 189\text{px}$. Width 1920 covers $vw = 960$ seamlessly.
+4. **Layer 3: Ancient Stone Flagging Floor (Parallax 1.0, World Space)**:
+   - Lines 408–421:
+     ```typescript
+     const fSize = this.flagstoneTileSize; // 512
+     const startX = -(((camX % fSize) + fSize) % fSize);
+     const startY = -(((camY % fSize) + fSize) % fSize);
+     ctx.globalAlpha = 0.88;
+     for (let x = startX; x < vw; x += fSize) {
+       for (let y = startY; y < vh; y += fSize) {
+         ctx.drawImage(this.flagstoneCanvas, x, y);
+       }
+     }
+     ctx.globalAlpha = 1.0;
+     ```
+   - **Observation**: `createFlagstoneSurface` draws a 4x4 grid of stones with 2px mortar margin around the edges. When tiles connect, $2\text{px} + 2\text{px} = 4\text{px}$ mortar. This grid is mathematically seamless in both X and Y.
+5. **Layer 4: Dynamic Occult Runic Circles (Spatial Grid, Interval 800)**:
+   - Lines 423–444:
+     `RUNE_INTERVAL = 800`, dynamic pulse alpha, culled mathematically with bounds $[(cam - 256)/800, (cam + v)/800]$. Completely seamless and artifact-free.
+6. **Layer 5: Cursed Graveyard Props (Cell Size 160)**:
+   - Lines 446–480: Deterministic spatial hashing `hash = ((cx * 73856093) ^ (cy * 19349663)) >>> 0`. Margin of $\pm 80\text{px}$ outside viewport prevents any pop-in or edge culling artifacts.
+7. **Layer 6: Rolling Ground Mist / Fog (Parallax 0.40 & 0.65)**:
+   - Lines 482–507:
+     - Sub-layer A: Parallax 0.40, fixed at $y = 0$.
+     - Sub-layer B: Parallax 0.65 with multi-harmonic sinusoidal undulation `undulationY = 14 * sin(...) + 8 * cos(...)`.
+   - **Observation**: In `createMistSurface` (lines 340–352), radial puffs generated with centers near $x \in \{0, W\}$ or $y \in \{0, H\}$ are clipped at canvas boundaries without toroidal wrapping, creating faint linear density steps upon wrapping.
+8. **Foreground Mist Pass: `renderForegroundMist`**:
+   - Lines 530–548:
+     ```typescript
+     // Layer 3: Cinematic Foreground Depth Mist (Parallax 1.15)
+     const startX = -((((camX * 1.15 + elapsedTime * 35.0) % W) + W) % W);
+     ctx.globalAlpha = 0.10;
+
+     for (let x = startX; x < vw + W; x += W) {
+       ctx.drawImage(this.mistCanvas, x, 0);
+     }
+
+     // Camera Y tracking for vertical arena movement
+     if (camY !== 0) {
+       const startY = -((((camY * 0.35 + Math.sin(elapsedTime * 0.6) * 10) % H) + H) % H);
+       if (Math.abs(startY) > 4) {
+         for (let x = startX; x < vw + W; x += W) {
+           for (let y = startY; y < vh + H; y += H) {
+             ctx.drawImage(this.mistCanvas, x, y);
+           }
+         }
+       }
+     }
+     ```
+   - **CRITICAL DEFECT (Flickering & Double Blending)**:
+     - The first loop unconditionally blits a row of mist at $y = 0$ with `alpha = 0.10`.
+     - When $camY \neq 0$ and $|startY| > 4$, a second loop blits a full 2D grid of mist. This **doubles the opacity** along $y = 0$ from $0.10$ to $0.20$.
+     - Whenever $|startY|$ crosses the arbitrary threshold of $4\text{px}$ (which happens continuously as the camera moves vertically or as $\sin(0.6t) \cdot 10$ oscillates), the entire 2D grid abruptly pops into and out of existence. This causes **severe, visible full-screen flickering**.
 
 ---
 
 ## 2. Logic Chain
 
-### 2.1 Aesthetic Deficiencies of the Existing Minions
-1. **Lack of Volumetric Shading & Texturing**:
-   - Both Skeleton and Ghoul currently use flat solid hex fills from `PALETTE` without lighting gradients, depth occlusion, or specular highlights. They read as flat paper cutouts rather than imposing dark fantasy creatures.
-2. **Absence of Anatomical Detail**:
-   - *Skeleton*: The ribcage is currently 3 straight horizontal lines; there are no individual vertebrae, no pelvis (pelvic girdle/iliac crest), no clavicles/shoulders, and no skull anatomical features (zygomatic arches, nasal cavity, teeth).
-   - *Ghoul*: The torso is a single tilted ellipse; there is no hunched feral quadruped posture, no exposed flank ribs, no jaw separation (head is a featureless circle), and no tattered burial rags.
-3. **Crudeness of Weapons & Natural Attacks**:
-   - *Skeleton Blade*: A featureless 2.5px wide grey stick without bevels, fuller, chipping, or rust oxidation.
-   - *Ghoul Claws*: Two straight lines that lack claw articulation, curved sickle profile, or dried blood encrustation.
-4. **Static Animation Dynamics**:
-   - Both entities rely on a simple ±2-3px offset on a single axis. They lack secondary motion (head tilt, jaw chatter, pustule swelling, spine curvature flexing).
-
-### 2.2 Procedural Vector Engineering Strategy
-To achieve high-fidelity rendering within HTML5 Canvas2D while maintaining locked 60Hz performance and zero per-frame garbage collection:
-1. **Layer-Ordered Painter's Algorithm**:
-   - Both entities must be drawn in strict back-to-front layer ordering:
-     1. Ground contact drop shadow (`ellipse` with `rgba(8, 6, 12, 0.45-0.50)`).
-     2. Distal (far) limbs & shadows.
-     3. Skeletal spine / torso necrotic core.
-     4. Anterior ribcage / dorsal hump & bone spurs.
-     5. Pelvis / tattered waistcloth.
-     6. Proximal (near) articulated limbs.
-     7. Cranium / feral snarling head with facial cavity voids & eyes.
-     8. Weapons (notched rusted broadsword) / sickle bone claws with dried gore.
-2. **Multi-Stop Gradients with Graceful Fallback**:
-   - In browser environments, offscreen caching executes `ctx.createLinearGradient` and `ctx.createRadialGradient` once during sprite atlas generation.
-   - To guarantee 100% test compatibility in headless test runners (where `mockCtx` may lack gradient methods), gradient creation is wrapped in runtime feature checks:
-     `if (typeof ctx.createLinearGradient === 'function') { ... } else { ctx.fillStyle = fallbackColor; }`
-3. **Anatomic Curve Modeling (`bezierCurveTo` & `quadraticCurveTo`)**:
-   - Replace flat polygons with smooth organic contours:
-     - Calvaria dome, orbital sockets, and zygomatic cheekbones.
-     - Curving anatomical ribs branching from thoracic vertebrae to sternum.
-     - Feral hunched dorsal arch with protruding vertebrae osteophytes.
-     - Hooked sickle talons and notched battle-damaged blade cutouts.
-4. **Dynamic Multi-Frame Organic Motion**:
-   - **Skeleton (4 frames)**:
-     - Frame 0: Extended walking stride (distal leg forward, proximal leg back).
-     - Frame 1: Stride passing compression (torso dips 0.8px, head tilts -0.08 rad, sword lowers).
-     - Frame 2: Opposite extended stride (proximal leg forward, distal leg back).
-     - Frame 3: Recoil high point (torso rises 0.6px, jaw chatters open with 1px vertical gap).
-   - **Ghoul (4 frames)**:
-     - Frame 0: Low predatory compression (haunches coiled, spine deeply arched, boils dormant).
-     - Frame 1: Forward lunge (foreclaw reaches forward, jaw snaps half-closed, bile drop forms).
-     - Frame 2: High scuttle step (torso rises 1.2px, jaw hangs wide open, bile strand stretches).
-     - Frame 3: Pre-strike recoil (forelimbs plant into earth, pustules reach peak sine swelling).
+### 2.1 Centered Camera Tracking Evolution
+1. **Defect**: Observation 1.1.2 shows that `Camera.ts` uses side-scroller deadzones (35% to 44% width, 30% to 70% height).
+2. **Requirement**: `ORIGINAL_REQUEST.md:340`, `COLLABORATION.md:47`, and `SCOPE.md:8` mandate centered player tracking for omnidirectional top-down horde survival.
+3. **Ideal Screen Center**:
+   To place the player at the exact screen center $(W/2, H/2)$, the base camera target must be:
+   $$\text{baseCamX} = \text{targetX} - \frac{\text{viewportWidth}}{2}$$
+   $$\text{baseCamY} = \text{targetY} - \frac{\text{viewportHeight}}{2}$$
+4. **Ratchet Lock Removal**:
+   `forwardLock` was designed for side-scrollers where the player cannot walk left. In top-down survival, `forwardLock` must default to `false` (or be eliminated from active clamping).
 
 ---
 
-## 3. High-Fidelity Procedural Design Specifications
+### 2.2 Velocity Lookahead Dynamics & Bounded Formulation
 
-### 3.1 Skeleton: "The Cursed Legionnaire"
-- **Dimensions**: `{ w: 40, h: 40, ox: 20, oy: 20 }` (centered coordinates from `x = -10` to `+11`, `y = -17` to `+18`).
-- **Visual Features**:
-  1. **Weathered Ivory Cranium**:
-     - Calvaria constructed via bezier curves (`-5.5, -5.5` to `0, -15.5` to `5.5, -5.5`).
-     - Shaded with radial bone gradient: `#ede5de` (cranial top highlight) → `#b8aea5` (mid ivory) → `#615852` (weathered shadow).
-     - Inverted heart-shaped nasal cavity void (`ABYSSAL_VOID.DEEP`, `#08060c`).
-     - Dual deep orbital cavities with pitch-black voids.
-     - **Occult Crimson Pinpoints**: Each socket holds a 1.2px radial occult ember halo (`rgba(229, 62, 62, 0.35)`) enclosing a piercing `#e53e3e` pinpoint core.
-     - **Cracked Skull Filigree**: Hairline fracture zigzagging across the frontal bone down to the temporal ridge (`ctx.strokeStyle = '#2a2624'`, `lineWidth = 0.6`).
-     - Maxilla with 4 distinct tooth serrations (`#ede5de`) and an articulated mandible that drops on frame 3 for jaw-chattering animation.
-  2. **Anatomic Ribcage & Vertebral Column**:
-     - 4 segmented lumbar/thoracic vertebrae discs (`fillRect(-1.5, y, 3, 1.4)` in `#615852` and `#b8aea5`).
-     - 4 pairs of curved anatomical ribs (`quadraticCurveTo` arcs) enclosing a central sternum keel plate (`#ede5de`).
-     - Posterior dark void interior shadow (`rgba(23, 19, 38, 0.6)`) creating hollow 3D thoracic depth.
-  3. **Pelvic Girdle & Articulated Skeletal Legs**:
-     - Flared butterfly iliac wings (`#b8aea5` with `#615852` crevices) and sacrum plate.
-     - Two-segment articulated legs: Femur → Patella (kneecap) → Tibia/Fibula pair → Phalange clawed feet.
-     - Opposing walk cycle: Distal leg shaded in darker bone tone (`#615852`), proximal leg in bleached bone (`#b8aea5` / `#ede5de`).
-  4. **Notched Rusted Iron Blade**:
-     - Hand grip with pommel skull-crusher knob and iron crossguard (`#380a0a` dried blood crust).
-     - Blade: 16.5px tapered falchion/broadsword with oxidized rust gradient (`#7a828e` steel edge → `#3e444c` forged iron → `#5c2715` oxidized rust).
-     - Central blood fuller groove (`#1b1d20`).
-     - Two jagged battle notches cut out of the cutting edge (`y = -6` and `y = -10`) with dark oxidation pitting.
+#### 1. Why Naive Lookahead Fails:
+- If lookahead is computed as $\vec{L} = \frac{\vec{v}}{|v|} \times 40\text{px}$ and added directly to the target:
+  - Instantaneous direction reversal (e.g., pressing Left while moving Right) produces an **$80\text{px}$ instantaneous step** in camera target.
+  - When stopping, $|v| \to 0$ causes division-by-zero or sudden snapping back to center ("rubber-banding").
+  - Small velocity noise or micro-taps cause erratic camera jitter.
 
-### 3.2 Ghoul: "The Feral Necrophage"
-- **Dimensions**: `{ w: 44, h: 44, ox: 22, oy: 22 }` (centered coordinates from `x = -14` to `+15`, `y = -12` to `+17`).
-- **Visual Features**:
-  1. **Hunched Feral Posture**:
-     - Quadrupedal predatory stance with high arched haunches (`(-10, -5)`), sunken lumbar flank, and low lunging neck.
-     - Contoured body path using quadratic curves creating an aggressive hunchback silhouette.
-     - 3 emaciated exposed ribs visible along the sunken flank (`#b8aea5`).
-  2. **Decaying Necrotic Flesh Shading**:
-     - Complex multi-stop linear/radial gradient blending putrid green (`#19633e`), gangrenous olive (`#384c24`), dead cadaver grey (`#2d3033`), and deep abyssal green (`#0d3824`).
-     - Subcutaneous bruised purple/crimson undertones (`#300d18`) around joints and belly folds.
-  3. **Spinal Bone Spurs (Vertebral Osteophytes)**:
-     - 3 prominent jagged bone spikes erupting along the dorsal spine hunch:
-       - Rump spur: `(-8, -8 + crawl)`
-       - Hunch apex spur: `(-3, -11 + crawl)`
-       - Cervical spur: `(2, -9 + crawl)`
-     - Shaded from weathered bone base (`#615852`) to sharp bleached ivory tips (`#ede5de`).
-  4. **Pulsating Necrotic Boils / Pustules**:
-     - Cluster of 3 swollen pustules on shoulder, dorsal crest, and flank.
-     - Base: Dark inflamed erythematous ring (`#4a0e1e`).
-     - Fluid dome: Pressurized bilious core (`#d4f55a` → `#68d391` → `#19633e`).
-     - Dynamic Sine Swelling: Radius expands and contracts rhythmically (`r + Math.sin(frame * PI * 0.5) * 0.4px`).
-     - Specular Wet Highlight: Pure white glistening micro-dot (`rgba(255, 255, 255, 0.95)`, `r = 0.6px`) on upper-left quadrant giving a foul, pressurized wet sheen.
-  5. **Tattered Waistcloth**:
-     - Decayed burial shroud / torn rags wrapped around the pelvis (`#2b2723`).
-     - Asymmetrical shredded hemline with loose hanging strips dragging in the dirt.
-     - Outlined with rotted thread and dried gore edging (`#161311`).
-  6. **Snapping Feral Maw & Crazed Eye**:
-     - Elongated predatory cranium (`ellipse(9, -2 + crawl, 6.5, 4.8)`).
-     - Gaping unhinged jaw revealing a pitch-black oral cavity (`#0a0305`).
-     - Irregular needle-sharp fangs (`#ede5de`) including a prominent curved lower canine jutting upward.
-     - Dripping Viscous Bile: Hanging venomous saliva thread (`#68d391`) with a teardrop bead (`#28a745`) dangling below the chin.
-     - Crazed Necrotic Eye: Sunken orbital cavity (`#08060c`) holding a glowing bilious iris (`#68d391`) with a vertical feral slit pupil.
-  7. **Elongated Jagged Bone Claws**:
-     - Powerful forelimbs transitioning into 3 elongated, sickle-curved talons.
-     - Articulated knuckles and tapering bone blades (`quadraticCurveTo`).
-     - Tips crusted in coagulated and vivid dried blood (`#380a0a` to `#a81d1d`).
+#### 2. Mathematical Formulation for Subtle Bounded Lookahead:
+Let $\vec{v} = (v_x, v_y)$ with speed $s = \sqrt{v_x^2 + v_y^2}$.
+
+1. **Velocity Threshold (Deadzone)**:
+   Define $v_{\text{threshold}} = 5.0\text{px/s}$ (matching `Player.ts:179` facing threshold).
+   If $s < v_{\text{threshold}}$, target lookahead is $(0, 0)$:
+   $$\vec{L}_{\text{target}} = (0, 0)$$
+
+2. **Proportional Speed Scaling & Strict $40\text{px}$ Clamping**:
+   Let maximum lookahead distance be $L_{\max} = 40.0\text{px}$.
+   Let reference base move speed be $v_{\text{base}} = 200.0\text{px/s}$.
+   The scaling coefficient is:
+   $$c_{\text{scale}} = \frac{L_{\max}}{v_{\text{base}}} = \frac{40.0}{200.0} = 0.20\text{ seconds}$$
+   The desired lookahead magnitude is:
+   $$d_{\text{lead}} = \min(L_{\max}, s \cdot c_{\text{scale}}) = \min(40.0, 0.20 \cdot s)$$
+   Therefore, the target lookahead vector is:
+   $$\vec{L}_{\text{target}} = \frac{\vec{v}}{s} \cdot d_{\text{lead}} = \vec{v} \cdot \min\left(\frac{40.0}{s}, 0.20\right)$$
+   Specifically:
+   $$L_{x, \text{target}} = v_x \cdot \min\left(\frac{40.0}{s}, 0.20\right)$$
+   $$L_{y, \text{target}} = v_y \cdot \min\left(\frac{40.0}{s}, 0.20\right)$$
+
+3. **Mathematical Proof of Boundedness**:
+   $$|\vec{L}_{\text{target}}| = \sqrt{L_{x, \text{target}}^2 + L_{y, \text{target}}^2} = s \cdot \min\left(\frac{40.0}{s}, 0.20\right) \le s \cdot \frac{40.0}{s} = 40.0\text{px}$$
+   $\therefore |\vec{L}_{\text{target}}| \le 40.0\text{px}$ holds identically for all velocities $(v_x, v_y) \in \mathbb{R}^2$. $\blacksquare$
+
+4. **Smooth Damping Filter (Second-Order Response)**:
+   To ensure zero jerk upon reversal or stopping, the camera stores internal state `lookaheadX` and `lookaheadY`.
+   Each frame, `lookaheadX` and `lookaheadY` are smoothly damped toward `L_target` with a dedicated lookahead smoothing factor ($k_{\text{look}} = 5.0\text{s}^{-1}$):
+   $$\alpha_{\text{lead}} = \min(1.0, dt \cdot k_{\text{look}})$$
+   $$\text{this.lookaheadX} \mathrel{+}= (L_{x, \text{target}} - \text{this.lookaheadX}) \cdot \alpha_{\text{lead}}$$
+   $$\text{this.lookaheadY} \mathrel{+}= (L_{y, \text{target}} - \text{this.lookaheadY}) \cdot \alpha_{\text{lead}}$$
+
+   Then, the overall camera position smoothly tracks the lookahead-offset center using `smoothSpeed` ($k_{\text{cam}} = 8.0\text{s}^{-1}$):
+   $$\text{targetCamX} = \text{targetX} - \frac{\text{viewportWidth}}{2} + \text{this.lookaheadX}$$
+   $$\text{targetCamY} = \text{targetY} - \frac{\text{viewportHeight}}{2} + \text{this.lookaheadY}$$
+   $$\alpha_{\text{cam}} = \min(1.0, dt \cdot \text{this.smoothSpeed})$$
+   $$\text{this.x} \mathrel{+}= (\text{targetCamX} - \text{this.x}) \cdot \alpha_{\text{cam}}$$
+   $$\text{this.y} \mathrel{+}= (\text{targetCamY} - \text{this.y}) \cdot \alpha_{\text{cam}}$$
+
+   *Result*: The cascading combination of two first-order low-pass filters produces an exceptionally smooth, critically-damped second-order kinematic response:
+   - On sudden direction flip: Lookahead smoothly glides from $+40\text{px}$ to $-40\text{px}$ across $\approx 0.35\text{s}$ without snap.
+   - On full stop: As player decelerates at $2400\text{px/s}^2$ ($0.083\text{s}$), lookahead gently floats back to center over $\approx 0.3\text{s}$.
+   - At rest: Lookahead equals $(0, 0)$, providing perfect symmetrical centering.
 
 ---
 
-## 4. Concrete Canvas2D Drawing Procedures (Reference Code)
+### 2.3 Backdrop Parallax Alignment & Artifact Elimination
 
-The following procedures provide the complete, ready-to-integrate Canvas2D implementation for `DarkFantasySprites.ts`:
+1. **Elimination of Foreground Mist Flickering**:
+   - Observation 1.3.8 identified the arbitrary conditional `if (Math.abs(startY) > 4)` and the duplicate draw at $y=0$ in `renderForegroundMist`.
+   - **Fix**: Replace both passes with a single unified 2D grid loop that smoothly shifts with continuous parallax offsets $startX = -(((camX \cdot 1.15 + 35t) \pmod W + W) \pmod W)$ and $startY = -(((camY \cdot 0.35 + 10\sin(0.6t)) \pmod H + H) \pmod H)$.
+   - This completely eliminates the blinking/flickering bug and normalizes mist opacity to a consistent $0.10$.
+
+2. **Elimination of Celestial Sky Seam**:
+   - Observation 1.3.1 identified that `createSkySurface` uses an asymmetric vertical gradient (DEEP to SLATE), which creates a visible line across the sky when $camY < 0$.
+   - **Fix**: Make the vertical gradient in `createSkySurface` symmetrical:
+     `0.0 -> DEEP`, `0.5 -> MID / SLATE`, `1.0 -> DEEP`.
+     When tiled vertically, top edge (`DEEP`) meets bottom edge (`DEEP`) with mathematical $C^0$ and $C^1$ continuity.
+
+3. **Toroidal Cloud & Mist Puff Wrapping**:
+   - Observations 1.3.2 & 1.3.7 revealed that puffs centered near canvas borders are clipped, creating flat edges that scroll across the screen.
+   - **Fix**: When pre-rendering `cloudCanvas` and `mistCanvas`, apply toroidal edge wrapping:
+     If an ellipse/arc extends beyond $x < 0$, wrap a secondary instance at $x + W$; if $x + rad > W$, wrap at $x - W$.
+     For mist (which tiles in both axes), wrap in $x \pm W$ and $y \pm H$.
+     This yields 100% seamless procedural textures.
+
+4. **Loop Boundary Optimization**:
+   - In `render()`, Layer 0 and Layer 3 use `x < vw`, while Layer 6 uses `x < vw + W`.
+   - Since $startX \in (-W, 0]$, any tile loop starting at $startX$ with step $W$ and condition `x < vw` will draw its final tile with left edge $x_{\text{last}} < vw$ and right edge $x_{\text{last}} + W \ge vw$. Thus, the entire viewport $[0, vw]$ is always covered.
+   - Using `x < vw + W` in Layer 6 caused offscreen tile draws ($x > vw$). Normalizing all loops to `x < vw` and `y < vh` saves unnecessary draw calls while maintaining 100% viewport coverage.
+
+---
+
+## 3. Caveats
+
+1. **Arena Boundary Clamping with Lookahead**:
+   - When the player is near the world boundary (e.g. $x = 1980$ against boundary $2000$), a forward velocity lookahead of $+40\text{px}$ requests a camera position beyond the arena clamp limit ($x > 2000 - 960 = 1040$).
+   - `Camera.clampToBounds()` strictly clamps `this.x` and `this.y` to $[minClamp, maxClamp]$.
+   - Consequently, lookahead smoothly compresses against the world boundary, which is the correct physical behavior (the camera will not expose un-rendered void outside the arena).
+2. **Screen Shake Separation**:
+   - Screen shake offsets (`shakeOffsetX`, `shakeOffsetY`) are added during the final render calculation (`renderX`, `renderY`) **after** bounds clamping and lookahead.
+   - This ensures violent trauma shakes never corrupt the player lookahead vector or persistent camera tracking state.
+3. **Backwards Compatibility**:
+   - Defaulting `vx = 0, vy = 0` in `Camera.update(targetX, targetY, dt, vx = 0, vy = 0)` ensures all existing test suites (`tests/unit/*.test.ts`) that invoke `camera.update(x, y, dt)` remain 100% green without modification.
+
+---
+
+## 4. Conclusion & Recommended Concrete Code Proposals
+
+### 4.1 Proposed Refactor for `src/render/Camera.ts`
 
 ```typescript
-// =========================================================================
-// 1. HIGH-FIDELITY SKELETON VECTOR ROUTINE
-// =========================================================================
-private static drawSkeletonVector(ctx: CanvasRenderingContext2D, frame: number): void {
-  const legOffset = (frame % 2 === 0 ? 2.5 : -2.5);
-  const headTilt = (frame === 1 ? -0.08 : frame === 3 ? 0.06 : 0);
-  const bodyBob = (frame === 1 ? 0.8 : frame === 3 ? -0.6 : 0);
-  const jawDrop = (frame === 3 ? 1.0 : 0);
+export interface CameraOptions {
+  viewportWidth?: number;  // default 960
+  viewportHeight?: number; // default 540
+  forwardLock?: boolean;   // default false for top-down
+  bounds?: CameraBounds;
+  smoothSpeed?: number;    // default 8.0
+  lookaheadMax?: number;   // default 40.0
+  lookaheadSpeed?: number; // default 5.0
+}
 
-  // --- Layer 1: Ground Contact Drop Shadow ---
-  ctx.beginPath();
-  ctx.ellipse(0, 17, 9.5, 3.2, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(8, 6, 12, 0.45)';
-  ctx.fill();
+export class Camera {
+  public readonly viewportWidth: number;
+  public readonly viewportHeight: number;
 
-  // --- Layer 2: Distal (Far) Leg ---
-  ctx.strokeStyle = PALETTE.BONE_IVORY.WEATHERED;
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.moveTo(-2.5, 10 + bodyBob);
-  ctx.lineTo(-2.5 - legOffset * 0.6, 13.5 + bodyBob);
-  ctx.lineTo(-2.5 - legOffset, 17);
-  ctx.stroke();
-  // Distal Foot
-  ctx.fillStyle = PALETTE.BONE_IVORY.SHADOW;
-  ctx.fillRect(-3.5 - legOffset, 16.5, 3.0, 1.2);
+  public x: number = 0;
+  public y: number = 0;
+  public renderX: number = 0;
+  public renderY: number = 0;
 
-  // --- Layer 3: Spine & Thoracic Cavity Shadow ---
-  ctx.fillStyle = 'rgba(23, 19, 38, 0.6)';
-  ctx.beginPath();
-  ctx.ellipse(0, 3 + bodyBob, 4.5, 4.0, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Velocity lookahead state (bounded <= 40px)
+  public lookaheadX: number = 0;
+  public lookaheadY: number = 0;
+  public readonly lookaheadMax: number;
+  public readonly lookaheadSpeed: number;
 
-  // Segmented Vertebrae Column (T1 - L4)
-  ctx.fillStyle = PALETTE.BONE_IVORY.WEATHERED;
-  for (let i = 0; i < 4; i++) {
-    const vy = 0.5 + i * 1.8 + bodyBob;
-    ctx.fillRect(-1.5, vy, 3.0, 1.2);
+  public forwardLock: boolean = false;
+  private maxReachedX: number = 0;
+
+  public bounds: CameraBounds = {
+    minX: -2000,
+    maxX: 2000,
+    minY: -2000,
+    maxY: 2000,
+  };
+
+  public smoothSpeed: number = 8.0;
+
+  // Screen shake / trauma system
+  public shakeIntensity: number = 0;
+  public shakeDuration: number = 0;
+  public shakeTimer: number = 0;
+  public shakeOffsetX: number = 0;
+  public shakeOffsetY: number = 0;
+
+  constructor(options: CameraOptions = {}) {
+    this.viewportWidth = options.viewportWidth ?? 960;
+    this.viewportHeight = options.viewportHeight ?? 540;
+    this.forwardLock = options.forwardLock ?? false;
+    this.smoothSpeed = options.smoothSpeed ?? 8.0;
+    this.lookaheadMax = options.lookaheadMax ?? 40.0;
+    this.lookaheadSpeed = options.lookaheadSpeed ?? 5.0;
+
+    if (options.bounds) {
+      this.bounds = { ...options.bounds };
+    }
   }
 
-  // --- Layer 4: Anatomic Curved Ribcage ---
-  ctx.strokeStyle = PALETTE.BONE_IVORY.BLEACHED;
-  ctx.lineWidth = 1.2;
-  // Rib Pair 1 (T1)
-  ctx.beginPath();
-  ctx.moveTo(0, 0.5 + bodyBob);
-  ctx.quadraticCurveTo(-5.0, 0.5 + bodyBob, -4.0, 2.2 + bodyBob);
-  ctx.moveTo(0, 0.5 + bodyBob);
-  ctx.quadraticCurveTo(5.0, 0.5 + bodyBob, 4.0, 2.2 + bodyBob);
-  ctx.stroke();
-  // Rib Pair 2 (T3)
-  ctx.beginPath();
-  ctx.moveTo(0, 2.3 + bodyBob);
-  ctx.quadraticCurveTo(-6.0, 2.3 + bodyBob, -4.8, 4.2 + bodyBob);
-  ctx.moveTo(0, 2.3 + bodyBob);
-  ctx.quadraticCurveTo(6.0, 2.3 + bodyBob, 4.8, 4.2 + bodyBob);
-  ctx.stroke();
-  // Rib Pair 3 (T5)
-  ctx.beginPath();
-  ctx.moveTo(0, 4.1 + bodyBob);
-  ctx.quadraticCurveTo(-5.2, 4.1 + bodyBob, -4.2, 6.0 + bodyBob);
-  ctx.moveTo(0, 4.1 + bodyBob);
-  ctx.quadraticCurveTo(5.2, 4.1 + bodyBob, 4.2, 6.0 + bodyBob);
-  ctx.stroke();
-  // Rib Pair 4 (Floating Ribs)
-  ctx.beginPath();
-  ctx.moveTo(0, 5.9 + bodyBob);
-  ctx.quadraticCurveTo(-3.8, 5.9 + bodyBob, -2.8, 7.2 + bodyBob);
-  ctx.moveTo(0, 5.9 + bodyBob);
-  ctx.quadraticCurveTo(3.8, 5.9 + bodyBob, 2.8, 7.2 + bodyBob);
-  ctx.stroke();
+  public reset(x: number = 0, y: number = 0): void {
+    this.x = x;
+    this.y = y;
+    this.lookaheadX = 0;
+    this.lookaheadY = 0;
+    this.maxReachedX = x;
+    this.renderX = x;
+    this.renderY = y;
+    this.shakeIntensity = 0;
+    this.shakeDuration = 0;
+    this.shakeTimer = 0;
+    this.shakeOffsetX = 0;
+    this.shakeOffsetY = 0;
+    this.clampToBounds();
+  }
 
-  // Sternum Plate
-  ctx.fillStyle = PALETTE.BONE_IVORY.POLISHED;
-  ctx.fillRect(-0.7, 0.2 + bodyBob, 1.4, 4.5);
+  /**
+   * Updates camera tracking against player target position and velocity vector.
+   * Centers player on screen with smooth damping and subtle velocity lookahead (<= 40px).
+   */
+  public update(
+    targetX: number,
+    targetY: number,
+    dt: number,
+    vx: number = 0,
+    vy: number = 0
+  ): void {
+    // 1. Compute target velocity lookahead vector (bounded <= 40px)
+    const speed = Math.hypot(vx, vy);
+    let targetLookX = 0;
+    let targetLookY = 0;
 
-  // --- Layer 5: Pelvic Girdle ---
-  ctx.fillStyle = PALETTE.BONE_IVORY.BLEACHED;
-  // Left Iliac Wing
-  ctx.beginPath();
-  ctx.moveTo(-0.8, 7.5 + bodyBob);
-  ctx.quadraticCurveTo(-4.8, 7.0 + bodyBob, -4.2, 10.2 + bodyBob);
-  ctx.lineTo(-0.8, 9.8 + bodyBob);
-  ctx.closePath();
-  ctx.fill();
-  // Right Iliac Wing
-  ctx.beginPath();
-  ctx.moveTo(0.8, 7.5 + bodyBob);
-  ctx.quadraticCurveTo(4.8, 7.0 + bodyBob, 4.2, 10.2 + bodyBob);
-  ctx.lineTo(0.8, 9.8 + bodyBob);
-  ctx.closePath();
-  ctx.fill();
-  // Sacrum Core
-  ctx.fillStyle = PALETTE.BONE_IVORY.WEATHERED;
-  ctx.fillRect(-1.0, 8.0 + bodyBob, 2.0, 2.8);
+    if (speed >= 5.0) {
+      // Scale proportionally up to base speed (200px/s), clamped to lookaheadMax (40px)
+      const scale = Math.min(this.lookaheadMax / speed, 0.20);
+      targetLookX = vx * scale;
+      targetLookY = vy * scale;
+    }
 
-  // --- Layer 6: Proximal (Near) Leg ---
-  ctx.strokeStyle = PALETTE.BONE_IVORY.POLISHED;
-  ctx.lineWidth = 1.8;
-  ctx.beginPath();
-  ctx.moveTo(2.2, 10 + bodyBob);
-  ctx.lineTo(2.2 + legOffset * 0.6, 13.5 + bodyBob);
-  ctx.lineTo(2.2 + legOffset, 17);
-  ctx.stroke();
-  // Patella (Kneecap)
-  ctx.fillStyle = PALETTE.BONE_IVORY.POLISHED;
-  ctx.beginPath();
-  ctx.arc(2.2 + legOffset * 0.6, 13.5 + bodyBob, 1.1, 0, Math.PI * 2);
-  ctx.fill();
-  // Near Foot (Tarsals & Clawed Phalanges)
-  ctx.fillStyle = PALETTE.BONE_IVORY.BLEACHED;
-  ctx.fillRect(1.5 + legOffset, 16.5, 3.8, 1.3);
+    // 2. Smoothly damp lookahead offset to avoid jitter on stop or sudden reversal
+    if (dt > 0) {
+      const lookaheadT = Math.min(1.0, dt * this.lookaheadSpeed);
+      this.lookaheadX += (targetLookX - this.lookaheadX) * lookaheadT;
+      this.lookaheadY += (targetLookY - this.lookaheadY) * lookaheadT;
+    } else {
+      this.lookaheadX = targetLookX;
+      this.lookaheadY = targetLookY;
+    }
 
-  // --- Layer 7: Cranium & Facial Filigree ---
+    // 3. Compute centered camera target with lookahead lead bias
+    const targetCamX = targetX - this.viewportWidth * 0.5 + this.lookaheadX;
+    const targetCamY = targetY - this.viewportHeight * 0.5 + this.lookaheadY;
+
+    // 4. Smooth exponential camera interpolation
+    if (this.smoothSpeed > 0 && dt > 0) {
+      const t = Math.min(1.0, dt * this.smoothSpeed);
+      this.x += (targetCamX - this.x) * t;
+      this.y += (targetCamY - this.y) * t;
+    } else {
+      this.x = targetCamX;
+      this.y = targetCamY;
+    }
+
+    // Optional legacy forward ratchet (disabled by default in horde survival)
+    if (this.forwardLock) {
+      if (this.x < this.maxReachedX) {
+        this.x = this.maxReachedX;
+      } else {
+        this.maxReachedX = this.x;
+      }
+    }
+
+    // 5. Clamp inside stage world bounds
+    this.clampToBounds();
+
+    // 6. Update screen shake decay
+    this.updateShake(dt);
+
+    // 7. Compute final integer render coordinates
+    this.renderX = Math.round(this.x + this.shakeOffsetX);
+    this.renderY = Math.round(this.y + this.shakeOffsetY);
+  }
+}
+```
+
+---
+
+### 4.2 Proposed Call in `src/main.ts`
+
+Line 490 update:
+```typescript
+// 7. Camera Tracking (Centered with Velocity Lookahead)
+this.camera.update(
+  this.player.position.x,
+  this.player.position.y,
+  dt,
+  this.player.velocity.x,
+  this.player.velocity.y
+);
+```
+
+---
+
+### 4.3 Proposed Fixes in `src/render/GothicBackdrop.ts`
+
+#### 1. Symmetrical Celestial Sky Gradient (Line 96):
+```typescript
+private createSkySurface(w: number, h: number): HTMLCanvasElement {
+  const { canvas, ctx } = this.createOffscreen(w, h);
+  if (!ctx) return canvas;
+
+  // Symmetrical deep space gradient to prevent vertical seams
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+  skyGrad.addColorStop(0, PALETTE.ABYSSAL_VOID.DEEP);
+  skyGrad.addColorStop(0.5, PALETTE.ABYSSAL_VOID.MID);
+  skyGrad.addColorStop(1, PALETTE.ABYSSAL_VOID.DEEP);
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, w, h);
+  ...
+```
+
+#### 2. Toroidal Cloud Surface Wrapping (Line 135):
+```typescript
+private createCloudSurface(w: number, h: number): HTMLCanvasElement {
+  const { canvas, ctx } = this.createOffscreen(w, h);
+  if (!ctx) return canvas;
+  ctx.clearRect(0, 0, w, h);
+
+  for (let i = 0; i < 40; i++) {
+    const cx = (i * 53) % w;
+    const cy = 30 + ((i * 37) % (h - 60));
+    const radX = 80 + ((i * 29) % 110);
+    const radY = 25 + ((i * 17) % 35);
+    const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, radX);
+    grad.addColorStop(0, i % 2 === 0 ? PRECOMPUTED_TRANSLUCENCIES.stormCloudDeep : PRECOMPUTED_TRANSLUCENCIES.stormCloudSoft);
+    grad.addColorStop(1, 'rgba(15, 13, 26, 0)');
+    ctx.fillStyle = grad;
+
+    // Draw main puff
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, radX, radY, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Toroidal horizontal wrapping for seamless edge tiling
+    if (cx - radX < 0) {
+      ctx.beginPath();
+      ctx.ellipse(cx + w, cy, radX, radY, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (cx + radX > w) {
+      ctx.beginPath();
+      ctx.ellipse(cx - w, cy, radX, radY, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  return canvas;
+}
+```
+
+#### 3. Continuous, Flicker-Free Foreground Mist (Line 516):
+```typescript
+public renderForegroundMist(
+  ctx: CanvasRenderingContext2D,
+  camX: number,
+  camY: number = 0,
+  elapsedTime: number = 0
+): void {
+  if (!this.mistCanvas || !this.enableMist) return;
+
   ctx.save();
-  ctx.translate(0, -9 + bodyBob);
-  ctx.rotate(headTilt);
+  const vw = this.viewportWidth;
+  const vh = this.viewportHeight;
+  const W = 1024;
+  const H = 540;
 
-  // Calvaria Bone Shading
-  if (typeof ctx.createRadialGradient === 'function') {
-    const skullGrad = ctx.createRadialGradient(-1, -3, 1, 0, -1, 7.5);
-    skullGrad.addColorStop(0.0, PALETTE.BONE_IVORY.POLISHED);
-    skullGrad.addColorStop(0.55, PALETTE.BONE_IVORY.BLEACHED);
-    skullGrad.addColorStop(1.0, PALETTE.BONE_IVORY.WEATHERED);
-    ctx.fillStyle = skullGrad;
-  } else {
-    ctx.fillStyle = PALETTE.BONE_IVORY.POLISHED;
+  // Cinematic Foreground Depth Mist (Parallax 1.15 horizontal drift, 0.35 vertical tracking)
+  const startX = -((((camX * 1.15 + elapsedTime * 35.0) % W) + W) % W);
+  const startY = -((((camY * 0.35 + Math.sin(elapsedTime * 0.6) * 10) % H) + H) % H);
+
+  ctx.globalAlpha = 0.10;
+  for (let x = startX; x < vw; x += W) {
+    for (let y = startY; y < vh; y += H) {
+      ctx.drawImage(this.mistCanvas, x, y);
+    }
   }
 
-  // Cranial Vault Contour
-  ctx.beginPath();
-  ctx.moveTo(-5.2, 1.5);
-  ctx.bezierCurveTo(-6.5, -4.5, -4.0, -7.8, 0, -7.8);
-  ctx.bezierCurveTo(4.0, -7.8, 6.5, -4.5, 5.2, 1.5);
-  ctx.bezierCurveTo(3.8, 3.5, 2.0, 4.0, 0, 4.0);
-  ctx.bezierCurveTo(-2.0, 4.0, -3.8, 3.5, -5.2, 1.5);
-  ctx.closePath();
-  ctx.fill();
-
-  // Zygomatic Cheekbone Ridges
-  ctx.strokeStyle = PALETTE.BONE_IVORY.SHADOW;
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(-4.8, 1.0);
-  ctx.lineTo(-2.2, 2.2);
-  ctx.moveTo(4.8, 1.0);
-  ctx.lineTo(2.2, 2.2);
-  ctx.stroke();
-
-  // Nasal Cavity Void
-  ctx.fillStyle = PALETTE.ABYSSAL_VOID.DEEP;
-  ctx.beginPath();
-  ctx.moveTo(0, 0.8);
-  ctx.lineTo(-0.8, 2.2);
-  ctx.lineTo(0.8, 2.2);
-  ctx.closePath();
-  ctx.fill();
-
-  // Deep Orbital Cavities
-  ctx.beginPath();
-  ctx.ellipse(-2.3, -1.2, 1.8, 2.2, -0.1, 0, Math.PI * 2);
-  ctx.ellipse(2.3, -1.2, 1.8, 2.2, 0.1, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Occult Crimson Pinpoints & Corona
-  ctx.fillStyle = 'rgba(229, 62, 62, 0.35)';
-  ctx.beginPath();
-  ctx.arc(-2.2, -1.0, 1.4, 0, Math.PI * 2);
-  ctx.arc(2.2, -1.0, 1.4, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = PALETTE.BLOOD_CRIMSON.FLASH;
-  ctx.fillRect(-2.7, -1.5, 1.0, 1.0);
-  ctx.fillRect(1.7, -1.5, 1.0, 1.0);
-
-  // Cracked Skull Hairline Filigree
-  ctx.strokeStyle = PALETTE.BONE_IVORY.SHADOW;
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(-0.8, -7.5);
-  ctx.lineTo(-1.8, -5.2);
-  ctx.lineTo(-0.4, -3.2);
-  ctx.lineTo(-1.2, -2.0);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-1.8, -5.2);
-  ctx.lineTo(-3.5, -5.8);
-  ctx.stroke();
-
-  // Upper Maxilla Teeth
-  ctx.fillStyle = PALETTE.BONE_IVORY.POLISHED;
-  for (let t = 0; t < 4; t++) {
-    ctx.fillRect(-1.8 + t * 1.0, 3.2, 0.6, 1.2);
-  }
-
-  // Hinged Mandible (Jawbone) with Walking Chatter
-  ctx.fillStyle = PALETTE.BONE_IVORY.BLEACHED;
-  ctx.beginPath();
-  ctx.moveTo(-2.8, 4.2 + jawDrop);
-  ctx.lineTo(2.8, 4.2 + jawDrop);
-  ctx.lineTo(2.0, 6.2 + jawDrop);
-  ctx.lineTo(-2.0, 6.2 + jawDrop);
-  ctx.closePath();
-  ctx.fill();
   ctx.restore();
-
-  // --- Layer 8: Arm & Notched Rusted Iron Blade ---
-  // Humerus & Forearm holding sword hilt
-  ctx.strokeStyle = PALETTE.BONE_IVORY.BLEACHED;
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.moveTo(3.5, 1.0 + bodyBob);
-  ctx.lineTo(6.5, 3.5 + bodyBob);
-  ctx.stroke();
-
-  // Forged Iron Crossguard & Pommel
-  ctx.fillStyle = PALETTE.BLOOD_CRIMSON.DRIED;
-  ctx.fillRect(3.2, 2.8 + bodyBob, 7.5, 2.0);
-  ctx.fillStyle = PALETTE.ABYSSAL_VOID.SLATE;
-  ctx.beginPath();
-  ctx.arc(7.0, 6.2 + bodyBob, 1.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Rusted Blade Body with Gradient
-  if (typeof ctx.createLinearGradient === 'function') {
-    const bladeGrad = ctx.createLinearGradient(5.5, -14 + bodyBob, 8.5, 3 + bodyBob);
-    bladeGrad.addColorStop(0.0, '#7a828e'); // Tarnished steel tip
-    bladeGrad.addColorStop(0.35, '#3e444c'); // Forged iron
-    bladeGrad.addColorStop(0.70, '#5c2715'); // Rust oxidation patch
-    bladeGrad.addColorStop(1.0, '#26292d');  // Base iron
-    ctx.fillStyle = bladeGrad;
-  } else {
-    ctx.fillStyle = '#4a4440';
-  }
-
-  // Blade Path with Tapered Spear Point
-  ctx.beginPath();
-  ctx.moveTo(5.8, 2.8 + bodyBob);
-  ctx.lineTo(5.8, -13.5 + bodyBob);
-  ctx.lineTo(7.0, -15.5 + bodyBob); // Sharp tip
-  ctx.lineTo(8.2, -13.5 + bodyBob);
-  ctx.lineTo(8.2, 2.8 + bodyBob);
-  ctx.closePath();
-  ctx.fill();
-
-  // Central Blood Fuller Groove
-  ctx.strokeStyle = '#1b1d20';
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(7.0, 2.5 + bodyBob);
-  ctx.lineTo(7.0, -13.0 + bodyBob);
-  ctx.stroke();
-
-  // Jagged Edge Notches / Battle Chips
-  ctx.fillStyle = PALETTE.ABYSSAL_VOID.DEEP;
-  // Notch 1 (Deep triangular chip on cutting edge)
-  ctx.beginPath();
-  ctx.moveTo(5.8, -6.5 + bodyBob);
-  ctx.lineTo(7.0, -5.5 + bodyBob);
-  ctx.lineTo(5.8, -4.5 + bodyBob);
-  ctx.closePath();
-  ctx.fill();
-  // Notch 2 (Chipped stress fracture)
-  ctx.beginPath();
-  ctx.moveTo(5.8, -10.5 + bodyBob);
-  ctx.lineTo(6.6, -9.8 + bodyBob);
-  ctx.lineTo(5.8, -9.2 + bodyBob);
-  ctx.closePath();
-  ctx.fill();
-
-  // Rust Pitting Stains
-  ctx.fillStyle = '#6e2f18';
-  ctx.fillRect(6.2, -1.0 + bodyBob, 1.2, 1.5);
-  ctx.fillRect(6.0, -8.0 + bodyBob, 1.0, 1.2);
-}
-
-
-// =========================================================================
-// 2. HIGH-FIDELITY GHOUL VECTOR ROUTINE
-// =========================================================================
-private static drawGhoulVector(ctx: CanvasRenderingContext2D, frame: number): void {
-  const crawl = (frame % 2 === 0 ? 1.8 : -1.8);
-  const lunge = (frame === 1 ? 1.2 : frame === 3 ? -0.8 : 0);
-  const boilPulse = Math.sin((frame * Math.PI) / 2) * 0.35;
-
-  // --- Layer 1: Ground Contact Drop Shadow ---
-  ctx.beginPath();
-  ctx.ellipse(0, 16 + crawl * 0.3, 13.5, 4.2, -0.05, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(8, 6, 12, 0.50)';
-  ctx.fill();
-
-  // --- Layer 2: Distal (Far) Limbs ---
-  // Far Hind Leg
-  ctx.strokeStyle = '#1e241c';
-  ctx.lineWidth = 2.0;
-  ctx.beginPath();
-  ctx.moveTo(-8, 5 + crawl);
-  ctx.lineTo(-12, 10 - crawl);
-  ctx.lineTo(-9, 16);
-  ctx.stroke();
-
-  // Far Foreleg & Ground Claws
-  ctx.strokeStyle = '#2d3326';
-  ctx.lineWidth = 1.8;
-  ctx.beginPath();
-  ctx.moveTo(4, 3 + crawl);
-  ctx.lineTo(3, 9 - crawl);
-  ctx.lineTo(1, 15);
-  ctx.stroke();
-
-  // --- Layer 3: Hunched Necrotic Torso ---
-  if (typeof ctx.createLinearGradient === 'function') {
-    const fleshGrad = ctx.createLinearGradient(-12, -7 + crawl, 10, 8 + crawl);
-    fleshGrad.addColorStop(0.0, '#384c24'); // Gangrenous olive ridge
-    fleshGrad.addColorStop(0.35, PALETTE.NECROTIC_EMERALD.CORE); // Rotting green
-    fleshGrad.addColorStop(0.70, '#2d3033'); // Decayed ashen grey flank
-    fleshGrad.addColorStop(1.0, PALETTE.NECROTIC_EMERALD.DARK);  // Abyssal deep belly
-    ctx.fillStyle = fleshGrad;
-  } else {
-    ctx.fillStyle = PALETTE.NECROTIC_EMERALD.DARK;
-  }
-
-  // Feral Convex Spine & Haunches
-  ctx.beginPath();
-  ctx.moveTo(-11, 4 + crawl);
-  ctx.quadraticCurveTo(-14, -2 + crawl, -10, -5 + crawl); // High rump
-  ctx.quadraticCurveTo(-4, -9 + crawl, 3 + lunge, -4 + crawl); // Arched dorsal hump
-  ctx.quadraticCurveTo(8 + lunge, -1 + crawl, 9 + lunge, 4 + crawl); // Sunken chest
-  ctx.quadraticCurveTo(4, 9 + crawl, -5, 8 + crawl); // Belly
-  ctx.closePath();
-  ctx.fill();
-
-  // Subcutaneous Bruised Undertones
-  ctx.fillStyle = 'rgba(66, 18, 34, 0.35)';
-  ctx.beginPath();
-  ctx.ellipse(-3, 4 + crawl, 5.0, 3.2, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Emaciated Flank Ribs
-  ctx.strokeStyle = PALETTE.BONE_IVORY.BLEACHED;
-  ctx.lineWidth = 0.9;
-  ctx.beginPath();
-  ctx.moveTo(-1.5, 0.5 + crawl);
-  ctx.quadraticCurveTo(0.5, 3.0 + crawl, 2.5, 5.0 + crawl);
-  ctx.moveTo(-4.5, -0.5 + crawl);
-  ctx.quadraticCurveTo(-2.5, 2.2 + crawl, -0.5, 4.2 + crawl);
-  ctx.moveTo(-7.5, 0.2 + crawl);
-  ctx.quadraticCurveTo(-5.5, 2.5 + crawl, -3.5, 4.0 + crawl);
-  ctx.stroke();
-
-  // --- Layer 4: Spinal Bone Spurs (Vertebral Osteophytes) ---
-  ctx.fillStyle = PALETTE.BONE_IVORY.WEATHERED;
-  // Spur 1 (Rump)
-  ctx.beginPath();
-  ctx.moveTo(-9, -3 + crawl);
-  ctx.lineTo(-8, -7 + crawl);
-  ctx.lineTo(-6, -4 + crawl);
-  ctx.closePath();
-  ctx.fill();
-  // Spur 2 (Hunch Apex - Longest)
-  ctx.beginPath();
-  ctx.moveTo(-5, -6 + crawl);
-  ctx.lineTo(-3, -10.5 + crawl);
-  ctx.lineTo(-1, -5 + crawl);
-  ctx.closePath();
-  ctx.fill();
-  // Spur 3 (Cervical)
-  ctx.beginPath();
-  ctx.moveTo(1 + lunge, -5 + crawl);
-  ctx.lineTo(3 + lunge, -8.5 + crawl);
-  ctx.lineTo(5 + lunge, -3 + crawl);
-  ctx.closePath();
-  ctx.fill();
-
-  // Spur Ivory Highlights
-  ctx.fillStyle = PALETTE.BONE_IVORY.POLISHED;
-  ctx.fillRect(-8.3, -7.0 + crawl, 0.8, 1.2);
-  ctx.fillRect(-3.3, -10.5 + crawl, 0.8, 1.5);
-  ctx.fillRect(2.7 + lunge, -8.5 + crawl, 0.8, 1.2);
-
-  // --- Layer 5: Tattered Burial Waistcloth ---
-  ctx.fillStyle = '#2b2723'; // Mouldering linen
-  ctx.beginPath();
-  ctx.moveTo(-11, 2 + crawl);
-  ctx.lineTo(-5, 4 + crawl);
-  ctx.lineTo(-4, 8 + crawl);
-  ctx.lineTo(-6, 7 + crawl);
-  ctx.lineTo(-7, 11 + crawl); // Long shredded rag
-  ctx.lineTo(-9, 7.5 + crawl);
-  ctx.lineTo(-11, 9.5 + crawl); // Second frayed strip
-  ctx.lineTo(-12, 5 + crawl);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.strokeStyle = '#140d0a';
-  ctx.lineWidth = 0.7;
-  ctx.stroke();
-
-  // --- Layer 6: Pulsating Necrotic Boils & Wet Specular Highlights ---
-  // Boil 1: Shoulder Pustule
-  const b1x = 4 + lunge;
-  const b1y = -1 + crawl;
-  const b1r = 2.0 + boilPulse;
-  ctx.fillStyle = '#4a0e1e'; // Inflamed ring
-  ctx.beginPath();
-  ctx.arc(b1x, b1y, b1r + 0.6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = PALETTE.NECROTIC_EMERALD.BRIGHT;
-  ctx.beginPath();
-  ctx.arc(b1x, b1y, b1r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#d4f55a'; // Bilious core
-  ctx.beginPath();
-  ctx.arc(b1x - 0.3, b1y - 0.3, b1r * 0.5, 0, Math.PI * 2);
-  ctx.fill();
-  // Wet Specular Dot
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-  ctx.beginPath();
-  ctx.arc(b1x - 0.6, b1y - 0.6, 0.55, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Boil 2: Dorsal Hump Pustule
-  const b2x = -2;
-  const b2y = -4 + crawl;
-  const b2r = 1.7 - boilPulse * 0.8;
-  ctx.fillStyle = '#4a0e1e';
-  ctx.beginPath();
-  ctx.arc(b2x, b2y, b2r + 0.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = PALETTE.NECROTIC_EMERALD.GLOW;
-  ctx.beginPath();
-  ctx.arc(b2x, b2y, b2r, 0, Math.PI * 2);
-  ctx.fill();
-  // Wet Specular Dot
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-  ctx.beginPath();
-  ctx.arc(b2x - 0.5, b2y - 0.5, 0.45, 0, Math.PI * 2);
-  ctx.fill();
-
-  // --- Layer 7: Feral Cranium, Snapping Maw & Rabid Eye ---
-  // Cranial Mass
-  ctx.fillStyle = PALETTE.NECROTIC_EMERALD.CORE;
-  ctx.beginPath();
-  ctx.ellipse(8.5 + lunge, -1.8 + crawl, 6.2, 4.5, 0.22, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Blackened Gaping Maw
-  ctx.fillStyle = '#0a0305';
-  ctx.beginPath();
-  ctx.moveTo(8.5 + lunge, 0 + crawl);
-  ctx.lineTo(14.5 + lunge, -1.2 + crawl);
-  ctx.lineTo(12.5 + lunge, 4.2 + crawl);
-  ctx.closePath();
-  ctx.fill();
-
-  // Needle-Sharp Fangs
-  ctx.fillStyle = PALETTE.BONE_IVORY.POLISHED;
-  // Upper fangs
-  ctx.beginPath();
-  ctx.moveTo(10.5 + lunge, -0.5 + crawl);
-  ctx.lineTo(11.0 + lunge, 1.5 + crawl);
-  ctx.lineTo(11.5 + lunge, -0.5 + crawl);
-  ctx.moveTo(12.5 + lunge, -0.8 + crawl);
-  ctx.lineTo(13.0 + lunge, 1.2 + crawl);
-  ctx.lineTo(13.5 + lunge, -0.8 + crawl);
-  // Prominent curved lower canine
-  ctx.moveTo(11.8 + lunge, 3.8 + crawl);
-  ctx.lineTo(12.3 + lunge, 1.2 + crawl);
-  ctx.lineTo(12.9 + lunge, 3.8 + crawl);
-  ctx.fill();
-
-  // Dripping Toxic Bile Strand
-  ctx.strokeStyle = PALETTE.NECROTIC_EMERALD.GLOW;
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(11.5 + lunge, 3.5 + crawl);
-  ctx.quadraticCurveTo(12.5 + lunge, 6.5 + crawl, 11.0 + lunge, 8.5 + crawl);
-  ctx.stroke();
-  // Falling teardrop bead
-  ctx.fillStyle = PALETTE.NECROTIC_EMERALD.BRIGHT;
-  ctx.beginPath();
-  ctx.arc(11.0 + lunge, 9.2 + crawl, 1.1, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Sunken Eye Socket & Bilious Iris
-  ctx.fillStyle = PALETTE.ABYSSAL_VOID.DEEP;
-  ctx.beginPath();
-  ctx.arc(10.2 + lunge, -3.2 + crawl, 1.8, 0, Math.PI * 2);
-  ctx.fill();
-  // Glowing Necrotic Iris
-  ctx.fillStyle = PALETTE.NECROTIC_EMERALD.GLOW;
-  ctx.beginPath();
-  ctx.arc(10.5 + lunge, -3.2 + crawl, 1.1, 0, Math.PI * 2);
-  ctx.fill();
-  // Feral Slit Pupil
-  ctx.fillStyle = '#050203';
-  ctx.fillRect(10.3 + lunge, -3.7 + crawl, 0.5, 1.1);
-
-  // --- Layer 8: Proximal Forelimb & Elongated Bone Claws ---
-  // Muscular Upper Arm & Sinewy Forearm
-  ctx.strokeStyle = PALETTE.NECROTIC_EMERALD.CORE;
-  ctx.lineWidth = 2.4;
-  ctx.beginPath();
-  ctx.moveTo(6.5 + lunge, 2.0 + crawl);
-  ctx.lineTo(8.5 + lunge, 9.5 + crawl);
-  ctx.stroke();
-
-  // 3 Elongated Jagged Talons
-  ctx.strokeStyle = PALETTE.BONE_IVORY.WEATHERED;
-  ctx.lineWidth = 1.3;
-  // Talon 1 (Inner / Hooked back)
-  ctx.beginPath();
-  ctx.moveTo(7.5 + lunge, 9.5 + crawl);
-  ctx.quadraticCurveTo(6.0 + lunge, 12.5 + crawl, 5.5 + lunge, 15.2 + crawl);
-  ctx.stroke();
-  // Talon 2 (Center / Longest)
-  ctx.beginPath();
-  ctx.moveTo(8.5 + lunge, 9.5 + crawl);
-  ctx.quadraticCurveTo(9.5 + lunge, 13.0 + crawl, 11.2 + lunge, 16.0 + crawl);
-  ctx.stroke();
-  // Talon 3 (Outer)
-  ctx.beginPath();
-  ctx.moveTo(9.5 + lunge, 9.5 + crawl);
-  ctx.quadraticCurveTo(11.5 + lunge, 12.5 + crawl, 13.0 + lunge, 14.5 + crawl);
-  ctx.stroke();
-
-  // Blood-Dipped Claw Tips
-  ctx.fillStyle = PALETTE.BLOOD_CRIMSON.DRIED;
-  ctx.fillRect(5.0 + lunge, 14.5 + crawl, 1.2, 1.2);
-  ctx.fillRect(10.5 + lunge, 15.0 + crawl, 1.4, 1.4);
-  ctx.fillRect(12.2 + lunge, 13.8 + crawl, 1.2, 1.2);
 }
 ```
 
 ---
 
-## 5. Masked Entity (Hit Flash) Synchronizations
+## 5. Verification Method
 
-To prevent jarring visual "popping" or shape morphing when minions take damage (`flash === 'white'` or `flash === 'crimson'`), the `drawMaskedEntity` method in `DarkFantasySprites.ts` must be updated to mirror the new silhouettes:
+### 5.1 Independent Test Verification
+1. **Unit Test Suite for Camera Centering & Lookahead Clamping**:
+   - Verify with:
+     ```bash
+     npm test tests/unit/camera_tracking.spec.ts
+     ```
+   - Test cases:
+     - **Exact Centering**: With `vx = 0, vy = 0`, at steady state, verify `camera.x === player.x - viewportWidth / 2` and `camera.y === player.y - viewportHeight / 2`.
+     - **Lookahead Ceiling**: Inject extreme player velocities (`vx = 1000, vy = 1000`, `vx = -5000`), step update 60 frames, assert `Math.hypot(camera.lookaheadX, camera.lookaheadY) <= 40.001`.
+     - **Reversal Damping**: Start moving at $200\text{px/s}$ right for 60 frames (lookahead $+40\text{px}$), then instantly switch to $-200\text{px/s}$ left. Assert that on frame 1 of reversal, lookahead does NOT jump by $80\text{px}$, but smoothly transitions across multiple frames ($|\Delta \text{lookahead}| < 15\text{px}$ per frame at $60\text{Hz}$).
+     - **Zero-Speed Decay**: From full lookahead, set velocity to $(0, 0)$. Verify that lookahead decays smoothly to $< 0.1\text{px}$ within $0.5\text{s}$.
+2. **Backdrop Parallax Continuous Coverage**:
+   - Run existing empirical challenge suite:
+     ```bash
+     npm test tests/unit/ChallengerDF_M2.test.ts
+     ```
+   - Confirms all 8 tested 360-degree angles exhibit zero gaps in sky, clouds, skyline, flagstone, and mist coverage.
+3. **Full Regression Suite**:
+   - Verify all 31 test files pass cleanly:
+     ```bash
+     npm test
+     ```
+   - TypeScript compilation:
+     ```bash
+     npx tsc --noEmit
+     ```
 
-```typescript
-// Inside drawMaskedEntity(ctx, type, frame, maskColor):
-case 'skeleton': {
-  const legOffset = (frame % 2 === 0 ? 2.5 : -2.5);
-  const bodyBob = (frame === 1 ? 0.8 : frame === 3 ? -0.6 : 0);
-  // Cranium
-  ctx.beginPath();
-  ctx.arc(0, -9 + bodyBob, 6.0, 0, Math.PI * 2);
-  ctx.fill();
-  // Ribcage & Spine
-  ctx.fillRect(-5.0, 0.5 + bodyBob, 10.0, 7.0);
-  // Pelvis & Legs
-  ctx.fillRect(-4.5, 7.5 + bodyBob, 9.0, 2.5);
-  ctx.fillRect(-3.0 - legOffset, 10 + bodyBob, 2.2, 7.0);
-  ctx.fillRect(1.5 + legOffset, 10 + bodyBob, 2.2, 7.0);
-  // Notched Sword
-  ctx.fillRect(5.8, -14.0 + bodyBob, 2.6, 17.0);
-  ctx.fillRect(3.2, 2.8 + bodyBob, 7.5, 2.0);
-  break;
-}
-case 'ghoul': {
-  const crawl = (frame % 2 === 0 ? 1.8 : -1.8);
-  const lunge = (frame === 1 ? 1.2 : frame === 3 ? -0.8 : 0);
-  // Hunched Torso & Haunches
-  ctx.beginPath();
-  ctx.ellipse(-2, 1 + crawl, 12.0, 7.5, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-  // Head
-  ctx.beginPath();
-  ctx.ellipse(8.5 + lunge, -1.8 + crawl, 6.2, 4.5, 0.22, 0, Math.PI * 2);
-  ctx.fill();
-  // Claws & Limbs
-  ctx.fillRect(6.0 + lunge, 8.0 + crawl, 6.0, 8.0);
-  ctx.fillRect(-11.0, 8.0 - crawl, 4.0, 8.0);
-  break;
-}
-```
-
----
-
-## 6. Caveats
-1. **Headless / Vitest Environment Differences**:
-   - In browser environments, offscreen canvases are cached with real browser gradient objects.
-   - In headless unit test environments (`DarkFantasySprites.test.ts`), `mockCtx.createLinearGradient` is not mocked. The procedural code must include runtime guards (`if (typeof ctx.createLinearGradient === 'function')`) so that fallback solid palette colors are used without throwing `TypeError`.
-2. **Dimension Scaling**:
-   - Skeleton coordinates span 21px wide × 35px high. A canvas size of `{ w: 40, h: 40, ox: 20, oy: 20 }` (or `{ w: 36, h: 36, ox: 18, oy: 18 }`) cleanly accommodates all frames. Changing `getDimensions('skeleton')` to `40x40` is safe since `getDimensions` is private and internal to `DarkFantasySprites.ts`.
-3. **Flashing Invariant**:
-   - `ChallengerM2_2.test.ts` checks that `ctx.fillStyle` equals `#ffffff` on white flash and `PALETTE.BLOOD_CRIMSON.FLASH` on crimson flash, but NOT on normal frames. The last fill style set in normal rendering is `#6e2f18` (rust) or `#380a0a` (dried blood), fully satisfying this invariant.
-
----
-
-## 7. Conclusion
-- The current minion sprites in `DarkFantasySprites.ts` are simplistic geometric prototypes that do not meet the aesthetic bar of a high-fidelity dark fantasy game.
-- The formulated procedural designs for **Skeleton** and **Ghoul** introduce:
-  1. Multi-layered anatomical depth (segmented spine, curved ribcage, iliac wings, hunched haunches).
-  2. Weathered, decaying gradient textures (bone calvaria highlights, necrotic olive/emerald flesh, oxidized iron rust).
-  3. Evocative micro-details (cranial fracture filigree, glowing crimson pinpoints, notched blade chipped cutouts, pulsating wet pustules, and tattered burial linen).
-  4. Organic 4-frame walk cycles (pelvic sway, head bobbing, jaw chattering, lunging strike postures).
-- The provided Canvas2D code is 100% compliant with the offscreen canvas caching system, guarantees zero-allocation 60Hz runtime blitting, and maintains full backward compatibility with all 21 test suites.
-
----
-
-## 8. Verification Method
-
-### 8.1 Automated Regression Verification
-Run the complete unit test suite to verify zero regressions:
-```bash
-npx vitest run
-```
-Expected output: All 21 test files (247 tests) pass cleanly.
-
-### 8.2 Targeted Sprite Test Verification
-Run the sprite test suites specifically:
-```bash
-npx vitest run tests/unit/DarkFantasySprites.test.ts tests/unit/ChallengerM2_2.test.ts tests/unit/ChallengerDF_M2.test.ts
-```
-Expected output:
-- `DarkFantasySprites.test.ts`: All 11 tests pass (key generation, frame wrapping, transforms).
-- `ChallengerM2_2.test.ts`: All 12 tests pass (damage flash thresholds, mask switching, particle pool invariants).
-- `ChallengerDF_M2.test.ts`: 1,000+ entities offscreen blitting completes in `< 5.0ms`.
-
-### 8.3 Invalidation Conditions
-- If any test throws `ctx.createLinearGradient is not a function`, the runtime guard was omitted.
-- If `ChallengerM2_2.test.ts` fails assertion on normal `flashTimer <= 0`, verify that normal vector routines do not leave `ctx.fillStyle` set to `#ffffff` or `PALETTE.BLOOD_CRIMSON.FLASH`.
-- If offscreen blitting benchmark exceeds `5.0ms`, verify offscreen cache keys are correctly hitting `this.cache`.
+### 5.2 Invalidation Conditions
+- Any lookahead state where $\sqrt{\text{lookaheadX}^2 + \text{lookaheadY}^2} > 40.0\text{px}$ invalidates the boundedness criterion.
+- Any frame where foreground mist blits at $y=0$ twice or skips drawing based on $|startY| \le 4$ invalidates the flicker-free guarantee.
+- Any regression in existing 444 passing tests invalidates milestone delivery.

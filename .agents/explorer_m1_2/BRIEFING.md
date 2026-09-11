@@ -1,56 +1,50 @@
-# BRIEFING — 2026-09-10T15:32:00Z
+# BRIEFING — 2026-09-11T02:20:45Z
 
 ## Mission
-Investigate Milestone 1 (Restart State Engine & Lifecycle Architecture) with focus on Player, HordeManager, SpatialHashGrid, and LootManager reset mechanics.
+Investigate enemy collision radii in HordeManager.ts and enemy definitions, verify getEnemiesInRadius logic, evaluate separation/spatial grid, and provide calibration recommendations for Milestone 1.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Roles: investigation, synthesis
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 1 - Restart State Engine & Lifecycle Architecture
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 1 (Hitbox Calibration & Camera Tightening)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
-- Do NOT modify source code files
-- Recommend concrete fix and implementation strategies
-- Communicate all reports/results to parent via send_message
-- Follow 5-Component Handoff Protocol in handoff.md
+- Calibrate enemy collision radii across HordeManager.ts and enemy definitions
+- Examine getEnemiesInRadius collision logic
+- Evaluate impacts on spawning, spatial partitioning grid, and separation behaviors
+- Wait for explicit user approval before proceeding with implementation
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: 2026-09-10T15:32:00Z
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: not yet
 
 ## Investigation State
 - **Explored paths**:
-  - `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, `PROJECT.md`
-  - `src/core/entities/Player.ts`
-  - `src/core/player/PlayerStats.ts`, `src/core/progression/PlayerProgression.ts`
-  - `src/core/HordeManager.ts`
-  - `src/core/entities/Enemy.ts`, `src/core/entities/EnemyTypes.ts`
-  - `src/core/SpatialHashGrid.ts`
-  - `src/core/systems/LootManager.ts`
-  - `src/core/weapons/WeaponManager.ts`, `src/core/systems/UpgradeSystem.ts`
-  - `src/core/systems/WaveDirector.ts`
-  - `src/core/engine/GameEngine.ts`
-  - `src/render/Camera.ts`, `src/render/vfx/DarkFantasyVFX.ts`
-  - `src/ui/GothicHUD.ts`, `src/ui/UpgradeModal.ts`
-  - `src/main.ts`
-  - `tests/unit/*.ts` and `tests/e2e/*.ts`
+  - `src/core/entities/EnemyTypes.ts` (base stats, archetypes)
+  - `src/core/entities/Enemy.ts` (pooled entity properties)
+  - `src/core/HordeManager.ts` (swarm simulation, getEnemiesInRadius, flocking separation)
+  - `src/core/SpatialHashGrid.ts` (broadphase spatial partitioning, queryRadius)
+  - `src/render/sprites/DarkFantasySprites.ts` (visual sprite vector drawing contours)
+  - `src/core/systems/WaveDirector.ts` (off-screen perimeter spawning)
+  - `src/main.ts` (contact damage loop)
+  - Existing test suites in `tests/unit/`
 - **Key findings**:
-  1. `Player.ts` lacks any `reset()` method; `progression.reset()` resets XP but leaves listeners intact; mutated stats persist unless re-initialized.
-  2. `HordeManager.ts` current `clear()` calls `despawn()`, which increments `totalKilled++` during cleanup and fails to reset `totalSpawned` and `totalKilled` to 0. Shuffled freeIndices and dirty entity state linger.
-  3. `SpatialHashGrid.ts` `clear()` clears buckets (`cellHeads` and `entityNext` to -1), but leaves `entityX` and `entityY` caches un-zeroed.
-  4. `LootManager.ts` `clear()` recycles active items but does not reset `nextId`, leaves kinematic properties dirty on pooled items, and does not enforce strict pool size invariants.
-  5. `GrimHarvestGame` in `main.ts` completely lacks `restart()`, has no Spacebar/Click listener for resurrection, and duplicate RAF loops explode accumulators if re-instantiated.
-- **Unexplored areas**: None within Milestone 1 scope; all 4 target systems and their lifecycle caller have been thoroughly mapped.
+  - `HordeManager.getEnemiesInRadius()` does NOT check `distSq <= (radius + enemy.collisionRadius)^2`; it directly calls `SpatialHashGrid.queryRadius()`, which adds broadphase `maxEntityRadius = 32px` to the query radius.
+  - In `main.ts:468`, damage occurred up to $14 + 15 + 32 = 61\text{px}$ away because no narrowphase distance check existed!
+  - `Enemy` does not have a `collisionRadius` property (only `radius`).
+  - Calibrated radii from sprite contours: Skeleton $r=11\text{px}$, Ghoul $r=13\text{px}$, Banshee $r=12\text{px}$, Death Knight $r=18\text{px}$, Necromancer $r=14\text{px}$.
+  - Spawning and spatial grid (cellSize=64) are unaffected; soft flocking separation benefits from tighter clustering.
+- **Unexplored areas**: None within Milestone 1 scope; complete.
 
 ## Key Decisions Made
-- Recommend in-place `reset()` methods on `Player`, `HordeManager`, `SpatialHashGrid`, and `LootManager`.
-- In-place reset preserves object references across `WeaponManager`, `UpgradeSystem`, and HUD, eliminating stale pointer and listener re-wiring hazards.
-- Specify exact implementation of `GrimHarvestGame.restart()` with clean RAF teardown, clock reset, modal closure, initial swarm respawn, and resurrection event listeners.
+- Concluded that narrowphase filtering must be added to `HordeManager.getEnemiesInRadius()` to ensure $\text{distSq} \le (\text{radius} + \text{enemy.radius})^2$.
+- Aliased `collisionRadius` to `radius` via getter/setter on `Enemy` for complete contract safety.
+- Documented full findings and recommendations in `handoff.md`.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2/DISPATCH.md — Incoming mission dispatch log
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2/progress.md — Progress log and liveness heartbeat
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_2/handoff.md — Final 5-component handoff report
+- handoff.md — Final handoff report (complete 5-component report)
+- progress.md — Liveness heartbeat
+- DISPATCH.md — Task history

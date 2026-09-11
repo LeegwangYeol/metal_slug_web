@@ -92,11 +92,11 @@ export class GothicBackdrop {
     const { canvas, ctx } = this.createOffscreen(w, h);
     if (!ctx) return canvas;
 
-    // Deep space gradient
+    // Deep space gradient - symmetrical to prevent vertical seams when tiling in world coordinates
     const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
     skyGrad.addColorStop(0, PALETTE.ABYSSAL_VOID.DEEP);
     skyGrad.addColorStop(0.5, PALETTE.ABYSSAL_VOID.MID);
-    skyGrad.addColorStop(1, PALETTE.ABYSSAL_VOID.SLATE);
+    skyGrad.addColorStop(1, PALETTE.ABYSSAL_VOID.DEEP);
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, w, h);
 
@@ -149,6 +149,17 @@ export class GothicBackdrop {
       ctx.beginPath();
       ctx.ellipse(cx, cy, radX, radY, 0, 0, Math.PI * 2);
       ctx.fill();
+
+      // Toroidal horizontal wrapping for seamless edge tiling
+      if (cx - radX < 0) {
+        ctx.beginPath();
+        ctx.ellipse(cx + w, cy, radX, radY, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (cx + radX > w) {
+        ctx.beginPath();
+        ctx.ellipse(cx - w, cy, radX, radY, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     return canvas;
   }
@@ -527,23 +538,14 @@ export class GothicBackdrop {
     const W = 1024;
     const H = 540;
 
-    // Layer 3: Cinematic Foreground Depth Mist (Parallax 1.15)
+    // Layer 3: Cinematic Foreground Depth Mist (Parallax 1.15 horizontal drift, 0.35 vertical tracking)
     const startX = -((((camX * 1.15 + elapsedTime * 35.0) % W) + W) % W);
+    const startY = -((((camY * 0.35 + Math.sin(elapsedTime * 0.6) * 10) % H) + H) % H);
+
     ctx.globalAlpha = 0.10;
-
-    for (let x = startX; x < vw + W; x += W) {
-      ctx.drawImage(this.mistCanvas, x, 0);
-    }
-
-    // Camera Y tracking for vertical arena movement
-    if (camY !== 0) {
-      const startY = -((((camY * 0.35 + Math.sin(elapsedTime * 0.6) * 10) % H) + H) % H);
-      if (Math.abs(startY) > 4) {
-        for (let x = startX; x < vw + W; x += W) {
-          for (let y = startY; y < vh + H; y += H) {
-            ctx.drawImage(this.mistCanvas, x, y);
-          }
-        }
+    for (let x = startX; x < vw; x += W) {
+      for (let y = startY; y < vh; y += H) {
+        ctx.drawImage(this.mistCanvas, x, y);
       }
     }
 

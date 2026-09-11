@@ -1,23 +1,18 @@
-## 2026-09-10T15:28:44Z
-<USER_REQUEST>
-You are explorer_m1_1 (role: Codebase Researcher / Explorer).
-Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_1
+## 2026-09-11T02:17:31Z
+You are Explorer 1 for Milestone 1 of Grim Harvest: Undead Siege.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_1
+Project root: /Users/user/teamwork_projects/metal_slug_web
 
-MANDATORY FIRST STEP:
-Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
-Also read:
+Read the following documents:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
 - /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
 
 Mission:
-Investigate Milestone 1 (Restart State Engine & Lifecycle Architecture) with focus on:
-1. `src/main.ts` and `GrimHarvestGame` class structure and lifecycle.
-2. How the requestAnimationFrame (RAF) loop is currently started and maintained (`rafId`), and how it must be cleanly cancelled upon restart or game over.
-3. How `lastTime`, `accumulator`, `elapsedTime`, `isPaused` are managed in the main loop, and how accumulator explosion (infinite while-loop) can happen and must be prevented on restart (`lastTime = performance.now()`, `accumulator = 0`, `elapsedTime = 0`, `isPaused = false`).
-4. How event listeners (Keyboard 'Space' and Canvas 'click') can be wired to trigger a clean restart when in GAME_OVER or VICTORY states without attaching duplicate listeners or memory leaks.
-
-Produce a detailed report in `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_1/handoff.md`.
-Update your `progress.md` with your status.
-You are a read-only exploration agent. Do NOT modify source code files. Recommend concrete fix and implementation strategies.
-When complete, send a message to orchestrator with your findings and path to handoff.md.
-</USER_REQUEST>
+Investigate the player contact damage logic and hurtbox calibration:
+1. Deep-dive into `src/main.ts` around line 468 where `getEnemiesInRadius(this.player.position.x, this.player.position.y, Player.COLLISION_RADIUS + 15, scratch)` is invoked.
+2. Analyze all usages of `Player.COLLISION_RADIUS` in `src/core/entities/Player.ts` and other files.
+3. Determine how setting the player hurtbox to inner radius r = 11.0px and removing the `+ 15` phantom padding impacts gameplay, spatial queries, and health deduction.
+4. Check if there are any other places where player hitboxes/hurtboxes or phantom paddings are hardcoded.
+5. Write your comprehensive analysis and implementation recommendations to `/Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m1_1/handoff.md`.
+6. Send a message to orchestrator when finished with a summary of findings and the path to your handoff file.

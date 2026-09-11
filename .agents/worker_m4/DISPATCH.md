@@ -1,75 +1,50 @@
-# Dispatch: Worker M4 (Dynamic Aiming Crosshair & 5-Directional Upper-Body Animations)
+## 2026-09-11T04:31:17Z
 
-## Mission
-Implement dynamic weapon aiming crosshairs/reticles and 5-directional upper-body aiming animations according to R2 requirements and Explorer 2's handoff specification.
+You are Worker 4 (Agent 27) for Milestone 4: 100% Green Test Suite & Production Deployment.
+Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4
+Project root: /Users/user/teamwork_projects/metal_slug_web
 
-## Working Directory
-/Users/user/src/fullmetalslug/.agents/worker_m4
+Read the following documents before starting:
+- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/GATE_STATUS.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_1/handoff.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/handoff.md
 
-## Exclusive File Ownership
-- `src/render/CanvasRenderer.ts`
-- `src/main.ts` (`buildRenderSceneState()` player render state forwarding)
-
-## Input References
-- `/Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md` (MANDATORY: read first)
-- `/Users/user/src/fullmetalslug/COLLABORATION.md`
-- `/Users/user/src/fullmetalslug/PROJECT.md`
-- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_2/handoff.md`
-- `/Users/user/src/fullmetalslug/.agents/explorer_overhaul_2/survey_report.md`
-- `/Users/user/src/fullmetalslug/.agents/worker_m3/handoff.md` (check composite sprite keys)
-
-## Instructions
-1. In `src/main.ts`:
-   - In `RenderPlayerState` interface: ensure `aimAngle?: number | string` (or `AimAngle`) and `aimDirection?: Vector2D` are present.
-   - In `buildRenderSceneState()`: pass `aimAngle: this.player.aimAngle` and `aimDirection: this.player.aimDirection` in `playerRenderState`.
-2. In `src/render/CanvasRenderer.ts`:
-   - Implement Pass 3.5: Tactical Aiming Reticle / Crosshair:
-     - Render crosshair along player aim vector from player position / muzzle.
-     - Provide weapon-specific visual styling:
-       - Handgun / Pistol: Laser targeting pip and subtle crosshair bracket.
-       - Heavy Machine Gun: Tactical circular reticle with bullet spread pips.
-       - Flame Shot: Tapered incendiary arc / cone indicator.
-     - Reticle distance: positioned at responsive targeting distance (e.g. 36-54px along aim vector), flipping orientation cleanly when player faces left.
-   - Implement 5-Directional Upper-Body Aiming Animations:
-     - Select sprite using the high-resolution composite keys pre-baked by Worker M3:
-       - `FORWARD`: `player_idle_aim_FORWARD_0..3`, `player_run_aim_FORWARD_0..5`, `player_jump_aim_FORWARD`
-       - `UP_FORWARD`: `player_idle_aim_UP_FORWARD_0..3`, `player_run_aim_UP_FORWARD_0..5`, `player_jump_aim_UP_FORWARD`
-       - `UP`: `player_idle_aim_UP_0..3`, `player_run_aim_UP_0..5`, `player_jump_aim_UP`
-       - `DOWN_FORWARD`: `player_jump_aim_DOWN_FORWARD` (airborne)
-       - `DOWN`: `player_jump_aim_DOWN` (airborne)
-       - Grounded crouch: `player_crouch_aim_FORWARD`
-       - Fallback to `player_aim_0..7` or base locomotion sprite if key not found.
-3. Run `npm test` and `npm run build` to confirm 100% green tests and 0 compilation errors.
-4. Deliver `handoff.md` in your working directory with build & test output.
-
-## Integrity Warning
+MANDATORY INTEGRITY WARNING:
 DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-## 2026-09-03T06:40:33Z
+Scope & Deployment Tasks:
+Follow the exact 4-phase deployment blueprint provided in explorer_m4_2/handoff.md:
 
-You are worker_m4.
-Working directory: /Users/user/src/fullmetalslug/.agents/worker_m4
-Scope document: /Users/user/src/fullmetalslug/PROJECT.md
-Original user request: /Users/user/src/fullmetalslug/ORIGINAL_REQUEST.md
-Collaboration guide: /Users/user/src/fullmetalslug/COLLABORATION.md
-Dispatch instructions: /Users/user/src/fullmetalslug/.agents/worker_m4/DISPATCH.md
+Phase 1: Pre-Flight Verification & Clean Build
+1. Run `npx tsc --noEmit` and ensure 0 errors.
+2. Run `npm test` and ensure all unit tests pass (488/488).
+3. Run `npm run build` to generate the fresh production bundle in `dist/`.
+4. Clean up transient test results:
+   `rm -rf test-results/`
+   `git checkout -- test-results/.last-run.json 2>/dev/null || true`
 
-Exclusive File Ownership:
-- src/render/CanvasRenderer.ts
-- src/main.ts (buildRenderSceneState player render state forwarding)
+Phase 2: Git Staging
+5. Stage all project files:
+   `git add src/ tests/ artifacts/dark_fantasy/ dist/ .agents/ COLLABORATION.md PROJECT.md ORIGINAL_REQUEST.md tsconfig.tsbuildinfo`
+6. Verify status with `git status` to ensure `test-results/` is NOT staged.
 
-Your task:
-1. In src/main.ts:
-   - Ensure RenderPlayerState interface has aimAngle?: any and aimDirection?: Vector2D.
-   - In buildRenderSceneState(): pass aimAngle: this.player.aimAngle and aimDirection: this.player.aimDirection in playerRenderState.
-2. In src/render/CanvasRenderer.ts:
-   - Implement Pass 3.5: Tactical Aiming Reticle / Crosshair:
-     - Render crosshairs projected along aimDirection from the player position.
-     - Weapon-specific styling: Pistol (laser targeting pip and subtle bracket), Heavy Machine Gun (tactical circular reticle with bullet spread pips), Flame Shot (tapered incendiary arc / cone indicator).
-     - Cleanly handle facing orientation when player faces left.
-   - Implement 5-Directional Upper-Body Aiming Animations:
-     - Select sprite using the high-resolution composite keys pre-baked by Worker M3 (player_idle_aim_FORWARD_0..3, player_idle_aim_UP_FORWARD_0..3, player_idle_aim_UP_0..3, player_run_aim_FORWARD_0..5, player_run_aim_UP_FORWARD_0..5, player_run_aim_UP_0..5, player_jump_aim_FORWARD, player_jump_aim_UP_FORWARD, player_jump_aim_UP, player_jump_aim_DOWN_FORWARD, player_jump_aim_DOWN, player_crouch_aim_FORWARD).
-     - Graceful fallback to player_aim_${aimAngle} or base locomotion sprite if key not found.
-3. Run npm test and npm run build to verify all tests pass 100% green and 0 build errors.
-4. Deliver handoff.md in your working directory with test outputs. Send a message to orchestrator when done.
+Phase 3: Git Commit & Remote Push
+7. Commit changes:
+   `git commit -m "feat(hitbox-camera): calibrate precision damage hitboxes, overhaul centered camera tracking with velocity lookahead, and verify visual proof (Grim Harvest)"`
+8. Push to GitHub remote:
+   `git push origin main`
+   Confirm push exit code is 0 and remote is updated.
 
+Phase 4: Live Vercel Production Verification
+9. Verify live deployment:
+   - Check CLI or URL status: `npx vercel inspect https://metal-slug-web-lovat.vercel.app`
+   - Probe live headers: `curl -I -sS https://metal-slug-web-lovat.vercel.app` (confirm HTTP/2 200)
+   - Probe live HTML: `curl -sS https://metal-slug-web-lovat.vercel.app | grep -o 'src="/assets/[^"]*"'`
+   - Probe live JS bundle: `curl -I -sS https://metal-slug-web-lovat.vercel.app/assets/index-BsOJa5ji.js` (confirm HTTP/2 200)
+
+10. Document all executed commands, console outputs, git commit hash, and verification results in:
+    `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m4/handoff.md`.
+11. Send a message to the orchestrator when finished.

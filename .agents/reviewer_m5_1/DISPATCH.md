@@ -1,26 +1,31 @@
-## 2026-09-08T05:57:52Z
+## 2026-09-10T19:16:14Z
 
-You are the Lead Reviewer subagent (teamwork_preview_reviewer) for Milestone M5 (Full Verification Gate & Final Project Review).
-Your working directory is: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m5_1
-Project root is: /Users/user/teamwork_projects/metal_slug_web
+You are reviewer_m5_1 (role: High-Reliability Reviewer).
+Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m5_1
 
-MANDATORY CONTEXT:
-Read these files first:
-- ORIGINAL_REQUEST: /Users/user/teamwork_projects/metal_slug_web/.agents/ORIGINAL_REQUEST.md
-- PROJECT.md: /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_expansion_gen3/PROJECT.md
-- COLLABORATION.md: /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+MANDATORY FIRST STEP:
+Read /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md before starting any work. Do not skip this.
+Also read:
+- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
+- /Users/user/teamwork_projects/metal_slug_web/PROJECT.md
+- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m5_1/handoff.md
 
-MISSION & FINAL REVIEW:
-Conduct a comprehensive whole-project review against all original user requirements:
-1. M1: Boss Encounters & Crisis Engine (CrisisEventManager, Iron Nokana 4 phases, hazards, arena bounds collapse).
-2. M2: Autonomous Ally NPCs & Weapons/Items (AllyNPC Hyakutaro, AllyKiBlast, Shotgun, Laser, Rocket Launcher, Shield, Medkit, POW rescues).
-3. M3: Ultimate Move System & Procedural Sprites / Cinematic FX (KeyU mapping, 4-phase cinematic pipeline, viewport minion wipe, 120 boss burst damage, zero friendly fire, 164 baseline sprite invariant preserved, Web Audio synthesis).
-4. M4: Playwright E2E Integration & Visual Proof Screenshots (29/29 browser tests passing, 8 screenshot artifacts in artifacts/expansion/).
-5. Run full verification commands:
-   - `npm run build`
-   - `npx vitest run`
-   - `npx playwright test`
-6. Provide an explicit verdict: APPROVE or REQUEST_CHANGES.
-7. Write your full report to:
-   `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m5_1/handoff.md`
-   and call `send_message` to parent.
+Review Mission:
+Evaluate Milestone 5 (100% Green Test Suite & Git Repository Synchronization):
+1. Verify Git status and history:
+   - Run `git status` to verify the working tree is clean.
+   - Run `git log -1 --stat` to verify commit ae833f7e8e948324c8b92d73c4de4c0cc98f7d43 (feat: overhaul dark fantasy visual fidelity & fix restart lifecycle (Grim Harvest)).
+   - Verify local main is cleanly synchronized with origin/main (`git status -uno` shows up to date with origin/main).
+2. Verify Test Suite & Build Quality:
+   - Run `npm test` to independently confirm all 29 test files and 376 unit tests pass.
+   - Run `npx tsc --noEmit` to confirm 0 type errors.
+   - Run `npm run build` to confirm clean production bundle creation in `dist/`.
+3. Check artifacts in `artifacts/dark_fantasy/`:
+   - Verify all 3 visual proof screenshots exist and exceed 50KB:
+     - `enhanced_graphics_swarm.png` (>50KB)
+     - `restart_verified.png` (>50KB)
+     - `occult_vfx_lighting.png` (>50KB)
+
+Write your comprehensive evaluation in `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m5_1/handoff.md`.
+Explicitly state your verdict as either APPROVE or REQUEST_CHANGES.
+When complete, send a message to orchestrator with your verdict.

@@ -84,8 +84,12 @@ describe('Occult Weapons & WeaponManager Suite (Milestone M3)', () => {
       orbiters.update(1 / 60);
       expect(enemy!.health).toBe(hpAfterHit1); // No new damage dealt immediately
 
-      // Step past per-enemy hit cooldown (0.3s)
-      orbiters.update(0.35);
+      // Step past per-enemy hit cooldown (0.3s) with enemy on skull
+      for (let i = 0; i < 21; i++) {
+        enemy!.x = skull.x;
+        enemy!.y = skull.y;
+        orbiters.update(1 / 60);
+      }
       expect(enemy!.health).toBeLessThan(hpAfterHit1); // Damage dealt again
     });
   });
@@ -194,9 +198,9 @@ describe('Occult Weapons & WeaponManager Suite (Milestone M3)', () => {
 
       expect(weaponManager.getEquippedCount()).toBe(5);
 
-      // Run 60 frames (1 second)
-      hordeManager.spawnWave('skeleton', 20, { x: 0, y: 0 }, 100);
-      for (let f = 0; f < 60; f++) {
+      // Run 90 frames (1.5s) to allow auto-fire weapons (Spear cd=1.1s, Scythe cd=1.4s) to fire
+      hordeManager.spawnWave('skeleton', 20, { x: 0, y: 0 }, 75);
+      for (let f = 0; f < 90; f++) {
         weaponManager.update(1 / 60);
       }
 

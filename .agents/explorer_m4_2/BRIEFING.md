@@ -1,49 +1,48 @@
-# BRIEFING — 2026-09-10T18:51:35Z
+# BRIEFING — 2026-09-11T13:27:00+09:00
 
 ## Mission
-Investigate Milestone 4 post-restart 15-second survival test design, 8-directional steering bot evaluation, weapon mechanics, and pass criteria.
+Investigate git repository configuration, status, remotes, upstream tracking, changes for Milestone 4, and Vercel production deployment pipeline.
 
 ## 🔒 My Identity
 - Archetype: explorer
-- Roles: Codebase Researcher / Explorer
+- Roles: Git Remote & Vercel Deployment Explorer
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: Milestone 4 (Automated E2E Verification & Visual Proof Suite)
+- Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Milestone: Milestone 4 (Deploy, Remote, Verification)
 
 ## 🔒 Key Constraints
 - Read-only investigation — do NOT implement
 - ALWAYS wait for explicit user approval before proceeding with implementation
-- Communicate with Claude via Rule Guide (Markdown) COLLABORATION.md
-- Use File for content delivery, Message for coordination
+- Communicate via COLLABORATION.md if applicable
+- Do NOT push or alter remote repos without instruction; prepare exact commands for Worker 4
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: not yet
+- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
+- Updated: 2026-09-11T13:27:00+09:00
 
 ## Investigation State
 - **Explored paths**:
-  - `ORIGINAL_REQUEST.md`: Verified explicit user approval for M4 restart bug fix and graphics overhaul.
-  - `COLLABORATION.md`: Verified 60-agent swarm M4 blueprint for Playwright restart test and visual proof.
-  - `PROJECT.md`: Verified horde survival engine architecture and verification requirements.
-  - `tests/e2e/horde_survival.spec.ts`: Analyzed 8-directional dynamic window evaluation steering bot (lines 218–466).
-  - `src/main.ts`: Analyzed restart lifecycle, RAF cancellation, `loopEpoch` isolation, contact collision (29px).
-  - `src/core/weapons/ArcaneScythe.ts`: Analyzed Rank 1 scythe mechanics (25 damage, 1.4s cd, 75px area, 120 knockback, 1-shotting Skeletons).
-  - `src/core/entities/Player.ts` & `EnemyTypes.ts`: Analyzed player/swarm kinematics (200 px/s vs 65/110 px/s).
-  - `src/core/systems/WaveDirector.ts`: Verified Phase 1 Awakening spawn parameters.
-  - `tests/unit/restart.spec.ts`: Audited all 8 suites passing clean lifecycle invariants.
+  - `git status`, `git branch -vv`, `git remote -v`, `git ls-remote origin`
+  - Core engine files in `src/` (`main.ts`, `Camera.ts`, `GothicBackdrop.ts`, `Player.ts`, `EnemyTypes.ts`, `Enemy.ts`, `weapons/`)
+  - Unit tests in `tests/unit/` (`hitbox_precision.spec.ts`, `camera_tracking.spec.ts`, etc.)
+  - E2E tests in `tests/e2e/` (`hitbox_dodge.spec.ts`, `camera_view.spec.ts`)
+  - Visual artifacts in `artifacts/dark_fantasy/` (`improved_camera_angle.png`, `hitbox_precision_dodge.png`)
+  - Production build in `dist/` (`dist/assets/index-BsOJa5ji.js`)
+  - Live Vercel deployment at `https://metal-slug-web-lovat.vercel.app` via CLI (`npx vercel inspect`) and HTTP `curl`
 - **Key findings**:
-  - 8-directional steering bot with $H=0.32$s, 3-point collision evaluation, 58px warning buffer, 34px lethal elimination, 64-80px engagement sweet spot, and carousel orbit at $R=320$px guarantees 100% reliable 15+ second survival.
-  - Contact collision radius is strictly 29px ($14 + 15$px).
-  - Arcane Scythe 1-shots 25 HP Skeletons every 1.4s, generating kills and soul gem drops safely.
-  - Exact pass criteria defined: `elapsedTime >= 15.0`, `isAlive === true`, `health > 0`, `kills >= 1`, `accumulator <= 1/60 + 0.01`, zero duplicate RAF loops (frame delta ~16.6ms), zero console/page errors.
-- **Unexplored areas**: None for M4 exploration; ready for test implementation and visual proof execution.
+  - Repository branch `main` is up to date with `origin/main` (commit `ae833f7`), remote write access is valid.
+  - All Milestone 4 engine code, unit tests, E2E tests, and visual proof artifacts are complete, passing (tsc clean, 488/488 unit tests, 8/8 targeted E2E tests, build clean).
+  - Vercel currently serves previous bundle `index-s2gnTiXZ.js` (HTTP/2 200).
+  - Pushing new build will update bundle to `index-BsOJa5ji.js`. Exact staging, commit, push, and verification commands formulated.
+- **Unexplored areas**:
+  - None. Full investigation complete.
 
 ## Key Decisions Made
-- Fully documented 6-stage lifecycle for `tests/e2e/restart_survival.spec.ts` in `handoff.md`.
-- Established mathematical proof for steering bot reliability and RAF loop cleanliness.
+- Formulated exact staging command: `git add src/ tests/ artifacts/dark_fantasy/ dist/ .agents/ COLLABORATION.md PROJECT.md ORIGINAL_REQUEST.md tsconfig.tsbuildinfo`.
+- Excluded transient `test-results/` directory to prevent browser artifact pollution.
+- Documented 4-step post-push Vercel verification sequence using CLI and HTTP probes.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/DISPATCH.md — Initial dispatch
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/BRIEFING.md — Persistent working memory
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/progress.md — Liveness heartbeat
-- /Users/user/teamwork_projects/metal_slug_web/.agents/explorer_m4_2/handoff.md — Final investigation report
+- handoff.md — Final 5-component handoff report for Orchestrator and Worker 4
+- progress.md — Liveness heartbeat and progress tracker
+- DISPATCH.md — Incoming instruction log

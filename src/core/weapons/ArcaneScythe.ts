@@ -160,11 +160,11 @@ export class ArcaneScythe extends Weapon {
       : 110;
     const halfArcRad = (arcDegrees * Math.PI) / 360;
 
-    // Query enemies in range
+    // Query enemies in range (Two-Phase: Broadphase + Narrowphase radial reach & arc)
     const enemyCount = this.hordeManager.getEnemiesInRadius(
       px,
       py,
-      effectiveRadius,
+      effectiveRadius + 32,
       this.scratchIds
     );
 
@@ -176,6 +176,10 @@ export class ArcaneScythe extends Weapon {
 
       const dx = enemy.x - px;
       const dy = enemy.y - py;
+      const distSq = dx * dx + dy * dy;
+      const maxReach = effectiveRadius + enemy.radius;
+      if (distSq > maxReach * maxReach) continue;
+
       const enemyAngle = Math.atan2(dy, dx);
       let diff = enemyAngle - aimAngle;
 
