@@ -32,7 +32,7 @@ This enhancement mission overhauls character/enemy animations with dynamic motio
 | 20 | Visual Proof Artifacts (>250KB) | High-resolution Playwright screenshot captures for FOV, Modern UI, and Dynamic Motion | M4 | Survey / Req |
 | 21 | Automated E2E Regression Suite | 30s+ survival loop, level-up card selection, zero-error assertions | M4 | Survey / Req |
 | 22 | 100% Green Unit & E2E Tests | All Vitest and Playwright test suites passing cleanly without regressions | M5 | Survey / Req |
-| 23 | Production Deployment Verification | Git push to origin/main verified and live Vercel HTTP/2 200 confirmed | M5 | Survey / Req |
+| 23 | Production Deployment Verification | Git push to origin/main verified and live Vercel canonical deployment (https://metal-slug-web-lovat.vercel.app) confirmed | M5 | Survey / Req |
 
 ---
 
@@ -44,8 +44,8 @@ This enhancement mission overhauls character/enemy animations with dynamic motio
 | 1 | Milestone 1: Dynamic Animations & Motion Engine | Entity timer fix, easing, squash/stretch, walk/hover bobs, flinch, weapon anticipation | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M0 | **DONE** |
 | 2 | Milestone 2: Widen Camera FOV & Viewport Optimization | Camera zoom 0.80, world scale, culling/spawning boundaries, radial lighting, backdrop | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M0 | **DONE** |
 | 3 | Milestone 3: Modern Dark Fantasy UI/HUD Overhaul | Filigree health bar, soul-blue XP, runic badge, gold timer, 4-tier rarity glassmorphic cards | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M0 | **DONE** |
-| 4 | Milestone 4: Visual Proof & Automated E2E Suite | Playwright E2E tests, >250KB screenshots for FOV & UI, motion proof validation | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M1, M2, M3 | **PLANNED** |
-| 5 | Milestone 5: 100% Green Tests & Production Deployment | Full test suite verification (unit + E2E), git commit/push to origin/main, live Vercel HTTP/2 200 | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M4 | **PLANNED** |
+| 4 | Milestone 4: Visual Proof & Automated E2E Suite | Playwright E2E tests, >250KB screenshots for FOV & UI, motion proof validation | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M1, M2, M3 | **DONE** |
+| 5 | Milestone 5: 100% Green Tests & Production Deployment | Full test suite verification (unit + E2E), git commit/push to origin/main, live canonical Vercel deployment (https://metal-slug-web-lovat.vercel.app) verified | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M4 | **REMEDIATING** |
 
 ---
 

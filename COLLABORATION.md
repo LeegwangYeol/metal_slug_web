@@ -85,11 +85,11 @@
 - **challenger_m4_1 & challenger_m4_2**: Adversarial check of screenshot artifacts, payload sizes, and test non-flakiness.
 - **auditor_m4**: Forensic audit of screenshot artifacts and E2E test authenticity.
 
-### Milestone 5: Green Test Suite & Production Deployment (6 Agents)
-- **worker_m5_deploy**: Run complete test suite (Unit + E2E), verify 100% green status, git commit & push to `origin/main`, verify live Vercel deployment.
+### Milestone 5: Green Test Suite & Production Deployment (6 Agents + Remediation)
+- **worker_m5_deploy & worker_m5_remediation**: Run complete test suite (Unit + E2E), verify 100% green status, git commit & push to `origin/main`, document canonical production URL `https://metal-slug-web-lovat.vercel.app` (and secondary `https://metalslugweb.vercel.app`), explicitly resolving the external alias collision with `metal-slug-web.vercel.app`, and execute 5-layer authentic live deployment verification.
 - **reviewer_m5_1 & reviewer_m5_2**: Dual verification of git diff, build logs, and live production endpoints.
-- **challenger_m5_1 & challenger_m5_2**: Adversarial deployment verification (live site functionality, HTTP/2 200 check).
-- **auditor_m5**: Pre-victory forensic audit of repository clean state.
+- **challenger_m5_1 & challenger_m5_2**: Adversarial deployment verification (live site functionality, HTTP/2 200 check, HTML title/bundle match).
+- **auditor_m5**: Pre-victory forensic audit of repository clean state and deployment integrity.
 
 ### Final Verification Gate (1 Agent)
 - **teamwork_preview_victory_auditor**: Independent post-victory auditor executing 3-phase audit against `ORIGINAL_REQUEST.md`.
@@ -98,11 +98,13 @@
 
 ## 📋 Acceptance Criteria Tracking
 
+- [x] **Milestone 1 (Dynamic Animations & Motion Engine)**: Critically damped kinematics, harmonic squash/stretch, 3-phase weapon anticipation/recoil, bi-harmonic grounded walk cycles, spectral hover levitation, and damage flinch cascade.
 - [x] **Milestone 2 (Widen Camera FOV & Viewport Optimization)**: Implemented Z = 0.80 camera zoom (+56.25% area, 1200x675 world view), world render pass scaling in `src/main.ts`, 1:1 HUD & modal isolation, dynamic lighting [250, 725]px vignette & 250px player torch, 800px WaveDirector spawn ring, and clamped sky backdrop. All 36 test files (529 tests) 100% green; `npm run build` cleanly succeeds.
-- [ ] **Visual Proof (Animations)**: Playwright screenshots / recorded states demonstrate dynamic scaling, rotation, or sprite changes during gameplay.
-- [ ] **Visual Proof (FOV & UI)**: Playwright screenshots (>250KB) clearly demonstrate the significantly widened camera view and newly polished, modern UI.
-- [ ] **100% Green Tests**: Unit tests and E2E tests updated and pass cleanly without engine crashes.
-- [ ] **Deployment**: Git push to `origin/main` verified and Vercel build succeeds.
+- [x] **Milestone 3 (Modern Dark Fantasy UI/HUD Overhaul)**: Filigree health bar, soul-blue XP, runic badge, gold timer, 4-tier rarity glassmorphic cards, custom skill icons, and preloaded Cinzel font.
+- [x] **Visual Proof (Animations)**: Playwright screenshots / recorded states demonstrate dynamic scaling, rotation, or sprite changes during gameplay (`dynamic_motion_proof.png`, 284,927 bytes).
+- [x] **Visual Proof (FOV & UI)**: Playwright screenshots (>250KB) clearly demonstrate the significantly widened camera view (`widened_fov_battlefield.png`, 291,969 bytes) and newly polished, modern UI (`modern_gothic_hud.png`, 304,718 bytes; `upgrade_modal_modern.png`, 340,429 bytes).
+- [x] **100% Green Tests**: Unit tests (42 files, 629 tests) and E2E tests (8 spec files, 35 tests) pass cleanly without engine crashes.
+- [ ] **Deployment**: Git push to `origin/main` verified, Vercel build succeeds, and authentic 5-layer verification passes against canonical URL `https://metal-slug-web-lovat.vercel.app`.
 
 ---
 

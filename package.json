@@ -1,6 +1,7 @@
 {
   "name": "fullmetalslug",
   "version": "1.0.0",
+  "homepage": "https://metal-slug-web-lovat.vercel.app",
   "private": true,
   "type": "module",
   "scripts": {
