@@ -8,12 +8,12 @@
 
 | Environment | URL | Status | Description |
 | :--- | :--- | :--- | :--- |
-| **Canonical Production** | **`https://metal-slug-web-lovat.vercel.app`** | 🟢 Active | Primary authentic production deployment serving the full game, preloaded Cinzel typography, and Vite bundle. |
-| **Secondary Production** | **`https://metalslugweb.vercel.app`** | 🟢 Active | Secondary production mirror under team deployment. |
+| **Primary Canonical Production** | **`https://metalslugweb.vercel.app`** | 🟢 Active (HTTP/2 200) | Primary canonical production deployment serving the authentic game, preloaded Cinzel typography, and Vite bundle over clean public edge. |
+| **Secondary Production** | **`https://metal-slug-web-lovat.vercel.app`** | 🟡 Active (WAF Challenge) | Secondary production mirror under team deployment. |
 
 ### ⚠️ Domain Alias Collision Notice
 > **Important Note on `metal-slug-web.vercel.app`**:  
-> The domain alias `metal-slug-web.vercel.app` is owned by an **external third-party project** serving an obsolete 339-byte legacy prototype. It is **not** associated with this repository. The authentic, verified canonical production deployment for this project is strictly **`https://metal-slug-web-lovat.vercel.app`**.
+> The domain alias `metal-slug-web.vercel.app` is owned by an **external third-party project** serving an obsolete 339-byte legacy prototype. It is **not** associated with this repository. The authentic, verified canonical production deployment for this project is strictly **`https://metalslugweb.vercel.app`**.
 
 ---
 
@@ -117,7 +117,7 @@ npm test
 ### End-to-End Test Suite (Playwright)
 ```bash
 npx playwright test
-# Executes all 8 E2E test suites (35 tests) including visual proof captures
+# Executes all 9 E2E test suites (35 tests) including visual proof captures
 ```
 
 ---

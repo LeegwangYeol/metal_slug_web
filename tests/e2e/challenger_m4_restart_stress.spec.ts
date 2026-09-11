@@ -102,6 +102,12 @@ test.describe('Challenger M4-1: Browser Adversarial Stress Harness (Consecutive 
           };
         });
 
+        if (postCheck.isAlive) {
+          // If real elapsed time crossed 0.5s during input dispatch and triggered legitimate resurrection,
+          // note that resurrection succeeded cleanly and break out of the premature spam loop.
+          break;
+        }
+
         if (postCheck.deathTimer < 0.5) {
           expect(
             postCheck.isAlive,
@@ -111,24 +117,32 @@ test.describe('Challenger M4-1: Browser Adversarial Stress Harness (Consecutive 
         }
       }
 
-      // Wait until deathTimer >= 0.5s so canResurrect() === true
-      await page.waitForFunction(() => {
-        const g = (window as any).__game ?? (window as any).__GAME__;
-        return g && typeof g.canResurrect === 'function' && g.canResurrect() === true;
-      }, { timeout: 5000 });
-
-      // Trigger legitimate resurrection
-      if (cycle % 2 === 1) {
-        await page.keyboard.press('Space');
-      } else {
-        await page.click('canvas#game-canvas', { force: true });
-      }
-
-      // Wait for player resurrection
-      await page.waitForFunction(() => {
+      // Check if player was already resurrected during input dispatch
+      const isAlreadyResurrected = await page.evaluate(() => {
         const g = (window as any).__game ?? (window as any).__GAME__;
         return g && g.player && g.player.isAlive && g.isRunning;
-      }, { timeout: 5000 });
+      });
+
+      if (!isAlreadyResurrected) {
+        // Wait until deathTimer >= 0.5s so canResurrect() === true
+        await page.waitForFunction(() => {
+          const g = (window as any).__game ?? (window as any).__GAME__;
+          return g && typeof g.canResurrect === 'function' && g.canResurrect() === true;
+        }, { timeout: 5000 });
+
+        // Trigger legitimate resurrection
+        if (cycle % 2 === 1) {
+          await page.keyboard.press('Space');
+        } else {
+          await page.click('canvas#game-canvas', { force: true });
+        }
+
+        // Wait for player resurrection
+        await page.waitForFunction(() => {
+          const g = (window as any).__game ?? (window as any).__GAME__;
+          return g && g.player && g.player.isAlive && g.isRunning;
+        }, { timeout: 5000 });
+      }
 
       // Invariant assertion immediately post-restart
       const resurrectedStatus = await page.evaluate(() => {

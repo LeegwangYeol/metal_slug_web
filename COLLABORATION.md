@@ -85,8 +85,8 @@
 - **challenger_m4_1 & challenger_m4_2**: Adversarial check of screenshot artifacts, payload sizes, and test non-flakiness.
 - **auditor_m4**: Forensic audit of screenshot artifacts and E2E test authenticity.
 
-### Milestone 5: Green Test Suite & Production Deployment (6 Agents + Remediation)
-- **worker_m5_deploy & worker_m5_remediation**: Run complete test suite (Unit + E2E), verify 100% green status, git commit & push to `origin/main`, document canonical production URL `https://metal-slug-web-lovat.vercel.app` (and secondary `https://metalslugweb.vercel.app`), explicitly resolving the external alias collision with `metal-slug-web.vercel.app`, and execute 5-layer authentic live deployment verification.
+### Milestone 5: Green Test Suite & Production Deployment (6 Agents + Remediation & Final Polish)
+- **worker_m5_deploy, worker_m5_remediation, worker_m5_final_polish**: Run complete test suite (Unit + E2E), verify 100% green status, git commit & push to `origin/main`, document primary canonical production URL `https://metalslugweb.vercel.app` (HTTP/2 200, clean public edge) and secondary `https://metal-slug-web-lovat.vercel.app`, explicitly resolving the external alias collision with `metal-slug-web.vercel.app`, and execute authentic live deployment verification.
 - **reviewer_m5_1 & reviewer_m5_2**: Dual verification of git diff, build logs, and live production endpoints.
 - **challenger_m5_1 & challenger_m5_2**: Adversarial deployment verification (live site functionality, HTTP/2 200 check, HTML title/bundle match).
 - **auditor_m5**: Pre-victory forensic audit of repository clean state and deployment integrity.
@@ -103,8 +103,8 @@
 - [x] **Milestone 3 (Modern Dark Fantasy UI/HUD Overhaul)**: Filigree health bar, soul-blue XP, runic badge, gold timer, 4-tier rarity glassmorphic cards, custom skill icons, and preloaded Cinzel font.
 - [x] **Visual Proof (Animations)**: Playwright screenshots / recorded states demonstrate dynamic scaling, rotation, or sprite changes during gameplay (`dynamic_motion_proof.png`, 284,927 bytes).
 - [x] **Visual Proof (FOV & UI)**: Playwright screenshots (>250KB) clearly demonstrate the significantly widened camera view (`widened_fov_battlefield.png`, 291,969 bytes) and newly polished, modern UI (`modern_gothic_hud.png`, 304,718 bytes; `upgrade_modal_modern.png`, 340,429 bytes).
-- [x] **100% Green Tests**: Unit tests (42 files, 629 tests) and E2E tests (8 spec files, 35 tests) pass cleanly without engine crashes.
-- [ ] **Deployment**: Git push to `origin/main` verified, Vercel build succeeds, and authentic 5-layer verification passes against canonical URL `https://metal-slug-web-lovat.vercel.app`.
+- [x] **100% Green Tests**: Unit tests (42 files, 629 tests) and E2E tests (9 spec files, 35 tests) pass cleanly without engine crashes.
+- [x] **Deployment**: Git push to `origin/main` verified, Vercel build succeeds, and authentic 5-layer verification passes against primary canonical URL `https://metalslugweb.vercel.app`.
 
 ---
 
