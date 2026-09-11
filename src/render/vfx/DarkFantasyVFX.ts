@@ -911,11 +911,16 @@ export class DarkFantasyVFX {
   /**
    * Render ground decals (persistent blood splatters, pools, lightning scorch, sigils)
    */
-  public renderDecals(ctx: CanvasRenderingContext2D, camera: Camera): void {
+  public renderDecals(
+    ctx: CanvasRenderingContext2D,
+    camera: Camera,
+    overrideVw?: number,
+    overrideVh?: number
+  ): void {
     const camX = camera.renderX;
     const camY = camera.renderY;
-    const vw = camera.viewportWidth;
-    const vh = camera.viewportHeight;
+    const vw = overrideVw ?? (camera as any).viewWidth ?? camera.viewportWidth;
+    const vh = overrideVh ?? (camera as any).viewHeight ?? camera.viewportHeight;
 
     for (let i = 0; i < this.decalCapacity; i++) {
       const d = this.decals[i];
@@ -1021,11 +1026,16 @@ export class DarkFantasyVFX {
     }
   }
 
-  public renderGround(ctx: CanvasRenderingContext2D, camera: Camera): void {
+  public renderGround(
+    ctx: CanvasRenderingContext2D,
+    camera: Camera,
+    overrideVw?: number,
+    overrideVh?: number
+  ): void {
     const camX = camera.renderX;
     const camY = camera.renderY;
-    const vw = camera.viewportWidth;
-    const vh = camera.viewportHeight;
+    const vw = overrideVw ?? (camera as any).viewWidth ?? camera.viewportWidth;
+    const vh = overrideVh ?? (camera as any).viewHeight ?? camera.viewportHeight;
 
     for (let i = 0; i < this.activeCount; i++) {
       const idx = this.activeIndices[i];
@@ -1038,7 +1048,7 @@ export class DarkFantasyVFX {
       const r = p.size;
 
       // Culling
-      if (sx < -r || sx > vw + r || sy < -r || sy > vh + r) continue;
+      if (sx < -r * 2 || sx > vw + r * 2 || sy < -r * 2 || sy > vh + r * 2) continue;
 
       ctx.save();
       ctx.globalAlpha = p.alpha;
@@ -1129,11 +1139,16 @@ export class DarkFantasyVFX {
     }
   }
 
-  public renderAir(ctx: CanvasRenderingContext2D, camera: Camera): void {
+  public renderAir(
+    ctx: CanvasRenderingContext2D,
+    camera: Camera,
+    overrideVw?: number,
+    overrideVh?: number
+  ): void {
     const camX = camera.renderX;
     const camY = camera.renderY;
-    const vw = camera.viewportWidth;
-    const vh = camera.viewportHeight;
+    const vw = overrideVw ?? (camera as any).viewWidth ?? camera.viewportWidth;
+    const vh = overrideVh ?? (camera as any).viewHeight ?? camera.viewportHeight;
 
     for (let i = 0; i < this.activeCount; i++) {
       const idx = this.activeIndices[i];
@@ -1296,12 +1311,14 @@ export class DarkFantasyVFX {
     player: { position: { x: number; y: number }; isAlive: boolean },
     hordeManager: { getActiveEnemies(): readonly any[] },
     lootManager: { getActiveItems(): readonly any[] },
-    elapsedTime: number
+    elapsedTime: number,
+    overrideVw?: number,
+    overrideVh?: number
   ): void {
     const camX = camera.renderX;
     const camY = camera.renderY;
-    const vw = camera.viewportWidth;
-    const vh = camera.viewportHeight;
+    const vw = overrideVw ?? (camera as any).viewWidth ?? camera.viewportWidth;
+    const vh = overrideVh ?? (camera as any).viewHeight ?? camera.viewportHeight;
 
     ctx.save();
 
@@ -1448,9 +1465,11 @@ export class DarkFantasyVFX {
   public renderLighting(
     ctx: CanvasRenderingContext2D,
     camera: Camera,
-    scene: LightingSceneData
+    scene: LightingSceneData,
+    overrideVw?: number,
+    overrideVh?: number
   ): void {
-    this.lighting.render(ctx, camera, scene);
+    this.lighting.render(ctx, camera, scene, overrideVw, overrideVh);
   }
 }
 
@@ -1494,8 +1513,8 @@ export interface LightingSceneData {
  * - Strict restoration to source-over composite operation
  */
 export class DynamicLightingEngine {
-  public readonly width: number;
-  public readonly height: number;
+  public width: number;
+  public height: number;
   public lightCanvas: HTMLCanvasElement | null = null;
   public lightCtx: CanvasRenderingContext2D | null = null;
   public vignetteCanvas: HTMLCanvasElement | null = null;
@@ -1512,17 +1531,27 @@ export class DynamicLightingEngine {
     this.initSurfaces();
   }
 
+  public resize(width: number, height: number): void {
+    if (this.width === width && this.height === height) return;
+    this.width = width;
+    this.height = height;
+    this.initSurfaces();
+  }
+
   public initSurfaces(): void {
     this.lightCanvas = safeCreateOffscreenCanvas(this.width, this.height);
     this.lightCtx = this.lightCanvas?.getContext('2d') ?? null;
 
-    // 1. Pre-bake Viewport Edge Vignette (960 x 540)
+    // 1. Pre-bake Viewport Edge Vignette (dynamically scaled: [250, 725]px at 1200x675)
     this.vignetteCanvas = safeCreateOffscreenCanvas(this.width, this.height);
     const vCtx = this.vignetteCanvas?.getContext('2d');
     if (vCtx && typeof vCtx.createRadialGradient === 'function') {
       const cx = this.width / 2;
       const cy = this.height / 2;
-      const grad = vCtx.createRadialGradient(cx, cy, 200, cx, cy, 580);
+      // Scales to [250, 725]px at 1200x675, or [200, 580]px at 960x540
+      const innerR = Math.round(this.width * 0.208);
+      const outerR = Math.round(Math.hypot(cx, cy) * 1.05);
+      const grad = vCtx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
       grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
       grad.addColorStop(0.65, 'rgba(8, 6, 12, 0.40)');
       grad.addColorStop(1, 'rgba(8, 6, 12, 0.70)');
@@ -1582,7 +1611,19 @@ export class DynamicLightingEngine {
     this.lightningFlash = 0;
   }
 
-  public render(ctx: CanvasRenderingContext2D, camera: Camera, scene: LightingSceneData): void {
+  public render(
+    ctx: CanvasRenderingContext2D,
+    camera: Camera,
+    scene: LightingSceneData,
+    overrideVw?: number,
+    overrideVh?: number
+  ): void {
+    const targetW = overrideVw ?? this.width;
+    const targetH = overrideVh ?? this.height;
+    if (overrideVw !== undefined && overrideVh !== undefined && targetW > 0 && targetH > 0 && (targetW !== this.width || targetH !== this.height)) {
+      this.resize(targetW, targetH);
+    }
+
     const camX = camera.renderX;
     const camY = camera.renderY;
     const vw = this.width;
@@ -1607,12 +1648,13 @@ export class DynamicLightingEngine {
       // Pass 1C: Carve radial light holes via destination-out
       lCtx.globalCompositeOperation = 'destination-out';
 
-      // 1. Player Torch Light (200px radial light with multi-frequency breathing flicker)
+      // 1. Player Torch Light (scaled to 250px for widened 1200x675 FOV with multi-frequency breathing flicker)
       const px = scene.player.position.x - camX;
       const py = scene.player.position.y - camY;
       const t = scene.elapsedTime;
       const flicker = 5.0 * Math.sin(t * 7.3) + 2.5 * Math.cos(t * 19.1) + 1.5 * Math.sin(t * 31.7);
-      let torchR = 200 + flicker;
+      const baseTorch = this.width >= 1200 ? 250 : 200;
+      let torchR = baseTorch + flicker;
       if (scene.player.stats?.area) {
         torchR *= Math.max(0.8, Math.min(1.6, Math.sqrt(scene.player.stats.area / 100)));
       }
@@ -1747,7 +1789,8 @@ export class DynamicLightingEngine {
     // 1. Warm Amber Bloom for Player Torch (#f59e0b)
     const px = scene.player.position.x - camX;
     const py = scene.player.position.y - camY;
-    const amberR = 120 + 4.0 * Math.sin(scene.elapsedTime * 7.3);
+    const baseAmber = this.width >= 1200 ? 150 : 120;
+    const amberR = baseAmber + 4.0 * Math.sin(scene.elapsedTime * 7.3);
     if (typeof ctx.createRadialGradient === 'function') {
       const grad = ctx.createRadialGradient(px, py, 0, px, py, amberR);
       grad.addColorStop(0, 'rgba(245, 158, 11, 0.18)');

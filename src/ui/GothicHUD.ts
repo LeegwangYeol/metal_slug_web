@@ -33,8 +33,19 @@ export const GOTHIC_HUD_THEME = {
   bloodBright: '#e53e3e',
   bloodGlow: 'rgba(229, 62, 62, 0.4)',
   ghostHealth: '#b33939',
+  ghostAmberStart: '#f59e0b',
+  ghostAmberMid: '#d97706',
+  ghostAmberEnd: '#991b1b',
 
-  // Necrotic Emerald (XP & Soul Energy)
+  // Soul-Blue / Amethyst (XP & Soul Energy)
+  soulVoid: '#1e0838',
+  soulAmethyst: '#4c1d95',
+  soulIndigo: '#3b82f6',
+  soulCyan: '#06b6d4',
+  soulSpark: '#e0f2fe',
+  soulGlow: 'rgba(6, 182, 212, 0.7)',
+
+  // Necrotic Emerald (Legacy XP & Energy)
   necroticDark: '#0d3824',
   necroticMid: '#19633e',
   necroticBright: '#28a745',
@@ -47,18 +58,22 @@ export const GOTHIC_HUD_THEME = {
   arcaneBright: '#7038b8',
   arcaneGlow: '#b794f6',
 
-  // Bone Ivory & Gold (Text & Badges)
+  // Bone Ivory & Antique Gold (Text & Badges)
   boneIvory: '#ede5de',
   boneMuted: '#b8aea5',
   boneDark: '#615852',
   goldFiligree: '#d4af37',
+  goldHighlight: '#fff3b0',
+  goldShadow: '#946f08',
   goldGlow: 'rgba(212, 175, 55, 0.5)',
 
-  // Fonts
-  fontGothic: "bold 16px 'Cinzel', 'IM Fell English', 'Georgia', serif",
-  fontTimer: "bold 22px 'Cinzel', 'IM Fell English', 'Georgia', serif",
-  fontSmall: "bold 11px 'Georgia', serif",
+  // Fonts with robust Georgia fallbacks
+  fontGothic: "bold 16px 'Cinzel', 'Cinzel Decorative', 'Georgia', serif",
+  fontTimer: "bold 24px 'Cinzel', 'Cinzel Decorative', 'Georgia', serif",
+  fontHeading: "bold 20px 'Cinzel', 'Georgia', serif",
+  fontSmall: "bold 11px 'Cinzel', 'Georgia', serif",
   fontSubtitle: "italic 10px 'Georgia', serif",
+  fontMono: "bold 11px 'Courier New', monospace",
   fontSans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 } as const;
 
@@ -103,7 +118,7 @@ export interface HUDStateSnapshot {
 export interface GothicHUDConfig {
   virtualWidth?: number;  // default 960
   virtualHeight?: number; // default 540
-  xpColorMode?: 'necrotic-emerald' | 'cursed-violet';
+  xpColorMode?: 'soul-blue' | 'necrotic-emerald' | 'cursed-violet';
   showInventorySlots?: boolean;
   showWavePhase?: boolean;
 }
@@ -138,7 +153,7 @@ export class GothicHUD {
     this.config = {
       virtualWidth: config.virtualWidth ?? 960,
       virtualHeight: config.virtualHeight ?? 540,
-      xpColorMode: config.xpColorMode ?? 'necrotic-emerald',
+      xpColorMode: config.xpColorMode ?? 'soul-blue',
       showInventorySlots: config.showInventorySlots ?? true,
       showWavePhase: config.showWavePhase ?? true,
     };
@@ -338,11 +353,16 @@ export class GothicHUD {
     const barW = width - 24;
     const barH = 10;
 
-    // Obsidian Channel Background
+    // Double-Beveled Obsidian Channel Background
     ctx.fillStyle = GOTHIC_HUD_THEME.abyssalVoid;
     ctx.fillRect(barX, barY, barW, barH);
     ctx.fillStyle = GOTHIC_HUD_THEME.obsidianInset;
     ctx.fillRect(barX + 1, barY + 1, barW - 2, barH - 2);
+
+    // Inner Channel Shadow Bevel
+    ctx.strokeStyle = '#05030a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX + 1.5, barY + 1.5, barW - 3, barH - 3);
 
     // Fill Ratio
     const ratio = this.xpToNextLevel > 0
@@ -352,41 +372,58 @@ export class GothicHUD {
     const fillW = Math.round((barW - 2) * ratio);
 
     if (fillW > 0) {
-      const isEmerald = this.config.xpColorMode === 'necrotic-emerald';
+      const isArcane = this.config.xpColorMode === 'cursed-violet';
       const grad = ctx.createLinearGradient(barX + 1, barY, barX + 1 + fillW, barY);
-      if (isEmerald) {
-        grad.addColorStop(0, GOTHIC_HUD_THEME.necroticDark);
-        grad.addColorStop(0.5, GOTHIC_HUD_THEME.necroticMid);
-        grad.addColorStop(0.85, GOTHIC_HUD_THEME.necroticBright);
-        grad.addColorStop(1, GOTHIC_HUD_THEME.necroticGlow);
-      } else {
+      if (isArcane) {
         grad.addColorStop(0, GOTHIC_HUD_THEME.arcaneDark);
         grad.addColorStop(0.5, GOTHIC_HUD_THEME.arcaneMid);
         grad.addColorStop(0.85, GOTHIC_HUD_THEME.arcaneBright);
         grad.addColorStop(1, GOTHIC_HUD_THEME.arcaneGlow);
+      } else {
+        // Radiant Soul-Blue to Royal Amethyst Gradient (Mandatory Objective 3)
+        grad.addColorStop(0.00, '#1e0838'); // Deep cosmic void
+        grad.addColorStop(0.35, '#4c1d95'); // Royal amethyst core
+        grad.addColorStop(0.70, '#3b82f6'); // Soul-fire indigo
+        grad.addColorStop(0.92, '#06b6d4'); // Radiant cyan glow
+        grad.addColorStop(1.00, '#e0f2fe'); // Incandescent soul spark
       }
       ctx.fillStyle = grad;
       ctx.fillRect(barX + 1, barY + 1, fillW, barH - 2);
 
-      // Shimmer gleam
+      // Shimmer gleam wave
       const shimmerPos = (this.shimmerTimer * 160) % (barW + 100) - 50;
       if (shimmerPos > 0 && shimmerPos < fillW) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
         ctx.fillRect(barX + 1 + Math.max(0, shimmerPos - 12), barY + 1, 24, barH - 2);
       }
 
-      // Spark at leading edge
-      ctx.fillStyle = isEmerald ? GOTHIC_HUD_THEME.necroticSpark : '#ffffff';
+      // Radiant Leading Edge Soul Spark Orb
+      const orbX = barX + 1 + fillW;
+      const orbY = barY + barH / 2;
+      const orbGrad = ctx.createRadialGradient(orbX, orbY, 1, orbX, orbY, 6);
+      orbGrad.addColorStop(0, '#ffffff');
+      orbGrad.addColorStop(0.4, '#06b6d4');
+      orbGrad.addColorStop(1, 'rgba(6, 182, 212, 0)');
+      ctx.fillStyle = orbGrad;
+      ctx.beginPath();
+      ctx.arc(orbX, orbY, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sharp spark core at leading edge
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(barX + fillW - 1, barY + 1, 2, barH - 2);
     }
 
-    // Cracked Iron Frame Border
+    // Double-Beveled Cracked Iron Frame Border
     ctx.strokeStyle = GOTHIC_HUD_THEME.obsidianBorder;
     ctx.lineWidth = 1;
     ctx.strokeRect(barX + 0.5, barY + 0.5, barW - 1, barH - 1);
 
-    // Decorative corner rivets
-    ctx.fillStyle = GOTHIC_HUD_THEME.ironRivet;
+    ctx.strokeStyle = '#1a1429';
+    ctx.strokeRect(barX - 0.5, barY - 0.5, barW + 1, barH + 1);
+
+    // Decorative Antique Gold Micro-Rivets
+    ctx.fillStyle = GOTHIC_HUD_THEME.goldFiligree;
     ctx.fillRect(barX - 1, barY - 1, 2, 2);
     ctx.fillRect(barX + barW - 1, barY - 1, 2, 2);
     ctx.fillRect(barX - 1, barY + barH - 1, 2, 2);
@@ -397,49 +434,148 @@ export class GothicHUD {
   }
 
   private renderSoulLevelBadge(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    const badgeW = 72;
-    const badgeH = 22;
+    const badgeW = 74;
+    const badgeH = 24;
+    const cut = 5;
 
-    // Flash glow on level up
+    ctx.save();
+
+    // Pulsating ascension shockwave & corona aura on level up
     if (this.levelUpFlashTimer > 0) {
       const flashAlpha = this.levelUpFlashTimer / 0.8;
-      ctx.fillStyle = `rgba(104, 211, 145, ${flashAlpha * 0.4})`;
-      ctx.fillRect(x - 4, y - 4, badgeW + 8, badgeH + 8);
+      const expand = (1.0 - flashAlpha) * 14;
+
+      ctx.strokeStyle = `rgba(6, 182, 212, ${flashAlpha * 0.8})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x + badgeW / 2, y + badgeH / 2, (badgeW / 2) + expand, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = `rgba(59, 130, 246, ${flashAlpha * 0.35})`;
+      ctx.beginPath();
+      ctx.arc(x + badgeW / 2, y + badgeH / 2, (badgeW / 2) + expand * 0.6, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // Obsidian Tablet Inset
-    ctx.fillStyle = GOTHIC_HUD_THEME.charredBlack;
-    ctx.fillRect(x, y, badgeW, badgeH);
+    // Octagonal / Diamond Beveled Crest Path
+    ctx.beginPath();
+    ctx.moveTo(x + cut, y);
+    ctx.lineTo(x + badgeW - cut, y);
+    ctx.lineTo(x + badgeW, y + cut);
+    ctx.lineTo(x + badgeW, y + badgeH - cut);
+    ctx.lineTo(x + badgeW - cut, y + badgeH);
+    ctx.lineTo(x + cut, y + badgeH);
+    ctx.lineTo(x, y + badgeH - cut);
+    ctx.lineTo(x, y + cut);
+    ctx.closePath();
 
-    // Iron & Gold Trim Border
-    ctx.strokeStyle = this.levelUpFlashTimer > 0 ? GOTHIC_HUD_THEME.necroticGlow : GOTHIC_HUD_THEME.goldFiligree;
+    // Charred Obsidian Body
+    ctx.fillStyle = GOTHIC_HUD_THEME.charredBlack;
+    ctx.fill();
+
+    // Inner Iron Bevel
+    ctx.strokeStyle = GOTHIC_HUD_THEME.ironBevelLight;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Antique Gold Trim
+    ctx.strokeStyle = this.levelUpFlashTimer > 0 ? GOTHIC_HUD_THEME.soulCyan : GOTHIC_HUD_THEME.goldFiligree;
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(x + 0.5, y + 0.5, badgeW - 1, badgeH - 1);
+    ctx.stroke();
+
+    // Occult Runes: ᚱ (Raidho) and ᛟ (Othala)
+    ctx.font = "8px 'Georgia', serif";
+    ctx.fillStyle = GOTHIC_HUD_THEME.goldShadow;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('ᚱ', x + 3, y + 10);
+    ctx.textAlign = 'right';
+    ctx.fillText('ᛟ', x + badgeW - 3, y + 10);
 
     // Badge Text
     ctx.font = GOTHIC_HUD_THEME.fontSmall;
-    ctx.fillStyle = GOTHIC_HUD_THEME.boneIvory;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+
+    // Drop Shadow
+    ctx.fillStyle = '#000000';
+    ctx.fillText(`SOUL LVL ${this.currentLevel}`, x + badgeW / 2 + 1, y + badgeH / 2 + 1);
+
+    // Bone Ivory Fill
+    ctx.fillStyle = GOTHIC_HUD_THEME.boneIvory;
     ctx.fillText(`SOUL LVL ${this.currentLevel}`, x + badgeW / 2, y + badgeH / 2);
-    ctx.textAlign = 'start';
-    ctx.textBaseline = 'alphabetic';
+
+    ctx.restore();
   }
 
   private renderVitalityBar(ctx: CanvasRenderingContext2D): void {
-    const barX = 96;
+    const barX = 98;
     const barY = 18;
-    const barW = 160;
-    const barH = 22;
+    const barW = 168;
+    const barH = 24;
 
     const hpRatio = this.maxHealth > 0 ? Math.max(0, this.displayHealth / this.maxHealth) : 0;
     const ghostRatio = this.maxHealth > 0 ? Math.max(0, this.ghostHealth / this.maxHealth) : 0;
 
-    // Outer cracked iron framing & shadow
+    ctx.save();
+
+    // 1. Sculpted Wrought-Iron Filigree Brackets & Cathedral Spires
+    ctx.strokeStyle = GOTHIC_HUD_THEME.ironBevelLight;
+    ctx.fillStyle = GOTHIC_HUD_THEME.ironBase;
+    ctx.lineWidth = 1.5;
+
+    // Left Wing Bracket
+    ctx.beginPath();
+    ctx.moveTo(barX - 2, barY + barH / 2);
+    if (ctx.bezierCurveTo) {
+      ctx.bezierCurveTo(barX - 8, barY + 2, barX - 10, barY - 4, barX - 3, barY - 2);
+    } else {
+      ctx.lineTo(barX - 8, barY + 2);
+      ctx.lineTo(barX - 3, barY - 2);
+    }
+    ctx.lineTo(barX - 2, barY);
+    ctx.stroke();
+
+    // Right Wing Bracket
+    ctx.beginPath();
+    ctx.moveTo(barX + barW + 2, barY + barH / 2);
+    if (ctx.bezierCurveTo) {
+      ctx.bezierCurveTo(barX + barW + 8, barY + 2, barX + barW + 10, barY - 4, barX + barW + 3, barY - 2);
+    } else {
+      ctx.lineTo(barX + barW + 8, barY + 2);
+      ctx.lineTo(barX + barW + 3, barY - 2);
+    }
+    ctx.lineTo(barX + barW + 2, barY);
+    ctx.stroke();
+
+    // Center Cathedral Spire Accent
+    const midX = barX + barW / 2;
+    ctx.beginPath();
+    ctx.moveTo(midX - 12, barY - 2);
+    ctx.lineTo(midX, barY - 7);
+    ctx.lineTo(midX + 12, barY - 2);
+    ctx.closePath();
+    ctx.fillStyle = GOTHIC_HUD_THEME.ironBase;
+    ctx.fill();
+    ctx.stroke();
+
+    // Spire Apex Gold Micro-Stud
+    ctx.fillStyle = GOTHIC_HUD_THEME.goldFiligree;
+    ctx.beginPath();
+    ctx.arc(midX, barY - 7, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4 Corner Gold Micro-Studs
+    ctx.fillRect(barX - 4, barY - 4, 3, 3);
+    ctx.fillRect(barX + barW + 1, barY - 4, 3, 3);
+    ctx.fillRect(barX - 4, barY + barH + 1, 3, 3);
+    ctx.fillRect(barX + barW + 1, barY + barH + 1, 3, 3);
+
+    // 2. Double-Beveled Iron Casing
     ctx.fillStyle = GOTHIC_HUD_THEME.ironBase;
     ctx.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
 
-    // Beveled frame highlights
+    // Frame Highlights & Shadows
     ctx.strokeStyle = GOTHIC_HUD_THEME.ironBevelLight;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -455,60 +591,114 @@ export class GothicHUD {
     ctx.lineTo(barX - 2, barY + barH + 1);
     ctx.stroke();
 
-    // Interior Well (Charred Empty Reservoir)
-    ctx.fillStyle = GOTHIC_HUD_THEME.bloodDark;
+    // 3. Interior Reservoir (Abyssal Empty Blood Well)
+    ctx.fillStyle = '#1c070c';
     ctx.fillRect(barX, barY, barW, barH);
 
-    // Ghost Damage Fill (Lingering pale red)
+    // 4. Smoldering Amber Ghost Damage Stagger Bar
     if (ghostRatio > hpRatio) {
-      ctx.fillStyle = GOTHIC_HUD_THEME.ghostHealth;
-      ctx.fillRect(barX, barY, Math.round(barW * ghostRatio), barH);
+      const ghostW = Math.round(barW * ghostRatio);
+      const ghostGrad = ctx.createLinearGradient(barX, barY, barX + ghostW, barY);
+      ghostGrad.addColorStop(0, GOTHIC_HUD_THEME.ghostAmberStart);
+      ghostGrad.addColorStop(0.5, GOTHIC_HUD_THEME.ghostAmberMid);
+      ghostGrad.addColorStop(1, GOTHIC_HUD_THEME.ghostAmberEnd);
+      ctx.fillStyle = ghostGrad;
+      ctx.fillRect(barX, barY, ghostW, barH);
+
+      // Crackling ember seam at ghost leading edge
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(barX + ghostW - 2, barY, 2, barH);
     }
 
-    // Active Crimson Blood Fill
+    // 5. Dynamic Layered Blood Fill with Sinusoidal Fluid Meniscus Wave
     if (hpRatio > 0) {
-      const bloodW = Math.round(barW * hpRatio);
+      const bloodW = Math.max(1, Math.round(barW * hpRatio));
+
+      // 5-Stop Arterial Blood Gradient
       const bloodGrad = ctx.createLinearGradient(barX, barY, barX, barY + barH);
-      bloodGrad.addColorStop(0, GOTHIC_HUD_THEME.bloodBright);
-      bloodGrad.addColorStop(0.3, GOTHIC_HUD_THEME.bloodMid);
-      bloodGrad.addColorStop(0.7, GOTHIC_HUD_THEME.bloodBase);
-      bloodGrad.addColorStop(1, GOTHIC_HUD_THEME.bloodDark);
+      bloodGrad.addColorStop(0.00, '#ff8080'); // Radiant meniscus crest
+      bloodGrad.addColorStop(0.15, '#e52b2b'); // Bright arterial scarlet
+      bloodGrad.addColorStop(0.50, '#a81d1d'); // Deep blood midtone
+      bloodGrad.addColorStop(0.85, '#6b1212'); // Coagulated dark red
+      bloodGrad.addColorStop(1.00, '#380a0a'); // Abyssal base
+
+      // Fluid Meniscus Wave Clipping
+      ctx.save();
+      if (ctx.rect && ctx.clip) {
+        ctx.beginPath();
+        ctx.rect(barX, barY, bloodW, barH);
+        ctx.clip();
+      }
 
       ctx.fillStyle = bloodGrad;
-      ctx.fillRect(barX, barY, bloodW, barH);
+      ctx.beginPath();
+      ctx.moveTo(barX, barY + barH);
+      ctx.lineTo(barX, barY + Math.sin(this.shimmerTimer * 3.5) * 1.2 + 2);
 
-      // Surface Meniscus Line
-      ctx.fillStyle = '#ff8787';
-      ctx.fillRect(barX, barY, bloodW, 1.5);
+      const step = 4;
+      for (let px = 0; px <= bloodW; px += step) {
+        const waveY = barY + Math.sin(this.shimmerTimer * 3.5 + px * 0.1) * 1.2 + 1.5;
+        ctx.lineTo(barX + px, waveY);
+      }
+      ctx.lineTo(barX + bloodW, barY + barH);
+      ctx.closePath();
+      ctx.fill();
+
+      // Meniscus Crest Highlight Wave
+      ctx.strokeStyle = '#ff9999';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let px = 0; px <= bloodW; px += step) {
+        const waveY = barY + Math.sin(this.shimmerTimer * 3.5 + px * 0.1) * 1.2 + 1.5;
+        if (px === 0) ctx.moveTo(barX + px, waveY);
+        else ctx.lineTo(barX + px, waveY);
+      }
+      ctx.stroke();
+
+      ctx.restore();
     }
 
-    // Glass / Specular Sheen across top half
-    ctx.fillStyle = GOTHIC_HUD_THEME.specularSheen;
-    ctx.fillRect(barX, barY, barW, Math.floor(barH / 2));
+    // 6. Curvilinear Glass Specular Highlight across upper half
+    const glassGrad = ctx.createLinearGradient(barX, barY, barX, barY + barH * 0.5);
+    glassGrad.addColorStop(0, 'rgba(255, 255, 255, 0.24)');
+    glassGrad.addColorStop(1, 'rgba(255, 255, 255, 0.03)');
+    ctx.fillStyle = glassGrad;
+    ctx.beginPath();
+    ctx.moveTo(barX, barY);
+    ctx.lineTo(barX + barW, barY);
+    ctx.lineTo(barX + barW, barY + barH * 0.45);
+    if (ctx.bezierCurveTo) {
+      ctx.bezierCurveTo(barX + barW * 0.7, barY + barH * 0.55, barX + barW * 0.3, barY + barH * 0.35, barX, barY + barH * 0.45);
+    } else {
+      ctx.lineTo(barX, barY + barH * 0.45);
+    }
+    ctx.closePath();
+    ctx.fill();
 
-    // Low HP Pulse border
+    // 7. Low HP Warning Pulse Border
     if (hpRatio < 0.3) {
-      const pulseAlpha = 0.3 + 0.3 * Math.sin(this.lowHPPulseTimer);
+      const pulseAlpha = 0.35 + 0.35 * Math.sin(this.lowHPPulseTimer);
       ctx.strokeStyle = `rgba(229, 62, 62, ${pulseAlpha})`;
       ctx.lineWidth = 2;
       ctx.strokeRect(barX - 2, barY - 2, barW + 4, barH + 4);
     }
 
-    // Vitality Text Numeric Readout (Centered)
+    // 8. Polished Bone Ivory Numeric Readout
     ctx.font = GOTHIC_HUD_THEME.fontSmall;
-    ctx.fillStyle = GOTHIC_HUD_THEME.boneIvory;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     const hpText = `${Math.ceil(this.displayHealth)} / ${this.maxHealth}`;
-    // Shadow
+    // Solid 2px Drop Shadow
     ctx.fillStyle = '#000000';
     ctx.fillText(hpText, barX + barW / 2 + 1, barY + barH / 2 + 1);
+    ctx.fillText(hpText, barX + barW / 2 + 2, barY + barH / 2 + 1);
+
+    // Bone Ivory Fill
     ctx.fillStyle = GOTHIC_HUD_THEME.boneIvory;
     ctx.fillText(hpText, barX + barW / 2, barY + barH / 2);
 
-    ctx.textAlign = 'start';
-    ctx.textBaseline = 'alphabetic';
+    ctx.restore();
   }
 
   private renderInventorySlots(
@@ -717,38 +907,75 @@ export class GothicHUD {
 
   private renderSurvivalTimer(ctx: CanvasRenderingContext2D, width: number, elapsedTime: number): void {
     const cx = width / 2;
-    const cy = 34;
+    const cy = 30;
 
+    ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Gothic Winglets & Timer Readout
+    // 1. Arched Gothic Pediment Canopy
+    ctx.fillStyle = GOTHIC_HUD_THEME.charredBlack;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 8, 56, Math.PI, 0);
+    ctx.lineTo(cx + 56, cy + 18);
+    ctx.lineTo(cx - 56, cy + 18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = GOTHIC_HUD_THEME.ironBevelLight;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Gold Finial Crest at top
+    ctx.fillStyle = GOTHIC_HUD_THEME.goldFiligree;
+    ctx.fillRect(cx - 2, cy - 22, 4, 6);
+    ctx.beginPath();
+    ctx.arc(cx, cy - 24, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Antique Gold Gradient Typography
     ctx.font = GOTHIC_HUD_THEME.fontTimer;
+    const timerText = `\u27E8  ${this.cachedTimerStr}  \u27E9`;
 
-    // Deep Shadow
+    // Deep Solid Shadow
     ctx.fillStyle = '#000000';
-    ctx.fillText(`\u27E8  ${this.cachedTimerStr}  \u27E9`, cx + 1, cy + 1);
+    ctx.fillText(timerText, cx + 1.5, cy + 1.5);
+    ctx.fillText(timerText, cx + 2, cy + 2);
 
-    // Bone Ivory Fill
-    ctx.fillStyle = GOTHIC_HUD_THEME.boneIvory;
-    ctx.fillText(`\u27E8  ${this.cachedTimerStr}  \u27E9`, cx, cy);
+    // Antique Gold Linear Gradient
+    const goldGrad = ctx.createLinearGradient(cx, cy - 12, cx, cy + 12);
+    goldGrad.addColorStop(0.0, GOTHIC_HUD_THEME.goldHighlight);
+    goldGrad.addColorStop(0.5, GOTHIC_HUD_THEME.goldFiligree);
+    goldGrad.addColorStop(1.0, GOTHIC_HUD_THEME.goldShadow);
+    ctx.fillStyle = goldGrad;
+    ctx.fillText(timerText, cx, cy);
 
-    // Wave Phase Subtitle
+    // 3. Wave Phase Banner Ribbon
     if (this.config.showWavePhase) {
-      let phaseText = 'I. THE AWAKENING';
+      let phaseText = 'PHASE I • THE AWAKENING';
       if (elapsedTime >= 60) {
-        phaseText = 'III. NIGHTFALL';
+        phaseText = 'PHASE III • NIGHTFALL ASCENDANT';
       } else if (elapsedTime >= 30) {
-        phaseText = 'II. THE SWARM';
+        phaseText = 'PHASE II • THE UNDEAD SWARM';
       }
+
+      const bannerW = 200;
+      const bannerH = 15;
+      const bannerY = cy + 17;
+
+      // Inset dark banner with gold border
+      ctx.fillStyle = GOTHIC_HUD_THEME.abyssalVoid;
+      ctx.fillRect(cx - bannerW / 2, bannerY - bannerH / 2, bannerW, bannerH);
+      ctx.strokeStyle = GOTHIC_HUD_THEME.goldShadow;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cx - bannerW / 2 + 0.5, bannerY - bannerH / 2 + 0.5, bannerW - 1, bannerH - 1);
 
       ctx.font = GOTHIC_HUD_THEME.fontSubtitle;
       ctx.fillStyle = GOTHIC_HUD_THEME.goldFiligree;
-      ctx.fillText(phaseText, cx, cy + 16);
+      ctx.fillText(phaseText, cx, bannerY);
     }
 
-    ctx.textAlign = 'start';
-    ctx.textBaseline = 'alphabetic';
+    ctx.restore();
   }
 
   private renderKillCounter(
@@ -758,7 +985,7 @@ export class GothicHUD {
     swarmCount: number
   ): void {
     const rx = width - 20;
-    const ry = 34;
+    const ry = 30;
 
     ctx.save();
     ctx.translate(rx, ry);
@@ -770,68 +997,123 @@ export class GothicHUD {
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
 
-    // Kill Tally Text
+    // Kill Tally Text in Polished Bone Ivory
     ctx.font = GOTHIC_HUD_THEME.fontGothic;
     const formattedKills = kills.toLocaleString('en-US');
 
-    // Shadow
+    // Solid Shadow
     ctx.fillStyle = '#000000';
-    ctx.fillText(formattedKills, 1, 1);
+    ctx.fillText(formattedKills, 1.5, 1.5);
+    ctx.fillText(formattedKills, 2, 2);
+
+    // Bone Ivory Fill
     ctx.fillStyle = GOTHIC_HUD_THEME.boneIvory;
     ctx.fillText(formattedKills, 0, 0);
 
-    // Skull Icon (to left of text)
+    // Anatomical Gothic Skull with Ruby Eyes (to left of text)
     const textMetrics = ctx.measureText(formattedKills);
-    const skullX = -(textMetrics.width + 24);
-    const skullY = -8;
-    this.drawGothicSkull(ctx, skullX, skullY, 16);
+    const skullX = -(textMetrics.width + 26);
+    const skullY = -9;
+    this.drawGothicSkull(ctx, skullX, skullY, 18);
 
     ctx.restore();
 
-    // Swarm Counter Subtitle (Below)
+    // Dynamic Swarm Density Subtitle
     ctx.font = GOTHIC_HUD_THEME.fontSubtitle;
-    ctx.fillStyle = GOTHIC_HUD_THEME.necroticGlow;
     ctx.textAlign = 'right';
-    ctx.fillText(`SWARM: ${swarmCount}`, rx, ry + 16);
-    ctx.textAlign = 'start';
+    ctx.textBaseline = 'middle';
+
+    let densityColor: string = GOTHIC_HUD_THEME.necroticGlow;
+    if (swarmCount > 400) {
+      densityColor = '#f87171'; // Searing Crimson
+    } else if (swarmCount >= 200) {
+      densityColor = '#fbbf24'; // Amber
+    }
+
+    // Shadow
+    ctx.fillStyle = '#000000';
+    ctx.fillText(`SWARM: ${swarmCount}`, rx + 1, ry + 19);
+    ctx.fillStyle = densityColor;
+    ctx.fillText(`SWARM: ${swarmCount}`, rx, ry + 18);
   }
 
   private drawGothicSkull(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
     const cx = x + size / 2;
-    const cy = y + size * 0.45;
-    const r = size * 0.42;
+    const cy = y + size * 0.44;
+    const r = size * 0.44;
 
-    // Cranium
+    ctx.save();
+
+    // 1. Cranium Bone Structure
     ctx.fillStyle = GOTHIC_HUD_THEME.boneIvory;
     ctx.beginPath();
     ctx.arc(cx, cy, r, Math.PI, 0);
-    ctx.lineTo(cx + r * 0.7, cy + r * 0.8);
-    ctx.lineTo(cx - r * 0.7, cy + r * 0.8);
+    ctx.lineTo(cx + r * 0.72, cy + r * 0.85);
+    ctx.lineTo(cx - r * 0.72, cy + r * 0.85);
     ctx.closePath();
     ctx.fill();
 
-    // Jaw
-    ctx.fillRect(cx - r * 0.45, cy + r * 0.8, r * 0.9, r * 0.4);
+    // Cranium Bone Highlights
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 1, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
 
-    // Eye Sockets (Dark with crimson glow)
+    // Weathered Forehead Suture Crack
+    ctx.strokeStyle = GOTHIC_HUD_THEME.boneDark;
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(cx - 1, cy - r * 0.85);
+    ctx.lineTo(cx + 1, cy - r * 0.5);
+    ctx.lineTo(cx - 1, cy - r * 0.2);
+    ctx.stroke();
+
+    // 2. Jaw & Teeth
+    ctx.fillStyle = GOTHIC_HUD_THEME.boneMuted;
+    ctx.fillRect(cx - r * 0.45, cy + r * 0.85, r * 0.9, r * 0.42);
+    ctx.strokeStyle = GOTHIC_HUD_THEME.abyssalVoid;
+    ctx.lineWidth = 0.6;
+    for (let t = -2; t <= 2; t++) {
+      ctx.beginPath();
+      ctx.moveTo(cx + t * 2, cy + r * 0.85);
+      ctx.lineTo(cx + t * 2, cy + r * 1.25);
+      ctx.stroke();
+    }
+
+    // 3. Deep Recessed Eye Sockets with Glowing Ruby Eyes
+    const eyeR = r * 0.24;
+    const eyeOffset = r * 0.35;
+    const eyeY = cy + 1;
+
     ctx.fillStyle = GOTHIC_HUD_THEME.abyssalVoid;
     ctx.beginPath();
-    ctx.arc(cx - r * 0.35, cy + 1, r * 0.22, 0, Math.PI * 2);
-    ctx.arc(cx + r * 0.35, cy + 1, r * 0.22, 0, Math.PI * 2);
+    ctx.arc(cx - eyeOffset, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.arc(cx + eyeOffset, eyeY, eyeR, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = GOTHIC_HUD_THEME.bloodBright;
-    ctx.fillRect(cx - r * 0.35, cy + 1, 1.5, 1.5);
-    ctx.fillRect(cx + r * 0.35, cy + 1, 1.5, 1.5);
+    // Ruby-Crimson Glowing Irises
+    ctx.fillStyle = '#ff2222';
+    ctx.beginPath();
+    ctx.arc(cx - eyeOffset, eyeY, eyeR * 0.55, 0, Math.PI * 2);
+    ctx.arc(cx + eyeOffset, eyeY, eyeR * 0.55, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Nasal aperture
+    // Additive Red Gleam
+    ctx.fillStyle = '#ff8888';
+    ctx.fillRect(cx - eyeOffset - 0.5, eyeY - 0.5, 1.5, 1.5);
+    ctx.fillRect(cx + eyeOffset - 0.5, eyeY - 0.5, 1.5, 1.5);
+
+    // 4. Nasal Cavity
     ctx.fillStyle = GOTHIC_HUD_THEME.abyssalVoid;
     ctx.beginPath();
-    ctx.moveTo(cx, cy + r * 0.35);
-    ctx.lineTo(cx + 1, cy + r * 0.55);
-    ctx.lineTo(cx - 1, cy + r * 0.55);
+    ctx.moveTo(cx, cy + r * 0.38);
+    ctx.lineTo(cx + 1.2, cy + r * 0.62);
+    ctx.lineTo(cx - 1.2, cy + r * 0.62);
     ctx.closePath();
     ctx.fill();
+
+    ctx.restore();
   }
 
   private renderBossBar(

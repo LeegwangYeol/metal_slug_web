@@ -1,56 +1,50 @@
-# BRIEFING — 2026-09-10T19:05:00Z
+# BRIEFING — 2026-09-11T07:43:00Z
 
 ## Mission
-Adversarially verify the 15-second survival loop and visual buffer fidelity for Milestone 4 (m4_2).
+Adversarially challenge and stress-test the Playwright E2E Suite, Survival Loop, and Error Invariants under heavy enemy load and rapid input fuzzing.
 
 ## 🔒 My Identity
 - Archetype: challenger
 - Roles: critic, specialist
 - Working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2
-- Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Milestone: m4_2
-- Instance: 1 of 1
+- Original parent: 52278ce8-fed5-44e0-ad05-d44362fee9a5
+- Milestone: M4
+- Instance: 2 of 2
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
-- Run all verification code and tests ourselves; do not trust claims or logs blindly
-- Empirically verify 15-second survival loop, kinematic safety of 8-way steering bot, XP/gem mechanics, and visual screenshot buffer fidelity
+- Adversarially stress test Playwright E2E Suite, Survival Loop, and Error Invariants
+- Assert zero console errors and zero unhandled exceptions throughout stress conditions
+- Write reports to progress.md and handoff.md in working directory
+- Do not modify production implementation files; write tests in tests/e2e/
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: 2026-09-10T19:05:00Z
+- Conversation ID: 52278ce8-fed5-44e0-ad05-d44362fee9a5
+- Updated: not yet
 
 ## Review Scope
-- **Files to review**:
-  - ORIGINAL_REQUEST.md
-  - COLLABORATION.md
-  - PROJECT.md
-  - .agents/worker_m4_2/handoff.md
-  - tests/e2e/restart_survival.spec.ts
-  - artifacts/dark_fantasy/*.png
-- **Interface contracts**: PROJECT.md
-- **Review criteria**: Kinematic safety, 15-second survival, auto-firing & XP/gem drop mechanics, visual screenshot buffer fidelity (960x540, non-blank, color histogram)
+- **Files to review**: `tests/e2e/challenger_m4_visual_stress.spec.ts`, `tests/e2e/challenger_m4_2_stress.spec.ts`, `src/ui/UpgradeModal.ts`, `src/main.ts`, `src/input/KeyboardController.ts`
+- **Interface contracts**: PROJECT.md, ORIGINAL_REQUEST.md, COLLABORATION.md, worker_m4_e2e_artifacts/handoff.md
+- **Review criteria**: Zero console errors, zero unhandled exceptions, accumulator stability, modal queue preservation, input boundary resilience under 50+ active entities.
+
+## Key Decisions Made
+- Authored 3-scenario adversarial stress suite `tests/e2e/challenger_m4_visual_stress.spec.ts`
+- Executed `challenger_m4_2_stress.spec.ts` (100% green, 2/2 passed)
+- Executed `challenger_m4_visual_stress.spec.ts` (100% green, 3/3 passed)
+- Currently validating full test suite regression
+
+## Artifact Index
+- DISPATCH.md — Initial dispatch instructions
+- progress.md — Real-time progress and verification milestones
+- handoff.md — Comprehensive 5-component handoff report
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - H1: Dynamic steering bot may get cornered or take lethal burst damage during Phase 1 waves -> Rejected. Bot maintained min HP 45.31 across 15+ seconds.
-  - H2: Weapons may fail to engage or slash buffers leak in memory -> Rejected. 29 kills registered, active slashes cleanly expired to 0.
-  - H3: Soul gems may accumulate without collection causing entity pool leak -> Rejected. 100% of drops picked up, LootManager pool capacity strictly conserved at 1,500.
-  - H4: Screenshots may be blank, solid black, corrupted, or undersized -> Rejected. Valid PNGs, exact 960x540, 203KB-336KB (>50KB threshold), 7k-53k unique colors, active 16/16 histogram bins.
-- **Vulnerabilities found**:
-  - None in core game engine or restart lifecycle. All invariants preserved.
-- **Untested angles**:
-  - Survival beyond 60+ seconds (covered in general horde tests).
+  - H1: Rapid modal opening/closing under 50+ active enemies causes accumulator runaway or coordinate NaNs. -> Disproved; accumulator clamped to <= 0.016s, 0 NaNs.
+  - H2: Keyboard navigation fuzzing (Digit1..Digit4, Escape, Space, Arrows, WASD) causes unhandled exceptions or console errors. -> Disproved; 324 keys fuzzed over 15s with 0 console errors and 0 page errors.
+  - H3: Out-of-bounds keys (e.g. Digit4 on 3-card modal) or rapid multi-level queue cause modal desync or stuck paused states. -> Disproved; boundary checks handled gracefully and 5 multi-queued level-ups consumed deterministically.
+- **Vulnerabilities found**: None. System is resilient against modal churn, input fuzzing, and accumulator desync.
+- **Untested angles**: WebGL GPU context loss (headless Chromium software rasterization used; hardware context loss out of scope for headless web).
 
 ## Loaded Skills
-- None requested
-
-## Key Decisions Made
-- Executed empirical Python PNG scanline & histogram analyzer on all 3 visual proof artifacts.
-- Executed Playwright adversarial stress harness testing kinematic safety, weapon engagement, gem drops, and zero-leak pool invariants.
-- Verdict: APPROVE.
-
-## Artifact Index
-- handoff.md — Final challenger evaluation and verdict (APPROVE)
-- progress.md — Liveness and task execution log
-- tests/e2e/challenger_m4_2_stress.spec.ts — Adversarial stress test harness
+- None required directly

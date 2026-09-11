@@ -1,7 +1,7 @@
-# BRIEFING — 2026-09-11T11:38:00+09:00
+# BRIEFING — 2026-09-11T15:33:00+09:00
 
 ## Mission
-Adversarial and quality review of Milestone 1: Precision Damage Hitbox & Collision Subsystem.
+Objective review and adversarial stress-testing of Milestone 1: Dynamic Animations & Motion Engine (HordeManager, Enemy, Player, DarkFantasySprites).
 
 ## 🔒 My Identity
 - Archetype: reviewer-critic
@@ -10,67 +10,63 @@ Adversarial and quality review of Milestone 1: Precision Damage Hitbox & Collisi
 - Original parent: d7e47049-ad05-49c0-9ddc-39995092b4b9
 - Milestone: Milestone 1: Precision Damage Hitbox & Collision Subsystem
 - Instance: 1 of 1
+- Current Parent: 52278ce8-fed5-44e0-ad05-d44362fee9a5
+- Active Milestone: Milestone 1 (Dynamic Animations & Motion Engine)
+- Subagent Instance: reviewer_m1_1 (1 of 2 dual reviewers)
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
 - Integrity check: actively check for hardcoded test results, facade implementations, shortcuts, fabricated verification
 - Send message to orchestrator upon completion
+- Actively stress-test assumptions, edge cases, and performance invariants
 
 ## Current Parent
-- Conversation ID: d7e47049-ad05-49c0-9ddc-39995092b4b9
-- Updated: 2026-09-11T11:38:00+09:00
+- Conversation ID: 52278ce8-fed5-44e0-ad05-d44362fee9a5
+- Updated: 2026-09-11T15:33:00+09:00
 
 ## Review Scope
 - **Files to review**:
-  - `src/main.ts`
-  - `src/core/entities/Player.ts`
-  - `src/core/entities/EnemyTypes.ts`
   - `src/core/entities/Enemy.ts`
-  - `src/core/weapons/BoneSpear.ts`
-  - `src/core/weapons/SoulOrbiters.ts`
-  - `src/core/weapons/ArcaneScythe.ts`
-  - `src/core/weapons/CursedAura.ts`
-  - `src/core/weapons/AbyssalLightning.ts`
-  - `tests/unit/hitbox_precision.spec.ts`
-  - `tests/unit/Weapons.test.ts`
-- **Interface contracts**: `/Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md`
+  - `src/core/HordeManager.ts`
+  - `src/core/entities/Player.ts`
+  - `src/render/sprites/DarkFantasySprites.ts`
+  - `tests/unit/PlayerMotionEngine.test.ts`
+  - `tests/unit/ChallengerM1_2.test.ts`
+- **Interface contracts**: `PROJECT.md`, `COLLABORATION.md`, `ORIGINAL_REQUEST.md`
 - **Review criteria**: correctness, style, conformance, adversarial edge cases, integrity
 
 ## Review Checklist
 - **Items reviewed**:
-  - `src/main.ts`: Contact damage loop & scratch allocation [Reviewed - PASS]
-  - `src/core/entities/Player.ts`: Hurtbox radius 11.0px & bounds calibration [Reviewed - PASS]
-  - `src/core/entities/EnemyTypes.ts`: Enemy base radii calibration [Reviewed - PASS]
-  - `src/core/entities/Enemy.ts`: Radius getter/setter and position getter [Reviewed - PASS]
-  - `src/core/weapons/BoneSpear.ts`: Projectile radius 8.0px & two-phase collision [Reviewed - PASS]
-  - `src/core/weapons/SoulOrbiters.ts`: Per-orb collision & gap immunity [Reviewed - PASS]
-  - `src/core/weapons/ArcaneScythe.ts`: Radial reach & angle cone cleave [Reviewed - PASS]
-  - `src/core/weapons/CursedAura.ts`: Radial reach shockwave [Reviewed - PASS]
-  - `src/core/weapons/AbyssalLightning.ts`: Primary & chain radial reach [Reviewed - PASS]
-  - `tests/unit/hitbox_precision.spec.ts`: 33 unit tests [Reviewed - PASS]
-  - `tests/unit/Weapons.test.ts`: Regression maintenance [Reviewed - PASS]
-- **Verdict**: APPROVE
+  - `src/core/HordeManager.ts`: BehaviorTimer advancement & gait phase integration [Reviewed - PASS]
+  - `src/core/entities/Player.ts`: Exponential relaxation velocity easing & 1.6x turnaround traction [Reviewed - PASS]
+  - `src/core/entities/Player.ts`: Damped harmonic squash/stretch volume conservation (Sx * Sy = 1.0) [Reviewed - PASS]
+  - `src/core/entities/Player.ts`: 3-phase weapon attack state machine (wind-up, release, follow-through) [Reviewed - PASS]
+  - `src/core/entities/Enemy.ts`: Procedural locomotion states, damage deformation squash & angular flinch [Reviewed - PASS]
+  - `src/render/sprites/DarkFantasySprites.ts`: Bi-harmonic walk cycles & incommensurate spectral hover [Reviewed - PASS]
+  - `src/render/sprites/DarkFantasySprites.ts`: 120-canvas atlas cache invariant preserved [Reviewed - PASS]
+  - `tests/unit/PlayerMotionEngine.test.ts`: 14/14 unit tests pass [Reviewed - PASS]
+  - Full test suite: 34/34 test files, 502/502 tests pass [Reviewed - PASS]
+- **Verdict**: APPROVE (with 2 constructive observations)
 - **Unverified claims**: None
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - 1. Floating-point tolerance $10^{-3}$ vs near-miss: Proved that $10^{-3}$ corresponds to $\sim 0.000023\text{px}$, strictly excluding 1px or 0.1px near misses while preventing false negatives from trigonometric roundoff.
-  - 2. Spatial query broadphase radius `Player.COLLISION_RADIUS + 32`: Proved that max enemy radius is 18px (Death Knight), guaranteeing complete candidate capture without spatial false negatives.
-  - 3. Dense horde scratch buffer saturation: `damageScratch` buffer (size 64) handles high density with zero per-frame dynamic allocations.
-  - 4. Annular gap immunity in SoulOrbiters: Proved that enemies located in empty gaps on the orbit radius take 0 damage, eliminating the 52px donut bug.
-  - 5. Weapon projectile / area narrowphase bounds: Proved that BoneSpear, ArcaneScythe, CursedAura, and AbyssalLightning strictly enforce Euclidean distances.
-- **Vulnerabilities found**: None in worker's code.
-- **Untested angles**: Camera centering and top-down viewport (deferred to Milestone 2).
+  - 1. Zero/Extreme dt Stability: Mathematically proved approachExp and damped oscillator remain stable for dt in [0, 0.5s].
+  - 2. Apparent Volume Invariant: Proved delta is bounded in [-0.25, 0.25], guaranteeing Sx * Sy == 1.0 without division by zero.
+  - 3. Incommensurate Spectral Levitation: Verified dual frequency ratio (1.886) provides non-repeating levitation float.
+  - 4. Blit Performance Bypass: Proved that entities bypass ctx.save()/restore() when flinchRot === 0 and scales === 1.0, preserving 1.68ms blit budget for 1,000 entities.
+  - 5. Single-Player Lean Transform Check: Identified that drawPlayer hasTransform omits tilt !== 0, skipping subtle running lean during steady-state walk (constructive finding).
+  - 6. Weapon Attack Trigger Integration: Identified that weapons do not yet invoke player.triggerAttack() during fire() (constructive recommendation).
+- **Vulnerabilities found**: None that break functionality or introduce crashes.
+- **Untested angles**: Full visual rendering in Playwright browser (owned by M4).
 
 ## Key Decisions Made
-- Confirmed zero phantom padding in contact damage loop (`src/main.ts:468`).
-- Confirmed player hurtbox radius calibration to 11.0px.
-- Confirmed horde enemy radii calibration (Skeleton 11, Ghoul 13, Banshee 12, Death Knight 18, Necromancer 14).
-- Confirmed occult weapons two-phase collision implementation.
-- Confirmed 33/33 tests pass in `tests/unit/hitbox_precision.spec.ts`.
-- Confirmed zero integrity violations (no dummy facades, no hardcoded results).
-- Rendered APPROVE verdict.
+- Verified complete absence of integrity violations (no mocks, no facades, no hardcoded outputs).
+- Verified TypeScript build clean (`tsc -b && vite build` exits 0).
+- Verified full test suite 100% green (34 test files, 502 tests).
+- Formulated verdict: APPROVE with constructive recommendations.
 
 ## Artifact Index
-- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m1_1/handoff.md` — Final handoff review report
 - `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m1_1/progress.md` — Liveness progress log
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m1_1/handoff.md` — Complete 5-component handoff review report
+

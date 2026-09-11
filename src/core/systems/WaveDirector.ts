@@ -49,8 +49,8 @@ export interface MilestoneEvent {
 }
 
 export interface WaveDirectorConfig {
-  viewportWidth?: number;  // Default 960
-  viewportHeight?: number; // Default 540
+  viewportWidth?: number;  // Default 1200 (widened camera FOV)
+  viewportHeight?: number; // Default 675
   spawnMargin?: number;    // Default 90 px outside viewport
   arenaBounds?: { minX: number; maxX: number; minY: number; maxY: number };
   onWaveEvent?: (event: WaveEventNotification) => void;
@@ -107,8 +107,8 @@ export class WaveDirector {
 
   constructor(hordeManager: HordeManager, config: WaveDirectorConfig = {}) {
     this.hordeManager = hordeManager;
-    this.viewportWidth = config.viewportWidth ?? 960;
-    this.viewportHeight = config.viewportHeight ?? 540;
+    this.viewportWidth = config.viewportWidth ?? 1200;
+    this.viewportHeight = config.viewportHeight ?? 675;
     this.spawnMargin = config.spawnMargin ?? 90;
     this.arenaBounds = config.arenaBounds ?? {
       minX: -2000,
@@ -391,7 +391,8 @@ export class WaveDirector {
   public spawnRingSurround(camX: number, camY: number, count: number): void {
     const centerX = camX + this.viewportWidth / 2;
     const centerY = camY + this.viewportHeight / 2;
-    const radius = 670; // Outside 960x540 camera
+    // Scaled from 670 to 800px to strictly lie outside the widened 1200x675 viewport (hypot(600, 337.5) = 688.4px)
+    const radius = Math.max(800, Math.hypot(this.viewportWidth / 2, this.viewportHeight / 2) + 110);
     const hpMult = this.getHPMultiplier();
     const speedMult = this.getSpeedMultiplier();
 

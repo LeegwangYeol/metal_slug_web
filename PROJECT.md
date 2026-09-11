@@ -1,151 +1,84 @@
-# Project: Dark Fantasy Horde Survival ("Grim Harvest: Undead Siege")
+# Project: Grim Harvest — Undead Siege (40-Agent Swarm Enhancement)
 
 ## Core Vision & Identity
 A grim, brutal, gothic dark-fantasy horde survival shooter inspired by Vampire Survivors.
-The player controls an exiled dark sorcerer / grim inquisitor fighting off endless tides of the undead and cosmic horrors across an cursed wasteland.
-Survival demands lethal precision, automated occult weaponry, soul-essence harvesting, and synergistic rogue-lite boons.
+This enhancement mission overhauls character/enemy animations with dynamic motion (R1), widens the camera field of view (FOV) to reveal a substantially broader battlefield against massive undead hordes (R2), completely redesigns the HUD and Upgrade Selection Menu with modern dark fantasy aesthetics (R3), provides Playwright visual proof screenshots (>250KB) and automated E2E tests (R4), and guarantees 100% green tests and live Vercel production deployment (R5).
 
 ---
 
-## 🏛️ Foundational Engine Architecture
+## 🏛️ Feature Inventory
 
-### 1. High-Performance Horde Simulation Core (`src/core/`)
-- **Entity Component & Horde Pool**:
-  - High-density spatial partitioning (dynamic spatial hash grid / quadtree) capable of simulating 1,000+ simultaneous active undead entities at locked 60Hz.
-  - Zero-garbage object pooling for projectiles, damage numbers, soul gems, and particle effects.
-  - Fixed-timestep physics simulation (`dt = 1/60`) completely decoupled from rendering.
-- **Player Entity (`src/core/entities/Player.ts`)**:
-  - Omnidirectional 360-degree movement with smooth inertia and responsive collision.
-  - Core statistics: Max Health, Health Regen, Armor / Damage Reduction, Move Speed, Might (Damage Multiplier), Area of Effect, Projectile Speed, Cooldown Reduction, Magnet Radius, Luck / Crit Chance.
-  - Soul level & XP progression curve: `XP_required = base * (level ^ 1.5)`.
-- **Horde Wave Director (`src/core/systems/WaveDirector.ts`)**:
-  - Continuous elapsed-time horde scaling:
-    - *Minute 0:00–0:30 (The Awakening)*: Shambling skeletons and crawling ghouls surrounding the player in staggered clusters.
-    - *Minute 0:30–1:00 (The Swarm)*: High-density zombie hordes and fast phantom bats executing ring surrounds.
-    - *Minute 1:00+ (Nightfall)*: Massive undead legion surges, elite armored death knights, and spectral banshees with projectile attacks.
-  - Periodic Mini-Bosses & Horde Events (e.g. Abyssal Reaper at milestone times).
-- **Automated Occult Arsenal (`src/core/weapons/`)**:
-  - Weapons fire automatically based on independent internal cooldowns, targeting nearest enemies, random clusters, or orbiting the player:
-    1. **Arcane Scythe**: Sweeping spectral blade cutting arcs through forward enemy clusters.
-    2. **Soul Orbiters**: Orbiting skull flames orbiting the player that incinerate encroaching enemies on contact.
-    3. **Abyssal Lightning**: Strikes down random dense enemy clusters with chaining electrical necrosis.
-    4. **Bone Spear**: High-velocity piercing projectiles penetrating multiple undead in a straight line.
-    5. **Cursed Aura (Death Sigil)**: Periodic pulsating damage ring centered on player with heavy knockback.
-- **Loot & Magnetism System (`src/core/systems/LootManager.ts`)**:
-  - Defeated enemies spawn Soul Shards / Blood Gems (Emerald, Ruby, Violet for varying XP values).
-  - Shards remain persistent until attracted by the player's Magnet radius, accelerating towards the player with lerped velocity.
-- **Rogue-Lite Boon & Synergy Engine (`src/core/systems/UpgradeSystem.ts`)**:
-  - Upon leveling up, the game pauses simulation and generates 3–4 randomized upgrade cards.
-  - Weapons can be upgraded from Rank 1 to 5.
-  - Passives (Tome of Might, Ring of Velocity, Blood Chalice, Eldritch Magnet, Obsidian Armor).
-  - Synergistic Weapon Evolutions at max rank (e.g. Arcane Scythe + Blood Chalice = Soul Reaping Harvester).
+| # | Feature | Description | Milestone | Source |
+|---|---------|-------------|-----------|--------|
+| 1 | Entity Animation Clock Fix | Increment `enemy.behaviorTimer` in `HordeManager.ts` to unlock 4-frame sprite walk cycles | M1 | Survey (Anim) |
+| 2 | Dynamic Velocity Easing | Critically damped exponential relaxation kinematics replacing linear clamping | M1 | Survey (Anim) |
+| 3 | Harmonic Squash & Stretch | Damped harmonic oscillator volume-conserving scale transforms on dashes/turns/impacts | M1 | Survey (Anim) |
+| 4 | Weapon Anticipation & Recoil | 3-phase weapon state machine (wind-up, release, follow-through) with torso lean | M1 | Survey (Anim) |
+| 5 | Bi-Harmonic Grounded Walk Cycles | Vertical gait bobbing and pelvic sway for Skeletons, Ghouls, and Death Knights | M1 | Survey (Anim) |
+| 6 | Spectral Hover & Floating | Dual incommensurate harmonic levitation and shadow-height coupling for Banshee/Necromancer | M1 | Survey (Anim) |
+| 7 | Dynamic Flinch & Damage Cascade | Multi-tier damage reaction (impulse squash, angular stumble, 3-phase hit flash) | M1 | Survey (Anim) |
+| 8 | Widened Camera FOV ($Z = 0.80$) | Expand visible world area by +56.25% ($1200 \times 675$) with centered damped tracking | M2 | Survey (Camera) |
+| 9 | World vs Canvas Isolation | Scale world render pass via camera zoom while rendering HUD 1:1 on 960x540 canvas | M2 | Survey (Camera) |
+| 10 | Viewport Culling Adaptation | Expand entity & loot render culling margins to match $1200 \times 675$ view extents | M2 | Survey (Camera) |
+| 11 | Wave Spawner Adaptation | Update WaveDirector spawn margins and increase ring surround radius ($670 \to 800\text{px}$) | M2 | Survey (Camera) |
+| 12 | Dynamic Radial Lighting Expansion | Scale player torch radius ($200 \to 250\text{px}$) and vignette radius to fit expanded FOV | M2 | Survey (Camera) |
+| 13 | Toroidal Backdrop Seam Prevention | Continuous flagstone, rune, and prop tiling across expanded $1200 \times 675$ bounds | M2 | Survey (Camera) |
+| 14 | Ornate Filigree Health Bar | Wrought-iron cathedral filigree framing, blood gradient, and amber ghost damage stagger | M3 | Survey (UI) |
+| 15 | Soul-Blue & Amethyst XP Bar | High-contrast glowing soul-blue progress bar with metallic bevel and octagonal runic badge | M3 | Survey (UI) |
+| 16 | Antique Gold Timer & Skull Ledger | Arched gothic pediment with antique gold chronometer and anatomical skull kill counter | M3 | Survey (UI) |
+| 17 | 4-Tier Rarity Upgrade Cards | Common, Rare, Epic, Legendary glowing borders on dark gothic glassmorphism cards | M3 | Survey (UI) |
+| 18 | Custom Procedural Skill Icons | Unique gothic iconography and traveling border gleam micro-interactions for upgrade cards | M3 | Survey (UI) |
+| 19 | Typography & Font Elevation | Google Font 'Cinzel' preloading in index.html with graceful Georgia offline fallback | M3 | Survey (UI) |
+| 20 | Visual Proof Artifacts (>250KB) | High-resolution Playwright screenshot captures for FOV, Modern UI, and Dynamic Motion | M4 | Survey / Req |
+| 21 | Automated E2E Regression Suite | 30s+ survival loop, level-up card selection, zero-error assertions | M4 | Survey / Req |
+| 22 | 100% Green Unit & E2E Tests | All Vitest and Playwright test suites passing cleanly without regressions | M5 | Survey / Req |
+| 23 | Production Deployment Verification | Git push to origin/main verified and live Vercel HTTP/2 200 confirmed | M5 | Survey / Req |
 
 ---
 
-## 🎨 Dark Fantasy Aesthetic & Render Pipeline (`src/render/`)
+## 👥 40-Agent Swarm Milestones & Decomposition
 
-### 1. Gothic Color Palette & Atmosphere
-- Deep grim palettes:
-  - Abyssal Void (`#08060c`, `#0f0d1a`, `#171326`)
-  - Necrotic Emerald (`#0d3824`, `#19633e`, `#28a745`, `#68d391`)
-  - Blood Crimson (`#380a0a`, `#6b1212`, `#a81d1d`, `#e53e3e`)
-  - Bone Ivory (`#2a2624`, `#615852`, `#b8aea5`, `#ede5de`)
-  - Cursed Arcane (`#1a0c2e`, `#3c1b6b`, `#7038b8`, `#b794f6`)
-
-### 2. High-Performance Procedural & Canvas Rendering
-- Dynamic multi-layered gothic backdrop:
-  - Cursed desolate graveyard with weathered obsidian tombstones, twisted dead trees, and ground mist.
-  - Blood moon / eclipse looming in the darkened stormy sky with drifting storm clouds.
-  - Dynamic runic circles engraved into ancient stone flagging.
-- Swarm Visuals:
-  - Distinct silhouette-driven procedural sprites for Player, Skeletons, Ghouls, Death Knights, and Banshees.
-  - Flashing damage frames (white/crimson flash on impact), gore splatters, and soul dissipation upon death.
-- Arcane VFX:
-  - Luminescent glowing trails, lingering spell circles, shadow aura, and floating XP gem glints.
+| # | Milestone | Scope | Agent Allocation | Dependencies | Status |
+|---|-----------|-------|------------------|--------------|--------|
+| 0 | Phase 0: Architectural Survey | Subsystem mapping across Anim, Camera, UI | 3 Explorers | None | **DONE** |
+| 1 | Milestone 1: Dynamic Animations & Motion Engine | Entity timer fix, easing, squash/stretch, walk/hover bobs, flinch, weapon anticipation | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M0 | **DONE** |
+| 2 | Milestone 2: Widen Camera FOV & Viewport Optimization | Camera zoom 0.80, world scale, culling/spawning boundaries, radial lighting, backdrop | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M0 | **DONE** |
+| 3 | Milestone 3: Modern Dark Fantasy UI/HUD Overhaul | Filigree health bar, soul-blue XP, runic badge, gold timer, 4-tier rarity glassmorphic cards | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M0 | **DONE** |
+| 4 | Milestone 4: Visual Proof & Automated E2E Suite | Playwright E2E tests, >250KB screenshots for FOV & UI, motion proof validation | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M1, M2, M3 | **PLANNED** |
+| 5 | Milestone 5: 100% Green Tests & Production Deployment | Full test suite verification (unit + E2E), git commit/push to origin/main, live Vercel HTTP/2 200 | 1 Worker, 2 Reviewers, 2 Challengers, 1 Auditor | M4 | **PLANNED** |
 
 ---
 
-## 🖥️ Imposing Dark Fantasy UI & HUD (`src/ui/`)
-- **Gothic HUD**:
-  - Vitality Orb / Bar with deep crimson blood filling and cracked iron framing.
-  - Soul Level indicator and luminous green/violet XP bar stretching across top of screen.
-  - Elapsed Survival Timer (MM:SS) and Kill Counter with skull iconography.
-  - Active Weapon & Passive Inventory Slots displaying current ranks.
-- **Level-Up Choice Modal**:
-  - Pauses gameplay immediately.
-  - Ornate gothic stone tablets displaying Card Icon, Name, Rank, Description, and Stat Deltas.
-  - Keyboard (1, 2, 3, 4) and mouse click selection with visceral sound/visual confirmation.
-- **Game Over & Victory Screen**:
-  - "YOU HAVE SUCCUMBED TO THE HORDE" / "SURVIVAL ACHIEVED".
-  - Detailed run statistics: Survival Time, Total Kills, Damage Dealt, Final Level, Weapon DPS breakdown.
-  - Restart / Retry button.
+## 🔗 Interface Contracts & Code Layout
 
----
+### Code Layout
+- `src/render/sprites/DarkFantasySprites.ts`: Sprite rendering, cached atlas transforms (squash, stretch, rotate, bob, flinch). Owned by M1.
+- `src/core/entities/Player.ts`: Player kinematic easing relaxation, attack animation state machine. Owned by M1.
+- `src/core/entities/Enemy.ts`: Enemy motion state (walk phase, hover phase, flinch state). Owned by M1.
+- `src/core/HordeManager.ts`: Entity simulation loop, advancing `behaviorTimer`. Owned by M1.
+- `src/render/Camera.ts`: Camera zoom factor ($Z = 0.80$), `viewWidth` ($1200$), `viewHeight` ($675$), coordinate transforms. Owned by M2.
+- `src/render/GothicBackdrop.ts`: Toroidal tiling, seam prevention for expanded FOV. Owned by M2.
+- `src/render/vfx/DarkFantasyVFX.ts`: Dynamic lighting engine bounds ($1200 \times 675$) and vignette gradients. Owned by M2.
+- `src/core/systems/WaveDirector.ts`: Viewport dimensions and ring surround radius ($800\text{px}$). Owned by M2.
+- `src/main.ts`: Render loop world scaling (`ctx.scale(zoom, zoom)`) and entity/loot culling bounds. Owned by M2.
+- `src/ui/GothicHUD.ts`: Canvas HUD rendering (Health filigree, soul-blue XP, runic badge, gold timer/kills). Owned by M3.
+- `src/ui/UpgradeModal.ts`: 4-tier rarity upgrade cards, glassmorphic styling, custom icons, border gleams. Owned by M3.
+- `index.html`: Font preloading ('Cinzel'). Owned by M3.
+- `tests/e2e/`: Playwright test suite and screenshot artifact generation. Owned by M4.
 
-## 🧪 Rigorous Verification & Deployment Strategy
-
-1. **Unit Test Suite (`tests/unit/`)**:
-   - `HordeManager.test.ts`: 1,000+ enemy spawn, culling, spatial grid lookup, zero memory leaks.
-   - `PlayerProgression.test.ts`: XP curve math, leveling logic, stat calculation with passives.
-   - `WeaponsAndSynergies.test.ts`: Auto-firing timing, projectile pierce, damage scaling, evolution triggers.
-   - `WaveDirector.test.ts`: Escalation timeline, difficulty scaling, enemy type distribution.
-
-2. **Automated Playwright E2E Playtesting (`tests/e2e/`)**:
-   - `horde_survival.spec.ts`:
-     - Launches browser and runs continuous 30+ second survival simulation.
-     - Simulates player dodging hordes while auto-firing kills enemies.
-     - Verifies XP gem collection and leveling up.
-     - Interacts with Level-Up modal and selects an upgrade card.
-     - Confirms simulation resumes seamlessly with upgraded stats.
-     - Asserts zero JavaScript errors, zero unhandled rejections, and zero engine lag.
-   - High-resolution visual proof screenshots saved in `artifacts/dark_fantasy/`:
-     - `artifacts/dark_fantasy/horde_swarm.png` (demonstrating overwhelming undead swarms and dark gothic art).
-     - `artifacts/dark_fantasy/level_up_modal.png` (demonstrating gothic upgrade card selection).
-     - `artifacts/dark_fantasy/survival_gameplay.png` (demonstrating auto-firing weapons and visual effects).
-
-3. **Production Deployment**:
-   - 100% green tests (`npm test` and `npm run test:e2e`).
-   - Clean production build (`npm run build`).
-   - Git push to `origin/main` on GitHub.
-   - Verify Vercel deployment status.
-
----
-
-## 🏁 Milestones & 60-Agent Decomposition
-
-| Milestone | Scope | Agent Allocation | Dependencies | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **M1: Foundation & High-Performance Core** | Wipe old cute code, implement spatial grid, horde entity pooling, player physics, XP/leveling math | Agents 1–15 | None | **DONE** |
-| **M2: Dark Fantasy Art & Gothic Render Engine** | Dark fantasy palette, procedural undead & player sprites, cursed graveyard backdrop, spell VFX, gothic HUD | Agents 16–30 | M1 | **DONE** |
-| **M3: Occult Arsenal, Upgrades & Horde Director** | 5 auto-firing weapons, rogue-lite level-up modal, passives & synergies, escalating wave spawner | Agents 31–45 | M1, M2 | **DONE** |
-| **M4: Automated E2E Playtesting & Hardening** | Playwright 30s+ survival loop test, visual proof screenshots, comprehensive unit tests | Agents 46–55 | M3 | **DONE** |
-| **M5: Deployment & Live Production Verification** | Clean build, 100% green tests, git push to origin/main, Vercel verification | Agents 56–60 | M4 | **DONE** |
-
----
-
-## 🔄 Enhancement & Bug-Fix: Clean Restart Architecture & Visual Fidelity Overhaul
-
-### 1. Game Restart State Engine (R1)
-- **Lifecycle Cleanliness**:
-  - Unbind/cancel previous `requestAnimationFrame` to prevent duplicate loop drift.
-  - Reset `lastTime = performance.now()` and `accumulator = 0` to prevent infinite `while (accumulator >= FIXED_TIMESTEP)` loops.
-  - Full purge and re-initialization of `HordeManager` (2,048 pooled entities), `SpatialHashGrid`, and `LootManager` (1,500 pooled gems).
-  - Reset `Player` state (HP, Level 1, inventory, position to (0,0), alive status).
-  - Reset `WeaponManager` to starter Rank 1 Arcane Scythe.
-  - Reset `WaveDirector` to Phase 1.
-  - Reset `UpgradeModal` and unpause simulation.
-  - Canvas click and Spacebar listener hooks for Game Over plaque resurrection.
-
-### 2. High-Fidelity Visuals & Atmospheric Polish (R2)
-- **Sprite Overhaul**:
-  - Multi-layered procedural character and monster rendering with anatomical depth.
-  - Grim Sorcerer with hooded cowl, ragged crimson robes, and glowing eyes.
-  - Skeletal warriors with weathered bone texturing and rusted iron scythes.
-  - Ghouls with decaying flesh gradients and necrotic pustules.
-  - Translucent additive-blended banshee specters.
-  - Death Knights in heavy obsidian plate with gold filigree.
-- **Lighting, Shadows & VFX**:
-  - Dynamic radial player torch/spell lighting.
-  - Ground contact drop shadows beneath all entities.
-  - Persistent fading blood decals on the terrain.
-  - Abyssal lightning arcs, swirling soul motes, and volumetric depth mist.
+### Cross-Module Interface Contracts
+1. **Camera ↔ Main Render Loop**:
+   - `camera.zoom: number` (default `0.80`)
+   - `camera.viewWidth: number` (returns `this.viewportWidth / this.zoom`, i.e. `1200`)
+   - `camera.viewHeight: number` (returns `this.viewportHeight / this.zoom`, i.e. `675`)
+   - `main.ts` executes `ctx.save(); ctx.scale(camera.zoom, camera.zoom);` for passes 1–10, then `ctx.restore();` before HUD pass 11 and modal pass 12.
+2. **HordeManager ↔ DarkFantasySprites**:
+   - `enemy.behaviorTimer: number` increments by `dt` on every frame.
+   - `DarkFantasySprites.drawEnemy` reads `enemy.behaviorTimer` and derives walk frame `Math.floor(timer * 8) % 4`.
+   - `DarkFantasySprites.initialize()` preserves the 120-canvas pre-rasterized atlas invariant (5 types $\times$ 4 frames $\times$ 2 facings $\times$ 3 flashes).
+3. **Player & Weapons ↔ Render Loop**:
+   - `player.attackAnimState: { phase: 'idle'|'windup'|'release'|'followthrough', timer: number, weaponType: string }`
+   - `DarkFantasySprites.drawPlayer` applies dynamic squash/stretch and torso lean during attacks and turns.
+4. **GothicHUD & UpgradeModal ↔ Canvas**:
+   - Both modules render strictly within the native $960 \times 540$ virtual coordinate space, unaffected by camera world zoom.
+   - Public properties in `GothicHUD` (`displayXP`, `ghostHealth`, `ghostDrainDelay`, `killScaleAnim`, `cachedTimerStr`) are strictly preserved.

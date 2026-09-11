@@ -1,31 +1,35 @@
-## 2026-09-11T02:35:05Z
+# Dispatch Assignment: Milestone 1 Forensic Auditor
 
-You are the Forensic Auditor (Agent 8) for Milestone 1: Precision Damage Hitbox & Collision Subsystem.
-Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1
-Project root: /Users/user/teamwork_projects/metal_slug_web
+- **Role**: teamwork_preview_auditor
+- **Milestone**: Milestone 1 (Dynamic Animations & Motion Engine)
+- **Working Directory**: /Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1
+- **Parent Orchestrator**: 52278ce8-fed5-44e0-ad05-d44362fee9a5
 
-Read the following documents:
-- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
-- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1/handoff.md
+## Mandatory Reading
+Before taking any action, you MUST read the following authoritative requirement documents in full:
+1. `/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md`
+2. `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md`
+3. `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md`
+4. `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m1_anim/handoff.md`
 
-Forensic Audit tasks:
-1. Audit all git diffs and changes introduced by Worker 1 in:
-   - `src/main.ts`
-   - `src/core/entities/Player.ts`
-   - `src/core/entities/EnemyTypes.ts`
-   - `src/core/entities/Enemy.ts`
-   - `src/core/weapons/`
-   - `tests/unit/hitbox_precision.spec.ts`
-   - `tests/unit/Weapons.test.ts`
-2. Rigorously check for integrity violations:
-   - Are there any hardcoded test values, cheats, or dummy stubs?
-   - Is contact damage calculated via genuine geometric math rather than mocked results?
-   - Did the worker genuinely eliminate the `+ 15` padding from `src/main.ts:468`?
-   - Are the radii calibrated genuinely in code?
-   - Do the unit tests run authentic assertions against real engine classes?
-3. State your audit verdict clearly: **CLEAN** or **INTEGRITY VIOLATION**.
-   Note: If any violation is detected, detail the exact file, line, and mechanism of cheating.
-4. Write your audit report to `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1/handoff.md`.
-5. Send a message to orchestrator when finished.
+## Forensic Audit Mission & Integrity Verification
+Perform an exhaustive forensic audit of all Milestone 1 changes to detect cheating, hardcoding, test spoofing, or superficial facades:
+1. Static Analysis:
+   - Check git diff / modified files (`Enemy.ts`, `HordeManager.ts`, `Player.ts`, `DarkFantasySprites.ts`, test files).
+   - Verify that all dynamic motions are computed using genuine physics equations ($1 - e^{-\lambda dt}$, harmonic oscillators, bi-harmonic gait math).
+   - Check for hardcoded test fixtures, dummy functions, or conditions checking `process.env.NODE_ENV === 'test'`.
+2. Runtime Tracing & Execution Verification:
+   - Run `npm test` and verify tests actually execute the production code paths.
+   - Trace `DarkFantasySprites.drawPlayer` and `drawEnemy` to confirm affine transforms actually alter coordinates and matrices at runtime.
+   - Confirm that `enemy.behaviorTimer` is genuinely incremented in the real game update loop (`HordeManager.ts:update()`).
+3. Anti-Cheating & Integrity Checklist:
+   - Zero hardcoded return values.
+   - Zero mocked logic in production source code.
+   - Zero bypass of simulation or rendering pipelines.
+4. Output your verdict: **CLEAN** (no integrity violations detected) or **INTEGRITY VIOLATION** (cheating/facade detected).
+
+Write your report to:
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1/progress.md`
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/auditor_m1/handoff.md`
+
+Report completion to parent orchestrator.

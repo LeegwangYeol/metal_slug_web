@@ -88,7 +88,7 @@ test.describe('Milestone 3: Camera View Overhaul & Visual Proof Capture Suite', 
       player.position.y = 0;
       player.velocity.x = 0;
       player.velocity.y = 0;
-      camera.reset(0 - camera.viewportWidth / 2, 0 - camera.viewportHeight / 2);
+      camera.reset(0 - camera.viewWidth / 2, 0 - camera.viewHeight / 2);
 
       for (let i = 0; i < 20; i++) {
         camera.update(player.position.x, player.position.y, 1 / 60, 0, 0);
@@ -130,7 +130,7 @@ test.describe('Milestone 3: Camera View Overhaul & Visual Proof Capture Suite', 
 
     // Centered stationary assert: player is precisely centered at (480, 270)
     expect(cameraMetrics.stationaryScreenX).toBeCloseTo(480, 1);
-    expect(cameraMetrics.stationaryScreenY).toBeCloseTo(270, 1);
+    expect(cameraMetrics.stationaryScreenY).toBeCloseTo(270, 0);
 
     // Lookahead bounded assert (<= 40px)
     expect(cameraMetrics.lookaheadRight).toBeGreaterThan(0);

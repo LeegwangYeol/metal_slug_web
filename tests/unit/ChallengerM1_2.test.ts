@@ -85,27 +85,28 @@ describe('Empirical Challenge Suite M1-2: Kinematics, Progression Math, and Loot
       expect(player.velocity.y).toBe(0);
     });
 
-    it('empirically verifies linear acceleration and friction timing', () => {
+    it('empirically verifies dynamic velocity easing and friction timing', () => {
       const dt = 1 / 60;
       const targetSpeed = 200; // px/s
-      // Acceleration = 1800 px/s^2 -> Time to reach 200 px/s = 200 / 1800 = 0.1111s (~6.67 frames)
       const p = new Player(0, 0, { moveSpeed: 1.0 });
 
-      // Frame 1
+      // Frame 1: Dynamic exponential acceleration (lambda_accel = 14.0)
       p.handleInput({ up: false, down: false, left: false, right: true }, dt);
-      expect(p.velocity.x).toBeCloseTo(1800 * dt, 2); // 30 px/s
+      const expectedV1 = targetSpeed * (1 - Math.exp(-Player.LAMBDA_ACCEL * dt));
+      expect(p.velocity.x).toBeCloseTo(expectedV1, 2);
 
-      // After 7 frames (0.1167s), must have reached max speed
-      for (let i = 1; i < 7; i++) {
+      // After 40 frames (~0.67s), must smoothly reach max speed
+      for (let i = 1; i < 40; i++) {
         p.handleInput({ up: false, down: false, left: false, right: true }, dt);
       }
-      expect(p.velocity.x).toBe(targetSpeed);
+      expect(p.velocity.x).toBeCloseTo(targetSpeed, 1);
 
-      // Deceleration = 2400 px/s^2 -> Time to stop from 200 px/s = 200 / 2400 = 0.0833s (5 frames)
+      // Deceleration (lambda_brake = 18.0)
       p.handleInput({ up: false, down: false, left: false, right: false }, dt);
-      expect(p.velocity.x).toBeCloseTo(200 - 2400 * dt, 2); // 160 px/s
+      const expectedVDecel = targetSpeed - targetSpeed * (1 - Math.exp(-Player.LAMBDA_BRAKE * dt));
+      expect(p.velocity.x).toBeCloseTo(expectedVDecel, 1);
 
-      for (let i = 1; i < 5; i++) {
+      for (let i = 1; i < 20; i++) {
         p.handleInput({ up: false, down: false, left: false, right: false }, dt);
       }
       expect(p.velocity.x).toBe(0);

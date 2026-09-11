@@ -31,6 +31,9 @@ describe('GothicHUD Architecture & Interface Verification (Milestone M2)', () =>
       createRadialGradient: vi.fn().mockReturnValue({ addColorStop: vi.fn() }),
       translate: vi.fn(),
       scale: vi.fn(),
+      bezierCurveTo: vi.fn(),
+      rect: vi.fn(),
+      clip: vi.fn(),
       fillStyle: '',
       strokeStyle: '',
       lineWidth: 1,
@@ -216,6 +219,57 @@ describe('GothicHUD Architecture & Interface Verification (Milestone M2)', () =>
       hud.render(mockCtx, 960, 540, defaultState);
 
       expect(mockCtx.fillText).toHaveBeenCalledWith('YOU HAVE SUCCUMBED TO THE HORDE', expect.any(Number), expect.any(Number));
+    });
+  });
+
+  describe('Suite 5: Modern Dark Fantasy HUD Mechanics & Aesthetics', () => {
+    it('creates linear gradients for health, soul XP bar, and antique gold chronometer', () => {
+      defaultState.player.currentXP = 5;
+      defaultState.player.xpToNextLevel = 10;
+      defaultState.player.stats.currentHealth = 80;
+
+      hud.update(0.016, defaultState);
+      hud.render(mockCtx, 960, 540, defaultState);
+
+      // Multiple linear gradients created for arterial blood, soul XP, and gold timer
+      expect(mockCtx.createLinearGradient).toHaveBeenCalled();
+      expect(mockCtx.createLinearGradient.mock.calls.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('displays dynamic wave phase indicators across time thresholds', () => {
+      // Phase I (<30s)
+      defaultState.elapsedTime = 15;
+      hud.update(0.016, defaultState);
+      hud.render(mockCtx, 960, 540, defaultState);
+      expect(mockCtx.fillText).toHaveBeenCalledWith('PHASE I • THE AWAKENING', expect.any(Number), expect.any(Number));
+
+      // Phase II (30s - 60s)
+      defaultState.elapsedTime = 45;
+      hud.update(0.016, defaultState);
+      hud.render(mockCtx, 960, 540, defaultState);
+      expect(mockCtx.fillText).toHaveBeenCalledWith('PHASE II • THE UNDEAD SWARM', expect.any(Number), expect.any(Number));
+
+      // Phase III (>= 60s)
+      defaultState.elapsedTime = 75;
+      hud.update(0.016, defaultState);
+      hud.render(mockCtx, 960, 540, defaultState);
+      expect(mockCtx.fillText).toHaveBeenCalledWith('PHASE III • NIGHTFALL ASCENDANT', expect.any(Number), expect.any(Number));
+    });
+
+    it('renders swarm density counter with dynamic counts', () => {
+      defaultState.hordeManager.getActiveCount = () => 450;
+      hud.update(0.016, defaultState);
+      hud.render(mockCtx, 960, 540, defaultState);
+
+      expect(mockCtx.fillText).toHaveBeenCalledWith('SWARM: 450', expect.any(Number), expect.any(Number));
+    });
+
+    it('renders runic occult characters in the level badge', () => {
+      hud.update(0.016, defaultState);
+      hud.render(mockCtx, 960, 540, defaultState);
+
+      expect(mockCtx.fillText).toHaveBeenCalledWith('ᚱ', expect.any(Number), expect.any(Number));
+      expect(mockCtx.fillText).toHaveBeenCalledWith('ᛟ', expect.any(Number), expect.any(Number));
     });
   });
 });

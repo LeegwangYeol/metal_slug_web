@@ -1,31 +1,41 @@
-# Sentinel Handoff Report — 30-Agent Swarm Dispatched
+# Sentinel Handoff Report — Animation Overhaul, FOV & UI Redesign (40-Agent Swarm)
 
 ## 1. Observation
-1. **User Approval Received**:
-   - `"승인"` received at `2026-09-11T02:16:21Z` from user/parent.
-   - Recorded to `ORIGINAL_REQUEST.md` (root & `.agents/`) and status updated to authorized in `COLLABORATION.md`.
-2. **Orchestrator Dispatched**:
-   - Subagent `teamwork_preview_orchestrator` spawned with ID `d7e47049-ad05-49c0-9ddc-39995092b4b9`.
-   - Working directory: `/Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera`.
-3. **Monitoring Crons Scheduled**:
-   - Cron 1 (Progress Reporting, `*/8 * * * *`): task-72
-   - Cron 2 (Liveness Check, `*/10 * * * *`): task-74
+- User Request: "Use a very large team of 40 agents. This is a focused enhancement task for the 'Grim Harvest: Undead Siege' game. The team must overhaul the animations, widen the camera field of view (FOV), and redesign the UI."
+- Explicit user approval verified: `"승인 (허용)"` (2026-09-11T06:12:29Z).
+- Working directory: `/Users/user/teamwork_projects/metal_slug_web`
+- Integrity mode: `development`
+- Requirements:
+  - R1: Dynamic Animations & Motion (easing, squash/stretch, multi-frame procedural animations).
+  - R2: Widen Field of View (FOV) (adjust zoom / FOV to reveal much larger map area).
+  - R3: Modern UI/HUD Overhaul (completely redesign HUD: Health, XP, Level, Timer, Upgrade menus with sleek dark fantasy aesthetic).
+- Acceptance Criteria:
+  - Visual Proof (Animations): Playwright screenshots or recorded states demonstrating dynamic scaling, rotation, or sprite changes.
+  - Visual Proof (FOV & UI): Playwright screenshots (>250KB) demonstrating widened FOV and modern UI.
+  - 100% Green Tests: Unit and E2E tests updated and passing without engine crashes.
+  - Deployment: Git push to `origin/main` verified and Vercel build succeeds.
 
 ## 2. Logic Chain
-1. Enforced `RULE[user_global]`: waited for explicit approval ("승인") before proceeding with implementation.
-2. Evaluated Routing Decision Table: General path (`teamwork_preview_orchestrator`).
-3. Dispatched orchestrator with full mission specifications for R1 (Hitbox precision fix) and R2 (Camera overhaul).
-4. Set progress and liveness crons immediately after spawning.
+1. User request and explicit approval recorded verbatim in both root `/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md` and `.agents/ORIGINAL_REQUEST.md`.
+2. Evaluated Routing Decision Table: General path selected (`teamwork_preview_orchestrator`).
+3. Updated `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md` for Claude collaboration with the 40-agent swarm blueprint and active status.
+4. Spawned Project Orchestrator (`52278ce8-fed5-44e0-ad05-d44362fee9a5`) with working directory `.agents/orchestrator_anim_fov_ui`.
+5. Initialized both Sentinel crons:
+   - Progress Reporting (`*/8 * * * *`, task-58)
+   - Liveness Check (`*/10 * * * *`, task-60)
+6. Sentinel state updated in `.agents/sentinel/BRIEFING.md`.
 
 ## 3. Caveats
-- Implementation is managed entirely by the 30-agent swarm via `teamwork_preview_orchestrator`.
-- Sentinel maintains strict architectural neutrality and monitoring oversight.
+- Sentinel maintains strict architectural neutrality (zero implementation lines written by Sentinel).
+- 40-agent swarm will be monitored continuously via active crons.
+- Independent post-victory audit (`teamwork_preview_victory_auditor`) will be dispatched upon victory claim before project completion can be reported.
 
 ## 4. Conclusion
-- Swarm is actively executing Milestone 1–4.
-- Crons are active and monitoring progress.
-- Mandatory independent victory audit will be triggered once the orchestrator claims completion.
+- Project Orchestrator `52278ce8-fed5-44e0-ad05-d44362fee9a5` dispatched and executing 40-agent swarm.
+- Both monitoring crons active.
 
 ## 5. Verification Method
-- Active orchestrator subagent status: `d7e47049-ad05-49c0-9ddc-39995092b4b9`
-- Cron tasks: task-72, task-74
+- Verification of `ORIGINAL_REQUEST.md` (verbatim request & approval captured).
+- Verification of `COLLABORATION.md` (active status and blueprint).
+- Verification of subagent list and crons via manage_task.
+

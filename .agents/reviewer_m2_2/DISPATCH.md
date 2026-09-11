@@ -1,23 +1,35 @@
-## 2026-09-11T02:50:28Z
+# Dispatch Assignment: Milestone 2 Reviewer 2 (Performance, Lighting & Backdrop)
 
-<USER_REQUEST>
-You are Reviewer 2 (Agent 14) for Milestone 2: Camera Overhaul & Cinematic Viewport Engine.
-Your working directory: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2
-Project root: /Users/user/teamwork_projects/metal_slug_web
+- **Role**: teamwork_preview_reviewer
+- **Milestone**: Milestone 2 (Widen Camera FOV & Viewport Optimization)
+- **Working Directory**: /Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2
+- **Parent Orchestrator**: 52278ce8-fed5-44e0-ad05-d44362fee9a5
 
-Read the following documents:
-- /Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md
-- /Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md
-- /Users/user/teamwork_projects/metal_slug_web/.agents/orchestrator_hitbox_camera/SCOPE.md
-- /Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2/handoff.md
+## Mandatory Reading
+Before taking any action, you MUST read the following authoritative requirement documents in full:
+1. `/Users/user/teamwork_projects/metal_slug_web/ORIGINAL_REQUEST.md`
+2. `/Users/user/teamwork_projects/metal_slug_web/COLLABORATION.md`
+3. `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md`
+4. `/Users/user/teamwork_projects/metal_slug_web/.agents/worker_m2_camera/handoff.md`
 
-Review tasks:
-1. Conduct an independent regression and visual pipeline review.
-2. Verify that `GothicBackdrop.ts` parallax alignments (vertical sky gradient, cloud wrapping, 2D continuous mist wrapping) render seamlessly and do not cause regressions.
-3. Verify that all existing unit tests in the project remain 100% green.
-4. Run verification commands:
-   - `npm test` (full unit test suite)
-   - `npm run build` (production build verification)
-5. Document findings and state a clear verdict: **APPROVE** or **REQUEST_CHANGES** in `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/handoff.md`.
-6. Send a message to orchestrator when finished.
-</USER_REQUEST>
+## Review Mission & Objectives
+Perform an independent, objective review of Milestone 2 changes:
+1. Inspect code modifications in:
+   - `src/render/Camera.ts`
+   - `src/main.ts`
+   - `src/render/vfx/DarkFantasyVFX.ts`
+   - `src/render/GothicBackdrop.ts`
+2. Run build and tests:
+   - `npm run build`
+   - `npm test`
+3. Verify:
+   - Lighting & Vignette Expansion: DynamicLightingEngine buffer pre-allocated to $1200 \times 675$ with zero dynamic canvas allocations at runtime. Vignette radial gradient $[250, 725]\text{px}$ eliminates pitch-black corner clipping. Player torch scaled to $250\text{px}$ preserving gothic mood.
+   - Toroidal Backdrop Seamlessness: Layer 0 sky clamped vertically to eliminate duplicate blood moons; flagstones, runes, and props tile without seams or unrendered margins.
+   - Bounds Clamping & Screen Shake: Ensure camera tracking damping ($k=8.0$), bounds clamping ($[-2000, 800] \times [-2000, 1325]$), and shake decay remain stable without jitter or drift.
+4. Output your verdict: **APPROVE** or **REQUEST_CHANGES** with clear rationale and evidence.
+
+Write your report to:
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/progress.md`
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m2_2/handoff.md`
+
+Report completion to parent orchestrator.

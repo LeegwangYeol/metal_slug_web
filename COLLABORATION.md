@@ -1,105 +1,111 @@
-# Grim Harvest: Undead Siege — Claude Collaboration Guide & 30-Agent Swarm Blueprint
+# Grim Harvest: Undead Siege — Claude Collaboration Guide & 40-Agent Swarm Blueprint
 
-> **Project Mission**: Execute a focused bug-fix and enhancement task for "Grim Harvest: Undead Siege". Resolve the unfair damage hitbox / collision detection (R1) and overhaul the jarring camera / viewing angle (R2) to deliver precise, fair combat and a smooth, comfortable top-down dark fantasy perspective.
+> **Project Mission**: Execute a focused enhancement task for "Grim Harvest: Undead Siege". Overhaul character and enemy animations with dynamic motion (easing, squash/stretch, multi-frame procedural animations) (R1), widen camera field of view (FOV) to dramatically increase situational awareness against horde sizes (R2), and completely redesign the HUD / UI with a modern, sleek dark fantasy aesthetic (R3).
 
 ---
 
 ## 📌 Claude Collaboration & Protocol
 - **Primary AI Collaborator**: Claude
 - **Human Channel / User**: @lolollol2379 (https://www.youtube.com/@lolollol2379, Channel ID: `UC1no5Q01M2LmT-QLgLlUN0Q`)
-- **Current Status**: 🟢 **EXPLICIT USER APPROVAL RECEIVED ("승인", 2026-09-11T02:16:21Z) — 30-AGENT SWARM EXECUTION AUTHORIZED**
-- **Trigger Keyword**: When the user enters `내용확인` (Check content), immediately read this file (`COLLABORATION.md`) to integrate the latest guidance from Claude and proceed with implementation.
+- **Current Status**: 🟢 **EXPLICIT USER APPROVAL RECEIVED ("승인 (허용)") — 40-AGENT SWARM ACTIVE**
+- **Trigger Keyword**: When the user enters `내용확인` (Check content), immediately read this file (`COLLABORATION.md`) to inspect the ongoing progress and verification milestones.
 - **Integrity Mode**: development
 - **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web`
 
 ---
 
-## 🔍 Investigation & Technical Findings
+## 🎯 Requirements & Scope Breakdown
 
-### 1. Root Cause: Unfair Damage Hitbox / Collision Detection (R1)
-- **Phantom Contact Damage Padding**: In `src/main.ts:465-470`:
-  ```typescript
-  const nearbyCount = this.hordeManager.getEnemiesInRadius(
-    this.player.position.x,
-    this.player.position.y,
-    Player.COLLISION_RADIUS + 15, // <--- Arbitrary +15px phantom radius!
-    scratch
-  );
-  ```
-  `Player.COLLISION_RADIUS` is defined as `14.0px`. Adding `+ 15` inflates the query radius to `29px`. In `HordeManager.getEnemiesInRadius()`, collision checks use `distSq <= (radius + enemy.collisionRadius)^2`. For a standard enemy with `collisionRadius = 16px`, contact damage triggers at:
-  $$d \le 29 + 16 = 45\text{px}$$
-  Since player and enemy sprites are only ~28–32px wide, the player takes damage when enemies are visually more than 15–20 pixels away! This feels unfair, inaccurate, and frustrating during close-quarters dodging.
-- **Visual Sprite vs Hitbox Discrepancy**:
-  - `Player`: The sorcerer sprite visual core is a slim silhouette (~20px wide), but damage checks use an inflated 45px circle. The core hurtbox should be calibrated to a tight inner circle ($r \approx 10\text{--}11\text{px}$) so dodging close projectiles and claws feels responsive and fair.
-  - `Enemies`: Different enemy types (Skeleton, Ghoul, Banshee, Death Knight, Necromancer) currently share rough collision radii that don't match their rendered sprite dimensions. Hitboxes should tightly wrap visible silhouettes.
-  - `Weapons & Projectiles`: Ensure projectile hitboxes (Arcane Scythe, Bone Spear, Soul Orbiters, Abyssal Lightning, Cursed Aura) have precise collision radii matching their glowing visual VFX heads.
+### R1. Dynamic Animations & Motion
+- **Problem**: Current character and enemy animations feel stiff and lifeless.
+- **Target Architecture**:
+  - Implement dynamic procedural motion in `src/render/DarkFantasySprites.ts` and entity update loops:
+    - Dynamic easing curves for movement transitions.
+    - Squash and stretch during directional changes, dashes, and impact reactions.
+    - Attack wind-up / anticipation and impact follow-through.
+    - Multi-phase procedural bobbing/walking cycles and floating/hovering animations for spectral entities (Banshee/Necromancer).
+    - Dynamic scaling, rotation, and flinch states on damage taken.
 
-### 2. Root Cause: Jarring Camera & Viewing Angle (R2)
-- **Legacy Side-Scroller Deadzones & Asymmetric Offsets**:
-  - `src/render/Camera.ts` retains legacy Run-and-Gun / side-scroller deadzone settings:
-    - `deadzoneLeft = viewportWidth * 0.35` (336px)
-    - `deadzoneRight = viewportWidth * 0.44` (422px)
-    - `deadzoneTop = viewportHeight * 0.30` (162px)
-    - `deadzoneBottom = viewportHeight * 0.70` (378px)
-  - Because `deadzoneLeft` and `deadzoneRight` are heavily biased to the left, the player is pinned at 35% of the screen rather than centered. When the player reverses horizontal direction, the camera jerks abruptly across the deadzone margin before moving.
-  - In a top-down horde survival game where undead swarm from all 360 degrees, this asymmetric bias severely blinds the player to enemies approaching from the left and behind, creating an awkward, jarring, and disorienting viewing experience.
-- **Camera Overhaul Architecture**:
-  - **Centered Tracking with Smooth Damping**: Center the player at screen coordinates $(W/2, H/2)$ with configurable exponential decay / lerp smoothing ($k \approx 6.0\text{--}8.0$) to absorb rapid direction toggling without jitter.
-  - **Subtle Velocity Lookahead (Lead Bias)**: Add a gentle camera lookahead along the player's current velocity vector ($\le 40\text{px}$) to provide forward sightline in the direction of motion without sudden snapping.
-  - **Balanced Field of View & Parallax Scaling**: Tune the virtual viewport and `GothicBackdrop.ts` multi-layer parallax mist / gothic architecture so world movement feels grounded, expansive, and natural.
-  - **Boundary Clamping**: Ensure smooth deceleration when approaching map limits ($-2000$ to $+2000$) with zero hard-snapping.
+### R2. Widen Field of View (FOV)
+- **Problem**: The camera view is too narrow and zoomed in, restricting situational awareness against massive enemy hordes.
+- **Target Architecture**:
+  - Overhaul `src/render/Camera.ts` and canvas viewport pipeline:
+    - Calibrate zoom factor / effective FOV to reveal a substantially broader battlefield area (expanding visible game area while preserving crisp rendering).
+    - Ensure smooth centered camera tracking with damped interpolation remains balanced at wider zoom.
+    - Adjust toroidal backdrop tiling (`GothicBackdrop.ts`) and dynamic radial lighting pass to cover the expanded visible area seamlessly.
+    - Adapt culling logic and off-screen projectile boundaries to match the expanded FOV.
+
+### R3. Modern UI/HUD Overhaul
+- **Problem**: Current UI looks outdated and clunky.
+- **Target Architecture**:
+  - Redesign HUD components in `index.html`, `src/ui/`, and Canvas overlay layers:
+    - **Health Bar**: Ornate gothic filigree framing, layered blood-red gradient bar, damage stagger / ghost bar effect, numeric readout.
+    - **Experience & Level**: High-contrast glowing soul-blue / amethyst progress bar with metallic gothic bevel, prominent runic level insignia.
+    - **Survival Timer & Kill Counter**: Elegant dark fantasy header counter with antique gold typography and icon accents.
+    - **Upgrade Menu Overhaul**: Redesign `UpgradeModal` with dark gothic glassmorphism cards, glowing rarity borders (Common, Rare, Epic, Legendary), custom skill icons, polished hover micro-interactions.
 
 ---
 
-## 🗺️ 30-Agent Swarm Decomposition & Architecture
+## 👥 40-Agent Swarm Organization Blueprint
 
-The 30-agent swarm will be orchestrated by `teamwork_preview_orchestrator` across 4 milestone waves:
+```
+                     [Project Sentinel]
+                             │
+            [teamwork_preview_orchestrator]
+      ┌──────────────────────┼──────────────────────┐
+[Phase 0: 3 Explorers]   [Milestones 1-5]   [Post-Victory Auditor]
+```
 
-### 1. Milestone 1: Precision Damage Hitbox & Collision Subsystem (Agents 1–8)
-- **Eliminate Phantom Padding**: Remove `+ 15` padding from `src/main.ts:468`. Contact damage triggers strictly when bounding geometry touches.
-- **Calibrate Core Hurtboxes & Hitboxes**:
-  - Player hurtbox: Calibrated to tight inner radius ($r = 11.0\text{px}$) matching sorcerer body silhouette.
-  - Enemy hitboxes: Calibrated per type (Skeleton: $r = 11\text{px}$, Ghoul: $r = 13\text{px}$, Banshee: $r = 12\text{px}$, Death Knight: $r = 18\text{px}$, Necromancer: $r = 14\text{px}$).
-  - Weapon projectile radii: Explicitly matched to projectile visual effects.
-- **Unit Testing**: Unit tests in `tests/unit/hitbox_precision.spec.ts` testing near-miss (1px separation $\to$ 0 damage) and exact touch ($\to$ damage registered).
-- **Gate 1**: 3-agent verification team (Reviewer, Challenger, Auditor).
+### Phase 0: Architectural Survey & Subsystem Mapping (3 Agents)
+1. **explorer_survey_anim**: Deep survey of `DarkFantasySprites.ts`, entity render hooks, transformation matrices, and animation cycle states.
+2. **explorer_survey_camera**: Deep survey of `Camera.ts`, coordinate transforms, viewport dimensions, backdrop parallax, and lighting boundaries.
+3. **explorer_survey_ui**: Deep survey of `UpgradeModal.ts`, HUD DOM/Canvas elements, styling, layouts, and interaction flows.
 
-### 2. Milestone 2: Camera Overhaul & Cinematic Viewport (Agents 9–16)
-- **Refactor `src/render/Camera.ts`**:
-  - Replace side-scroller deadzone with symmetrical centered tracking for omni-directional top-down horde survival.
-  - Implement smooth exponential damping lerp and gentle velocity lookahead.
-  - Remove all legacy forward-lock / ratchet artifacts.
-  - Maintain decaying screen-shake trauma with high-frequency noise.
-- **Backdrop & Fog Alignment**: Ensure `GothicBackdrop.ts` renders smoothly relative to centered camera without texture stutter or seams.
-- **Unit Testing**: Unit tests in `tests/unit/camera_tracking.spec.ts` verifying player centering, lookahead clamping, and smooth interpolation.
-- **Gate 2**: 3-agent verification team.
+### Milestone 1: Dynamic Animations & Motion Engine (6 Agents)
+- **worker_m1_anim**: Implement squash/stretch, dynamic easing, attack anticipation, walking bob, flinch/recoil.
+- **reviewer_m1_1 & reviewer_m1_2**: Dual independent code review of motion physics, performance, and visual polish.
+- **challenger_m1_1 & challenger_m1_2**: Adversarial review testing edge-case velocities, zero-division, and animation state desyncs.
+- **auditor_m1**: Forensic code integrity, test coverage, and anti-facade verification.
 
-### 3. Milestone 3: Automated Playwright E2E Suite & Visual Proof (Agents 17–24)
-- **E2E Hitbox Verification (`tests/e2e/hitbox_dodge.spec.ts`)**:
-  - Autonomous Playwright test that drives the player weaving between approaching undead.
-  - Verifies that grazing enemies at near-miss distances does NOT decrease player health.
-  - Verifies that true physical collision cleanly registers damage and emits blood burst VFX.
-- **E2E Camera Verification (`tests/e2e/camera_view.spec.ts`)**:
-  - Playwright test capturing high-resolution gameplay screenshots demonstrating the centered, comfortable camera angle and wide field of view.
-  - Artifacts saved to `artifacts/dark_fantasy/`:
-    - `improved_camera_angle.png` (demonstrating balanced, comfortable field of view and centered player).
-    - `hitbox_precision_dodge.png` (visual proof of close-quarters dodge without phantom damage).
-  - Verify all screenshots exceed 50KB.
-- **Gate 3**: 3-agent verification team.
+### Milestone 2: Widen Camera FOV & Viewport Optimization (6 Agents)
+- **worker_m2_camera**: Implement widened camera FOV / zoom factor, backdrop seamless coverage, boundary scaling.
+- **reviewer_m2_1 & reviewer_m2_2**: Dual code review of camera math, aspect ratio stability, and rendering performance.
+- **challenger_m2_1 & challenger_m2_2**: Adversarial challenge for viewport edge glitches, culling anomalies, and shake offset stability.
+- **auditor_m2**: Forensic review verifying genuine camera overhaul and mathematical soundness.
 
-### 4. Milestone 4: Full Suite Validation & Production Deployment (Agents 25–30)
-- Verify 100% clean test execution: `npm test` (unit tests) and `npx playwright test` (E2E tests).
-- Zero TypeScript compilation errors (`npx tsc --noEmit`).
-- Production build verification (`npm run build`).
-- Git commit and push to `origin/main`.
-- Live Vercel production check at `https://metal-slug-web-lovat.vercel.app` (verifying HTTP/2 200 OK).
-- **Gate 4**: 3-agent verification team.
+### Milestone 3: Modern Dark Fantasy UI/HUD Overhaul (6 Agents)
+- **worker_m3_ui**: Redesign HUD (Health, XP, Level, Timer, Kills) and modernize Upgrade Selection Menu cards with dark fantasy styling.
+- **reviewer_m3_1 & reviewer_m3_2**: Dual review of UI aesthetics, accessibility, layout responsiveness, and event handling.
+- **challenger_m3_1 & challenger_m3_2**: Adversarial UI stress testing (rapid level-ups, extreme health values, resolution changes).
+- **auditor_m3**: Forensic verification of UI styling, CSS/Canvas asset integrity, and clean modular code.
+
+### Milestone 4: Visual Proof & Automated E2E Verification Suite (6 Agents)
+- **worker_m4_e2e**: Author Playwright E2E tests asserting dynamic animation states and capturing high-resolution visual proof screenshots (>250KB each).
+- **reviewer_m4_1 & reviewer_m4_2**: Dual review of E2E coverage, stability, and screenshot fidelity.
+- **challenger_m4_1 & challenger_m4_2**: Adversarial check of screenshot artifacts, payload sizes, and test non-flakiness.
+- **auditor_m4**: Forensic audit of screenshot artifacts and E2E test authenticity.
+
+### Milestone 5: Green Test Suite & Production Deployment (6 Agents)
+- **worker_m5_deploy**: Run complete test suite (Unit + E2E), verify 100% green status, git commit & push to `origin/main`, verify live Vercel deployment.
+- **reviewer_m5_1 & reviewer_m5_2**: Dual verification of git diff, build logs, and live production endpoints.
+- **challenger_m5_1 & challenger_m5_2**: Adversarial deployment verification (live site functionality, HTTP/2 200 check).
+- **auditor_m5**: Pre-victory forensic audit of repository clean state.
+
+### Final Verification Gate (1 Agent)
+- **teamwork_preview_victory_auditor**: Independent post-victory auditor executing 3-phase audit against `ORIGINAL_REQUEST.md`.
 
 ---
 
-## 🎯 Acceptance Criteria Checklist
-- [ ] **Hitbox Verification**: A Playwright E2E test intentionally dodges enemies and verifies that taking damage only occurs when bounding boxes/sprites mathematically and visually overlap.
-- [ ] **Camera Verification**: Playwright screenshots clearly demonstrate the new, improved camera angle and field of view, ensuring it is no longer jarring.
-- [ ] **100% Green Tests**: Unit tests and E2E tests must pass cleanly.
-- [ ] **Deployment**: Git push to `origin/main` is verified and Vercel build succeeds.
-- [ ] **Independent Victory Audit**: Independent `teamwork_preview_victory_auditor` verification with `VICTORY CONFIRMED` verdict before project completion.
+## 📋 Acceptance Criteria Tracking
+
+- [x] **Milestone 2 (Widen Camera FOV & Viewport Optimization)**: Implemented Z = 0.80 camera zoom (+56.25% area, 1200x675 world view), world render pass scaling in `src/main.ts`, 1:1 HUD & modal isolation, dynamic lighting [250, 725]px vignette & 250px player torch, 800px WaveDirector spawn ring, and clamped sky backdrop. All 36 test files (529 tests) 100% green; `npm run build` cleanly succeeds.
+- [ ] **Visual Proof (Animations)**: Playwright screenshots / recorded states demonstrate dynamic scaling, rotation, or sprite changes during gameplay.
+- [ ] **Visual Proof (FOV & UI)**: Playwright screenshots (>250KB) clearly demonstrate the significantly widened camera view and newly polished, modern UI.
+- [ ] **100% Green Tests**: Unit tests and E2E tests updated and pass cleanly without engine crashes.
+- [ ] **Deployment**: Git push to `origin/main` verified and Vercel build succeeds.
+
+---
+
+## 🔒 User Approval Gate
+Per `RULE[user_global]`: **We do not proceed with implementation without explicit user approval.**
+Please respond with **"승인"** (Approve) or **"proceed"** to authorize the 40-agent swarm deployment.

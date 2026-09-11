@@ -1,18 +1,27 @@
 # Progress Log — challenger_m1_2
 
-Last visited: 2026-09-11T00:47:00+09:00
+Last visited: 2026-09-11T06:33:00Z
 
-- [x] Initialized workspace and briefing
-- [x] Read mandatory files: ORIGINAL_REQUEST.md, COLLABORATION.md, PROJECT.md, worker_m1_1/handoff.md
-- [x] Inspected implementation code for HordeManager, SpatialHashGrid, LootManager, WeaponManager, ProjectilePool
-- [x] Wrote and executed empirical stress test / adversarial verification harness (`tests/unit/ChallengerM1_2RestartAdversarial.test.ts`)
-- [x] Verified all 4 core invariants:
-  - HordeManager: 35 active, 2,013 pool available, 35 spawned, 0 killed
-  - SpatialHashGrid: 0 ghost entities, 0 phantom collision hits
-  - LootManager: 1,500 pooled items, 0 active gems
-  - WeaponManager: 0 active projectiles, only Rank 1 Arcane Scythe equipped
-- [x] Discovered and documented edge-case infinite loop vulnerability in `ProjectilePool.clear()` when entities are spawned without `active=true`
-- [x] Verified full unit test suite (21 test files, 246 tests, 100% green)
-- [x] Verified TypeScript typecheck (`npx tsc --noEmit` -> 0 errors)
-- [ ] Write handoff.md with comprehensive 5-component report and APPROVE verdict
-- [ ] Send verdict to orchestrator
+- [x] Initialized workspace and briefing for Milestone 1 (Dynamic Animations & Motion Engine)
+- [x] Read mandatory authoritative documents:
+  - `ORIGINAL_REQUEST.md`
+  - `COLLABORATION.md`
+  - `PROJECT.md`
+  - `DISPATCH.md`
+  - `worker_m1_anim/handoff.md`
+- [x] Inspected animation motion engine implementation:
+  - `src/core/entities/Enemy.ts`: Animation properties (`walkPhase`, `hoverPhase`, `squashX`, `squashY`, `flinchRot`, `flinchTimer`), `reset()`, and `takeDamage()`.
+  - `src/core/HordeManager.ts`: Behavior timer increment, walk/hover phase equations, decay curves, object pooling (`spawn`, `despawn`, `clear`, `reset`).
+  - `src/render/sprites/DarkFantasySprites.ts`: 120-canvas pre-rasterized atlas cache, `drawEnemy()` procedural motion offsets, `hasTransform` bypass branch.
+  - `src/core/entities/Player.ts`: Exponential relaxation velocity kinematics, harmonic squash & stretch, attack state machine.
+- [x] Observed baseline suite behavior:
+  - Discovered CPU contention sensitivity in `tests/unit/HordeStressAdversarial.test.ts` where heavy multi-threaded test suite execution pushes tick duration near the 8.0ms / 40.0ms limit.
+- [ ] Author adversarial test harness: `tests/unit/ChallengerM1_2_HordeStress.test.ts`:
+  - Suite 1: High-Density Active Horde (1,500 active enemies: grounded walk bobs, spectral floating, damage flinch, hit flashing, zero crashes, zero memory leaks, frame execution time < 5.0ms)
+  - Suite 2: State Desynchronization & Rapid Pooling Reset (`behaviorTimer`, `walkPhase`, `hoverPhase`, `flinchRot`, `squashX/Y` reset cleanliness, zero ghost animation bleed)
+  - Suite 3: Atlas Integrity & Zero Runtime Re-rasterization (strictly 120 canvases, zero offscreen canvas creation at runtime, negative/corrupted timer edge-case analysis)
+- [ ] Execute `tests/unit/ChallengerM1_2_HordeStress.test.ts` and verify results.
+- [ ] Execute project build (`npm run build`) and test suite.
+- [ ] Update `BRIEFING.md`.
+- [ ] Generate comprehensive 5-component `handoff.md`.
+- [ ] Send message report to parent orchestrator.

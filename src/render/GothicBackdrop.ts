@@ -26,8 +26,8 @@ export interface GothicBackdropOptions {
 }
 
 export class GothicBackdrop {
-  public readonly viewportWidth: number;
-  public readonly viewportHeight: number;
+  public viewportWidth: number;
+  public viewportHeight: number;
   public readonly enableParallax: boolean;
   public readonly enableMist: boolean;
   public readonly enableDynamicRunes: boolean;
@@ -372,12 +372,14 @@ export class GothicBackdrop {
     ctx: CanvasRenderingContext2D,
     camX: number,
     camY: number,
-    elapsedTime: number
+    elapsedTime: number,
+    overrideVw?: number,
+    overrideVh?: number
   ): void {
     if (!this.isInitialized) return;
 
-    const vw = this.viewportWidth;
-    const vh = this.viewportHeight;
+    const vw = overrideVw ?? this.viewportWidth;
+    const vh = overrideVh ?? this.viewportHeight;
 
     ctx.save();
 
@@ -386,11 +388,12 @@ export class GothicBackdrop {
       const W = 1024;
       const H = 540;
       const startX = -(((camX * 0.02) % W + W) % W);
-      const startY = -(((camY * 0.02) % H + H) % H);
+      // Vertically clamp sky to a single celestial band covering full viewport height
+      // to guarantee zero duplicate moon stacking across expanded vh (675px)
+      const drawH = Math.max(vh, H) + 80;
+      const skyY = Math.min(0, -(camY * 0.02) - 40);
       for (let x = startX; x < vw; x += W) {
-        for (let y = startY; y < vh; y += H) {
-          ctx.drawImage(this.skyCanvas, x, y);
-        }
+        ctx.drawImage(this.skyCanvas, x, skyY, W, drawH);
       }
     } else {
       ctx.fillStyle = PALETTE.ABYSSAL_VOID.DEEP;
@@ -495,11 +498,12 @@ export class GothicBackdrop {
       const W = 1024;
       const H = 540;
 
-      // Sub-layer A (Lower ground creeping mist at Parallax 0.40)
+      // Sub-layer A (Distant high haze at Parallax 0.40)
       const startX1 = -((((camX * 0.40 + elapsedTime * 18.0) % W) + W) % W);
       ctx.globalAlpha = 0.20;
+      const mistH = Math.max(vh, H);
       for (let x = startX1; x < vw + W; x += W) {
-        ctx.drawImage(this.mistCanvas, x, 0);
+        ctx.drawImage(this.mistCanvas, x, 0, W, mistH);
       }
 
       // Sub-layer B (Mid swirling mist at Parallax 0.65 with multi-harmonic sinusoidal undulation)
@@ -521,6 +525,14 @@ export class GothicBackdrop {
   }
 
   /**
+   * Resizes internal viewport dimensions.
+   */
+  public resize(width: number, height: number): void {
+    this.viewportWidth = width;
+    this.viewportHeight = height;
+  }
+
+  /**
    * Foreground mist pass rendered after entities for atmospheric depth.
    * Parallax 1.15 with horizontal drift and vertical camera responsiveness.
    */
@@ -528,13 +540,15 @@ export class GothicBackdrop {
     ctx: CanvasRenderingContext2D,
     camX: number,
     camY: number = 0,
-    elapsedTime: number = 0
+    elapsedTime: number = 0,
+    overrideVw?: number,
+    overrideVh?: number
   ): void {
     if (!this.mistCanvas || !this.enableMist) return;
 
     ctx.save();
-    const vw = this.viewportWidth;
-    const vh = this.viewportHeight;
+    const vw = overrideVw ?? this.viewportWidth;
+    const vh = overrideVh ?? this.viewportHeight;
     const W = 1024;
     const H = 540;
 

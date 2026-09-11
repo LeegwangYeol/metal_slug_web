@@ -1,239 +1,145 @@
-# Milestone 4 Handoff Report: Adversarial Verification & Empirical Audit
+# Handoff Report: Milestone 4 — Adversarial Challenge & Stress Verification
 
-**Agent**: `challenger_m4_2` (Role: Adversarial Verifier / Challenger)  
-**Date**: 2026-09-11  
-**Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2`  
-**Verdict**: **`APPROVE`**  
+- **Agent**: `challenger_m4_2`
+- **Archetype**: `teamwork_preview_challenger`
+- **Roles**: `critic`, `specialist`
+- **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m4_2`
+- **Target Recipient**: Orchestrator (`52278ce8-fed5-44e0-ad05-d44362fee9a5`)
+- **Date**: 2026-09-11
+- **Handoff Type**: Hard Handoff (Adversarial Verification Complete)
+- **Gate Verdict**: **APPROVE**
 
 ---
 
 ## 1. Observation
 
-### 1.1 Visual Buffer Fidelity & Color Histogram Inspection
-Direct execution of custom pixel-level PNG scanline and color distribution decoder (`/tmp/verify_visual_buffers.py`):
-```bash
-python3 /tmp/verify_visual_buffers.py
-```
-Output:
-```
-=== enhanced_graphics_swarm.png ===
-Size: 246656 bytes (240.9 KB)
-Dimensions: 960x540 (Valid Magic: True)
-Unique Colors: 8369
-Solid Black: 0.01%, Near Black: 82.47%, Bright Pixels: 0.68%
-R Channel: min=0, max=255, mean=12.76, std=19.58
-G Channel: min=0, max=253, mean=9.33, std=16.19
-B Channel: min=0, max=246, mean=14.89, std=14.14
-Theme Pixels: Amber=391, Violet=256, Blood=1098, Emerald=623, Cyan=60, Bone=1763
+1. **Adversarial Harness Authoring & Execution**:
+   Authored `tests/e2e/challenger_m4_visual_stress.spec.ts` targeting extreme boundary stress conditions:
+   - **Test 1 (`Adversarial Stress 1: Rapid Modal Opening/Closing Under Heavy Swarm Load (50+ Active Enemies)`)**:
+     - Pre-spawned 120 active undead entities (`SKELETON`, `GHOUL`, `BANSHEE`, `DEATH_KNIGHT`) surrounding the sorcerer.
+     - Executed 30 rapid back-to-back modal open/close cycles under active 60Hz rAF simulation.
+     - Interleaved dismissal inputs across numeric hotkeys (`Digit1`, `Digit2`, `Digit3`) and arrow navigation with `Enter` / `Space`.
+     - Result: `[Adversarial Stress 1] PASSED: 30 modal churn cycles under 50+ enemies with 0 console errors.` (Duration: 3.3s).
+     - Verified: Accumulator remained strictly within safe bounds (`accumulator <= 0.016s`), zero coordinate NaNs across player and enemies, `hordeManager.getActiveCount() >= 50` throughout.
+   - **Test 2 (`Adversarial Stress 2: Keyboard Navigation Fuzzing During Active Survival Loop`)**:
+     - Subjected the game loop to 15 continuous seconds of high-frequency chaotic keyboard fuzzing across 15 keys: `['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Escape', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Enter']`.
+     - Fuzzed 541 random keydown/keyup events while dynamically injecting level-up modals every 2.5s mid-fuzz.
+     - Result: `[Adversarial Stress 2] Fuzzing complete: 541 keys fuzzed over 15s`.
+     - Verified: `finalState = { elapsedTime: 6.92s, accumulator: 0.0097s, isPaused: false, modalOpen: false, playerAlive: true, playerX: -2.65, playerY: 0.0, playerHealth: 40.34, activeEnemies: 39 }`.
+     - Zero console errors and zero unhandled exceptions (`consoleErrors: []`, `pageErrors: []`).
+   - **Test 3 (`Adversarial Stress 3: Boundary & Out-of-Bounds Card Input Invariants`)**:
+     - Verified `Digit4` (index 3) on a 3-card modal safely ignores without closing or throwing out-of-bounds index exceptions.
+     - Verified `Escape` does not corrupt or abort modal selection unexpectedly.
+     - Verified `ArrowLeft` from index 0 safely wraps around to `cards.length - 1` (index 2).
+     - Verified `Space` confirms card selection and does NOT trigger premature `game.restart()`.
+     - Verified multi-queue level-up drain: queued 5 pending level-ups back-to-back, consumed all 5 deterministically via keyboard hotkeys until `pendingLevelUps === 0` and `isPaused === false`.
+     - Result: `[Adversarial Stress 3] PASSED: All boundary & multi-queue invariant assertions passed.` (Duration: 1.1s).
+   - Entire suite run command output:
+     `npx playwright test tests/e2e/challenger_m4_visual_stress.spec.ts` -> **3 passed (20.3s)**.
 
-=== restart_verified.png ===
-Size: 208656 bytes (203.8 KB)
-Dimensions: 960x540 (Valid Magic: True)
-Unique Colors: 7131
-Solid Black: 0.01%, Near Black: 82.5%, Bright Pixels: 0.59%
-R Channel: min=0, max=255, mean=12.64, std=19.68
-G Channel: min=0, max=255, mean=8.98, std=15.23
-B Channel: min=0, max=254, mean=14.58, std=13.72
-Theme Pixels: Amber=453, Violet=237, Blood=1230, Emerald=198, Cyan=26, Bone=1685
+2. **Consolidated Challenger Suite Execution**:
+   Executed all 3 adversarial challenger specifications concurrently:
+   `npx playwright test tests/e2e/challenger_m4_2_stress.spec.ts tests/e2e/challenger_m4_restart_stress.spec.ts tests/e2e/challenger_m4_visual_stress.spec.ts`:
+   - `challenger_m4_2_stress.spec.ts`: 2 passed (Adversarial Post-Restart 15s survival + Object pool leak audit).
+   - `challenger_m4_restart_stress.spec.ts`: 1 passed (5x consecutive death debounce hammering with accumulator <= 1/60).
+   - `challenger_m4_visual_stress.spec.ts`: 3 passed (Modal churn, input fuzzing, boundary invariants).
+   - Total: **6 passed (57.3s)**, 100% green.
 
-=== occult_vfx_lighting.png ===
-Size: 344384 bytes (336.3 KB)
-Dimensions: 960x540 (Valid Magic: True)
-Unique Colors: 53758
-Solid Black: 0.01%, Near Black: 71.86%, Bright Pixels: 4.87%
-R Channel: min=0, max=255, mean=20.49, std=35.33
-G Channel: min=0, max=255, mean=18.81, std=35.96
-B Channel: min=0, max=255, mean=25.58, std=37.88
-Theme Pixels: Amber=403, Violet=4218, Blood=1725, Emerald=117, Cyan=5583, Bone=9105
-```
+3. **High-Resolution Visual Proof File Size Audit in `artifacts/dark_fantasy/`**:
+   Verified byte-level sizes of all 4 visual proof screenshots:
+   - `artifacts/dark_fantasy/widened_fov_battlefield.png`: **292,303 bytes** (285.5 KB) — Exceeds 250KB (256,000 bytes) threshold by +36,303 bytes.
+   - `artifacts/dark_fantasy/modern_gothic_hud.png`: **302,829 bytes** (295.7 KB) — Exceeds 250KB (256,000 bytes) threshold by +46,829 bytes.
+   - `artifacts/dark_fantasy/dynamic_motion_proof.png`: **284,991 bytes** (278.3 KB) — Exceeds 250KB (256,000 bytes) threshold by +28,991 bytes.
+   - `artifacts/dark_fantasy/upgrade_modal_modern.png`: **340,396 bytes** (332.4 KB) — Exceeds 250KB (256,000 bytes) threshold by +84,396 bytes.
+   All 4 artifacts strictly exceed 250KB.
 
-Histogram 16-bin distribution spread:
-- `enhanced_graphics_swarm.png`:
-  - R channel active bins: **16/16**, bins: `[441669, 44878, 16373, 6988, 2594, 1253, 549, 500, 264, 134, 424, 411, 675, 591, 947, 150]`
-  - G channel active bins: **16/16**, bins: `[454994, 42324, 12719, 2645, 1609, 751, 312, 405, 274, 448, 535, 217, 256, 228, 660, 23]`
-  - B channel active bins: **16/16**, bins: `[429427, 54856, 23742, 5825, 1586, 551, 248, 395, 187, 286, 126, 149, 164, 831, 21, 6]`
-- `restart_verified.png`:
-  - R channel active bins: **16/16**, bins: `[442878, 42530, 16971, 8389, 1942, 954, 561, 463, 302, 126, 498, 432, 626, 613, 916, 199]`
-  - G channel active bins: **16/16**, bins: `[453984, 43286, 14495, 1897, 1444, 608, 165, 323, 199, 343, 430, 202, 159, 201, 641, 23]`
-  - B channel active bins: **16/16**, bins: `[428626, 55660, 25205, 4953, 1378, 510, 152, 281, 118, 280, 114, 155, 132, 765, 41, 30]`
-- `occult_vfx_lighting.png`:
-  - R channel active bins: **16/16**, bins: `[399972, 42277, 18515, 14180, 11525, 7920, 5285, 3902, 2962, 2240, 1951, 1559, 1768, 1656, 1561, 1127]`
-  - G channel active bins: **16/16**, bins: `[406309, 38558, 18243, 12657, 10438, 6378, 4667, 4328, 3852, 3357, 2773, 1844, 1478, 1009, 1136, 1373]`
-  - B channel active bins: **16/16**, bins: `[373537, 49664, 31323, 15393, 10655, 7239, 5010, 4625, 4328, 4235, 3035, 2493, 2016, 1990, 775, 2082]`
+4. **Full Playwright Regression Suite**:
+   Across all 9 Playwright test files (`camera_view.spec.ts`, `game_initialization.spec.ts`, `hitbox_dodge.spec.ts`, `horde_survival.spec.ts`, `restart_survival.spec.ts`, `visual_proof_m4.spec.ts`, `challenger_m4_2_stress.spec.ts`, `challenger_m4_restart_stress.spec.ts`, `challenger_m4_visual_stress.spec.ts`):
+   - **35 total tests executed: 35 passed (100% green)**.
+   - Zero console errors (`page.on('console')`).
+   - Zero page crashes / unhandled exceptions (`page.on('pageerror')`).
 
-### 1.2 Kinematic Safety & Autonomous Survival Stress Test
-Direct execution of adversarial stress harness (`tests/e2e/challenger_m4_2_stress.spec.ts`):
-```bash
-npx playwright test tests/e2e/challenger_m4_2_stress.spec.ts
-```
-Output:
-```
-Running 2 tests using 1 worker
-
-[Challenger M4-2 Trial Summary]
-  Elapsed Time: 15.07s
-  Health: final=47.493333333331066, minObserved=45.31333333333305
-  Kills: 29
-  Current XP: 9, Level: 2
-  Min Enemy Distance: 10.3px
-  Max Accumulator: 0.016500s
-  Active Enemies: 38
-  Active Loot Items: 3
-  Active Scythe Slashes: 0
-  ✓  1 [chromium] › tests/e2e/challenger_m4_2_stress.spec.ts:9:3 › Challenger M4-2: Adversarial Kinematic Safety & Weapon/XP Accumulation Leak Verification › Adversarial Challenge 1: Multi-Trial Post-Restart Kinematic Safety & 15s Survival Guarantee (15.9s)
-[Challenger M4-2 Leak Audit] {
-  "hordeInitialCapacity": 2048,
-  "lootInitialCapacity": 1500,
-  "initialDrops": 20,
-  "postCollectDrops": 0,
-  "playerXP": 10,
-  "slashesPre": 0,
-  "slashesPost": 0,
-  "hordePoolEndSize": 2048,
-  "lootPoolEndSize": 1500
-}
-  ✓  2 [chromium] › tests/e2e/challenger_m4_2_stress.spec.ts:277:3 › Challenger M4-2: Adversarial Kinematic Safety & Weapon/XP Accumulation Leak Verification › Adversarial Challenge 2: Long-Term Loot, Horde, and Slash Buffer Accumulation Leak Audit (385ms)
-
-  2 passed (18.7s)
-```
-
-### 1.3 Worker Test Suite Verification
-Command:
-```bash
-npx playwright test tests/e2e/restart_survival.spec.ts
-```
-Output:
-```
-Running 6 tests using 1 worker
-
-  ✓  1 [chromium] › tests/e2e/restart_survival.spec.ts:62:3 › Milestone M4: Dark Fantasy Horde Survival — Restart Lifecycle & Visual Proof Verification › Test 1: Game Over, Death Debounce & Pristine Restart State Invariants (1.5s)
-  ✓  2 [chromium] › tests/e2e/restart_survival.spec.ts:224:3 › Milestone M4: Dark Fantasy Horde Survival — Restart Lifecycle & Visual Proof Verification › Test 2: Post-Restart Autonomous Survival Loop (>= 15 Continuous Seconds) (16.1s)
-  ✓  3 [chromium] › tests/e2e/restart_survival.spec.ts:554:3 › Milestone M4: Dark Fantasy Horde Survival — Restart Lifecycle & Visual Proof Verification › Test 3a: Visual Proof — enhanced_graphics_swarm.png (>50KB, centered Sorcerer surrounded by 4 concentric rings of 92+ undead with drop shadows) (498ms)
-  ✓  4 [chromium] › tests/e2e/restart_survival.spec.ts:631:3 › Milestone M4: Dark Fantasy Horde Survival — Restart Lifecycle & Visual Proof Verification › Test 3b: Visual Proof — restart_verified.png (>50KB, active post-restart gameplay: player resurrected, revived HUD, active horde, scythe cleave slash) (746ms)
-  ✓  5 [chromium] › tests/e2e/restart_survival.spec.ts:716:3 › Milestone M4: Dark Fantasy Horde Survival — Restart Lifecycle & Visual Proof Verification › Test 3c: Visual Proof — occult_vfx_lighting.png (>50KB, dynamic amber torch light, violet scythe slash, branching abyssal lightning, soul motes, blood decals, 3-layer mist) (625ms)
-  ✓  6 [chromium] › tests/e2e/restart_survival.spec.ts:878:3 › Milestone M4: Dark Fantasy Horde Survival — Restart Lifecycle & Visual Proof Verification › Test 3d: Visual Proof Invariant Audit — All 3 artifacts exist on disk, exceed 50KB, have valid PNG magic bytes and 960x540 dimensions (4ms)
-
-  6 passed (21.0s)
-```
-
-Full Playwright Suite:
-```bash
-npx playwright test --reporter=list
-```
-Output:
-```
-  18 passed (1.4m)
-```
-
-Unit Test Suite:
-```bash
-npx vitest run --fileParallelism=false
-```
-Output:
-```
- Test Files  28 passed (28)
-      Tests  372 passed (372)
-   Duration  16.91s
-```
-
-TypeScript Check & Production Build:
-```bash
-npx tsc --noEmit && npm run build
-```
-Output:
-```
-vite v6.4.3 building for production...
-dist/index.html                  1.37 kB │ gzip:  0.61 kB
-dist/assets/index-s2gnTiXZ.js  177.62 kB │ gzip: 47.53 kB │ map: 622.28 kB
-✓ built in 431ms
-```
+5. **Build and Unit Test Verification**:
+   - `npx tsc --noEmit`: 0 errors / 0 warnings.
+   - `npm run build`: Production build via Vite completed cleanly in 248ms (`dist/index.html` 1.67 kB, `dist/assets/index-P-gakKWq.js` 194.90 kB).
+   - `npx vitest run tests/unit/HordeStressAdversarial.test.ts`: 7/7 passed, average 60Hz tick duration: 1.116ms (far below the 16.66ms / 8.0ms budget).
 
 ---
 
 ## 2. Logic Chain
 
-1. **Visual Buffer Integrity**:
-   - Observation 1.1 reveals that all 3 screenshots in `artifacts/dark_fantasy/` strictly satisfy the required dimensions ($960 \times 540$) and start with valid PNG magic bytes (`89 50 4E 47 0D 0A 1A 0A`).
-   - Solid black pixels represent only $0.01\%$ of each buffer, refuting any hypothesis of blank, cleared, or corrupted frame buffers.
-   - Decompressing and decoding scanlines directly proved that every image contains between $7,131$ and $53,758$ distinct colors, with all 16 histogram bins active across R, G, and B channels.
-   - Specifically, `occult_vfx_lighting.png` has $4.87\%$ bright luminance pixels ($> 100$), $5,583$ cyan lightning pixels, $4,218$ violet arcane pixels, and $9,105$ bone ivory pixels, demonstrating genuine dynamic dual-pass lighting and particle emissions.
-
-2. **Kinematic Safety & 15-Second Survival Loop**:
-   - Observation 1.2 demonstrates that the 8-directional steering bot successfully navigated the resurrected player through Phase 1 undead waves for $15.07$ continuous simulation seconds without dying.
-   - Throughout the entire trial, the player's health never dropped below $45.31$ HP (starting from $100$ HP, ending at $47.49$ HP with natural regeneration), proving that the 3-point lookahead collision avoidance effectively prevented lethal contact damage from encroaching skeletons ($65$ px/s) and ghouls ($110$ px/s).
-   - In all frames, the simulation `accumulator` remained bounded at $\le 0.0165$s, confirming that timestamp accumulation explosions and thread-blocking loops have been eliminated.
-
-3. **Auto-Firing Weapons, XP Advancement & Zero Accumulation Leaks**:
-   - During the survival trial, the starter weapon (Arcane Scythe) engaged enemies automatically, generating $29$ confirmed kills.
-   - Slain enemies generated soul shard drops that were pulled in by the player's magnet radius, granting XP and triggering a level-up to Level 2.
-   - Observation 1.2's leak audit confirmed that:
-     - $20$ spawned drops were collected down to $0$ remaining active items.
-     - `LootManager` pool capacity remained invariant at $1,500$ slots with zero dangling entities.
-     - `HordeManager` pool capacity remained invariant at $2,048$ slots.
-     - Active scythe slashes expired and were dereferenced back to $0$ active elements.
-     - Console errors and page errors remained strictly $0$.
+1. **Modal / Simulation State Decoupling Under Load**:
+   - *Observation*: During 30 rapid open/close cycles under 120 active enemies, `accumulator` never exceeded 0.016s and no NaN coordinates were produced.
+   - *Reasoning*: In `src/main.ts:249-272`, when `upgradeModal.getIsOpen()` is true, `this.step(dt)` is bypassed while `this.upgradeModal.update(dt)` runs. Upon closure in `main.ts:154-155`, `this.lastTime` is re-synchronized to `performance.now()` and `this.accumulator` is clamped to 0. This prevents the classic "spiral of death" or huge dt spike when resuming simulation.
+2. **Keyboard Input Fuzzing Robustness**:
+   - *Observation*: 541 rapid key presses across navigation and action keys produced 0 console errors and 0 unhandled exceptions.
+   - *Reasoning*: In `src/input/KeyboardController.ts`, keydown/keyup events update boolean flags with safe fallbacks and edge-detection latches that clear upon snapshot consumption. Keys outside the recognized map are safely ignored. In `src/ui/UpgradeModal.ts:163-182`, key handling explicitly verifies `this.isOpen && this.cards.length > 0`, and `confirmSelection` enforces strict bounds checking `index >= 0 && index < this.cards.length`.
+3. **Modal Selection Invariance Over Death / Restart**:
+   - *Observation*: Pressing `Space` while modal is open confirms card selection and never triggers resurrection / restart.
+   - *Reasoning*: In `src/main.ts:302-308`, `canResurrect()` strictly checks `!this.upgradeModal.getIsOpen() && this.deathTimer >= 0.5`. Since `this.upgradeModal.getIsOpen()` is true, `canResurrect()` evaluates to false, ensuring `Space` is safely handled by `UpgradeModal` rather than triggering a premature game restart.
+4. **Queue Preservation Under Rapid Level-Up Cascades**:
+   - *Observation*: Queuing 5 pending level-ups synchronously was resolved by 5 sequential modal opens and closes without race conditions.
+   - *Reasoning*: `main.ts:145-157` decrements `this.pendingLevelUps` and recursively calls `this.openNextLevelUp(...)` if `this.pendingLevelUps > 0`. The simulation remains paused until the entire backlog is drained, guaranteeing no dropped upgrades.
 
 ---
 
 ## 3. Caveats
 
-1. **Test Concurrency / CPU Contention in Unit Tests**:
-   - When running Vitest with default worker pools on multi-core systems under load, performance micro-benchmarks that test tight timing thresholds (e.g. `< 10ms` for 1,000 entities) can occasionally fail due to thread preemption. Running with `--fileParallelism=false` eliminates CPU thrashing and results in a 100% green pass (372/372).
-2. **Deterministic Screen Scaling**:
-   - Playwright tests enforce `canvas.style.width = '960px'` and `canvas.style.height = '540px'` to maintain exact 1:1 pixel rendering on headless Chromium without sub-pixel DPI scaling.
-3. **No other caveats**:
-   - All core invariants have been verified directly and empirically.
+1. **Synthetic Headless Web Environment**:
+   Playwright tests were executed on macOS Darwin with headless Chromium utilizing SwiftShader software rasterization (`--disable-gpu`). Hardware-accelerated GPU context loss (e.g. mobile browser background suspension) was not simulated as it is outside headless CI scope.
+2. **Deterministic Time vs Live Clock**:
+   Static visual proof screenshots in `visual_proof_m4.spec.ts` use deterministic render step injection (`game.stop(); game.render();`), whereas active stress and survival tests run the uninhibited full 60Hz browser rAF loop. Both regimes were independently verified.
 
 ---
 
 ## 4. Conclusion
 
-**Verdict: `APPROVE`**
+**Gate Verdict: APPROVE**
 
-Milestone 4 (Automated E2E Verification, Restart Lifecycle & Visual Proof) satisfies all requirements:
-1. **Kinematic Safety**: Player reliably survives $\ge 15.0$ continuous seconds post-restart without taking lethal contact damage.
-2. **Auto-Firing & Combat**: Starter Arcane Scythe engages enemies, registers kills, drops soul shards, advances XP and level, and recycles entity buffers without leaks.
-3. **Visual Buffer Fidelity**: All 3 screenshot artifacts (`enhanced_graphics_swarm.png`, `restart_verified.png`, `occult_vfx_lighting.png`) exceed the 50KB minimum threshold ($203$KB – $336$KB), match $960 \times 540$ dimensions, exhibit $0.01\%$ solid black, and have active 16/16 histogram bins across all RGB channels.
-4. **Full Test Suite**: 100% green across all 28 unit test files (372 tests) and all 18 Playwright E2E tests. Zero TypeScript errors, zero build errors.
+The work product delivered by `worker_m4_e2e_artifacts` meets and exceeds all requirements:
+1. All 4 high-resolution visual proof screenshots exist in `artifacts/dark_fantasy/` and strictly exceed the 250KB threshold (284KB to 340KB).
+2. The adversarial stress test harness (`tests/e2e/challenger_m4_visual_stress.spec.ts`) verified that the game survives rapid modal churn under 50+ active enemies, intense keyboard fuzzing, and boundary key inputs with zero console errors, zero unhandled page exceptions, and zero accumulator spikes.
+3. The full Playwright test suite is 100% green (35 passed across 9 spec files).
+4. TypeScript type checking and production Vite builds succeed with zero errors.
+
+Milestone 4 is certified complete. The project is approved to proceed to Milestone 5 (100% Green Tests & Production Deployment).
 
 ---
 
 ## 5. Verification Method
 
-To independently reproduce and verify:
+To independently reproduce all adversarial stress and invariant checks:
 
-1. **Pixel Buffer & Histogram Analysis**:
+1. **Execute New Adversarial Stress Harness**:
    ```bash
-   python3 /tmp/verify_visual_buffers.py
+   npx playwright test tests/e2e/challenger_m4_visual_stress.spec.ts
    ```
-   *Expected: All 3 images output valid PNG magic, 960x540 dimensions, file sizes > 50KB, unique colors > 7,000, and solid black 0.01%.*
+   *Expected*: 3 passed in ~20s with 0 console errors and 0 page errors.
 
-2. **Run Challenger Adversarial Stress Test**:
+2. **Execute Consolidated Challenger Suite**:
    ```bash
-   npx playwright test tests/e2e/challenger_m4_2_stress.spec.ts
+   npx playwright test tests/e2e/challenger_m4_visual_stress.spec.ts tests/e2e/challenger_m4_2_stress.spec.ts tests/e2e/challenger_m4_restart_stress.spec.ts
    ```
-   *Expected: 2 passed in ~19s.*
+   *Expected*: 6 passed in ~55s.
 
-3. **Run Worker Restart Survival E2E Test**:
+3. **Verify Screenshot Artifact File Sizes (>250KB / 256,000 bytes)**:
    ```bash
-   npx playwright test tests/e2e/restart_survival.spec.ts
+   ls -la artifacts/dark_fantasy/
    ```
-   *Expected: 6 passed in ~21s.*
+   *Expected*:
+   - `widened_fov_battlefield.png` > 256,000 bytes (~292KB)
+   - `modern_gothic_hud.png` > 256,000 bytes (~302KB)
+   - `dynamic_motion_proof.png` > 256,000 bytes (~285KB)
+   - `upgrade_modal_modern.png` > 256,000 bytes (~340KB)
 
-4. **Run Full Playwright E2E Suite**:
+4. **Verify Visual Proof Suite**:
    ```bash
-   npx playwright test
+   npx playwright test tests/e2e/visual_proof_m4.spec.ts
    ```
-   *Expected: 18 passed.*
+   *Expected*: 6 passed in ~34s.
 
-5. **Run Unit Tests**:
-   ```bash
-   npx vitest run --fileParallelism=false
-   ```
-   *Expected: 28 passed (28), 372 passed (372).*
-
-6. **TypeScript & Production Build**:
+5. **Verify TypeScript & Production Build**:
    ```bash
    npx tsc --noEmit && npm run build
    ```
-   *Expected: Clean exit code 0.*
+   *Expected*: Clean build in ~250ms with 0 errors.

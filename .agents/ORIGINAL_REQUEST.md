@@ -350,3 +350,35 @@ Adjust the camera or viewing angle. The current perspective feels "weird" or jar
 ## 2026-09-11T02:16:21Z
 
 승인 (Explicit user approval received to execute the hitbox precision fix and camera overhaul using the 30-agent swarm.)
+
+## 2026-09-11T06:10:26Z
+
+Use a very large team of 40 agents.
+
+This is a focused enhancement task for the "Grim Harvest: Undead Siege" game. The team must overhaul the animations, widen the camera field of view (FOV), and redesign the UI.
+
+Working directory: /Users/user/teamwork_projects/metal_slug_web
+Integrity mode: development
+
+## Requirements
+
+### R1. Dynamic Animations & Motion
+The current character and enemy animations feel stiff and lifeless. Implement dynamic motion (e.g., easing, squash/stretch, multi-frame sprite animations, or procedural movement) to make actions, attacks, and movement feel impactful, fluid, and alive.
+
+### R2. Widen Field of View (FOV)
+The current camera view is too narrow and zoomed in, restricting situational awareness. Adjust the camera zoom or FOV to reveal a much larger portion of the map, allowing the player to effectively see and react to massive enemy hordes.
+
+### R3. Modern UI/HUD Overhaul
+The current UI looks outdated and clunky. Completely redesign the HUD (Health, Experience, Level, Timer, Upgrade menus) to feature a modern, sleek, and high-quality dark fantasy aesthetic.
+
+## Acceptance Criteria
+
+### Verification & Deployment
+- [ ] Visual Proof (Animations): Playwright screenshots or recorded states demonstrate dynamic scaling, rotation, or sprite changes during gameplay.
+- [ ] Visual Proof (FOV & UI): Playwright screenshots (>250KB) clearly demonstrate the significantly widened camera view and the newly polished, modern UI.
+- [ ] 100% Green Tests: Unit tests and E2E tests must be updated and pass cleanly without engine crashes.
+- [ ] Deployment: Git push to `origin/main` is verified and Vercel build succeeds.
+
+## 2026-09-11T06:12:29Z
+
+승인 (허용) (Explicit user approval received to execute the animation overhaul, FOV widening, and UI redesign using the 40-agent swarm.)

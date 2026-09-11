@@ -1627,6 +1627,7 @@ export class DarkFantasySprites {
 
     // Movement frame: check if velocity is significant
     const speedSq = player.velocity.x * player.velocity.x + player.velocity.y * player.velocity.y;
+    const speed = Math.sqrt(speedSq);
     const frame = speedSq > 10 ? Math.floor(elapsedTime * 8) % 4 : 0;
 
     // Damage Flash:
@@ -1635,14 +1636,51 @@ export class DarkFantasySprites {
       flash = Math.floor(player.invulnerabilityTimer * 24) % 2 === 0 ? 'white' : 'crimson';
     }
 
+    // Dynamic procedural motion offsets (Spec 3, 4):
+    const moveRatio = Math.min(1.0, speed / Math.max(1, player.stats.moveSpeed));
+    const walkPhase = (player as any).walkBobPhase ?? 0;
+    const bobY = speedSq > 10 ? Math.sin(walkPhase) * 2.0 * moveRatio : 0;
+    const swayX = speedSq > 10 ? Math.cos(walkPhase * 0.5) * 1.2 * moveRatio : 0;
+    const flinchRot = (player as any).flinchRotation ?? 0;
+    const lean = speedSq > 10 ? (facingRight ? 0.05 : -0.05) * moveRatio : 0;
+    const tilt = flinchRot + lean;
+
+    const squash = (player as any).squashScale;
+    const scaleX = squash ? squash.x : 1.0;
+    const scaleY = squash ? squash.y : 1.0;
+
+    // Attack recoil and anticipation offset (Spec 4):
+    const attackAnim = (player as any).attackAnim;
+    const recoilX = attackAnim?.active ? (attackAnim.recoilOffset?.x ?? 0) : 0;
+    const recoilY = attackAnim?.active ? (attackAnim.recoilOffset?.y ?? 0) : 0;
+
+    const totalX = screenX + swayX + recoilX;
+    const totalY = screenY + bobY + recoilY;
+
+    const hasTransform = flinchRot !== 0 || scaleX !== 1.0 || scaleY !== 1.0;
     const entry = this.getCachedEntry('player', frame, facingRight, flash);
     if (entry) {
-      ctx.drawImage(entry.canvas, screenX - entry.originX, screenY - entry.originY);
+      if (hasTransform) {
+        ctx.save();
+        ctx.translate(totalX, totalY);
+        if (tilt !== 0) ctx.rotate(tilt);
+        if (scaleX !== 1.0 || scaleY !== 1.0) ctx.scale(scaleX, scaleY);
+        ctx.drawImage(entry.canvas, -entry.originX, -entry.originY);
+        ctx.restore();
+      } else {
+        ctx.drawImage(entry.canvas, totalX - entry.originX, totalY - entry.originY);
+      }
     } else {
       // Fallback
       ctx.save();
-      ctx.translate(screenX, screenY);
-      if (!facingRight) ctx.scale(-1, 1);
+      ctx.translate(totalX, totalY);
+      if (tilt !== 0) ctx.rotate(tilt);
+      if (scaleX !== 1.0 || scaleY !== 1.0) {
+        if (!facingRight) ctx.scale(-scaleX, scaleY);
+        else ctx.scale(scaleX, scaleY);
+      } else if (!facingRight) {
+        ctx.scale(-1, 1);
+      }
       if (flash === 'white') this.drawMaskedEntity(ctx, 'player', frame, '#ffffff');
       else if (flash === 'crimson') this.drawMaskedEntity(ctx, 'player', frame, PALETTE.BLOOD_CRIMSON.FLASH);
       else this.drawPlayerVector(ctx, frame);
@@ -1667,13 +1705,20 @@ export class DarkFantasySprites {
     if (rawType.includes('ghoul')) spriteType = 'ghoul';
     else if (rawType.includes('banshee')) spriteType = 'banshee';
     else if (rawType.includes('knight')) spriteType = 'death_knight';
+    else if (rawType.includes('necromancer')) spriteType = 'banshee';
     else spriteType = 'skeleton';
 
     const facingRight = enemy.facingRight !== false;
     const timer = (enemy as any).behaviorTimer ?? elapsedTime;
-    const frame = Math.floor(timer * 8) % 4;
+    const speedSq = (enemy.vx || 0) * (enemy.vx || 0) + (enemy.vy || 0) * (enemy.vy || 0);
+    const isSpectral = spriteType === 'banshee';
 
-    // Flash state
+    // Advance enemy walk cycle dynamically based on timer, movement velocity, or spectral hover (Spec 1)
+    const frame = (speedSq > 1 || isSpectral || ((enemy as any).behaviorTimer ?? 0) > 0)
+      ? Math.floor(timer * 8) % 4
+      : 0;
+
+    // Flash state (Spec 6)
     let flash: FlashState = 'normal';
     if (enemy.flashTimer > 0.05) {
       flash = 'white';
@@ -1681,14 +1726,82 @@ export class DarkFantasySprites {
       flash = 'crimson';
     }
 
+    // Dynamic procedural motion offsets (Spec 5):
+    let bobX = 0;
+    let bobY = 0;
+    let tilt = (enemy as any).flinchRot ?? 0;
+
+    if (isSpectral) {
+      // Ethereal floating & levitation (dual incommensurate harmonic)
+      const hPhase = (enemy as any).hoverPhase ?? 0;
+      if (hPhase > 0) {
+        bobY = Math.sin(hPhase) * 4.5 + Math.sin(hPhase * 1.886) * 1.8;
+        tilt += 0.05 * Math.cos(hPhase);
+      } else if (speedSq > 1) {
+        const t = elapsedTime * 2.2;
+        bobY = Math.sin(t) * 4.5 + Math.sin(t * 1.886) * 1.8;
+        tilt += 0.05 * Math.cos(t);
+      }
+    } else {
+      // Grounded walk cycles: bi-harmonic vertical gait bobbing and pelvic sway
+      const speed = Math.sqrt(speedSq);
+      const maxSpeed = Math.max(1, enemy.speed || 65);
+      const moveRatio = Math.min(1.0, speed / maxSpeed);
+
+      if (moveRatio > 0.05) {
+        let aBob = 2.2;
+        let aSway = 1.4;
+        let aTilt = 0.08;
+        let aLean = 0.05;
+
+        if (spriteType === 'ghoul') {
+          aBob = 3.0;
+          aSway = 2.0;
+          aTilt = 0.12;
+          aLean = 0.15;
+        } else if (spriteType === 'death_knight') {
+          aBob = 1.8;
+          aSway = 2.5;
+          aTilt = 0.05;
+          aLean = 0.04;
+        }
+
+        const wPhase = (enemy as any).walkPhase ?? (timer * 16.0);
+        bobY = (-Math.abs(Math.sin(wPhase)) * aBob + aBob * 0.25 * Math.cos(2 * wPhase)) * moveRatio;
+        bobX = Math.sin(wPhase) * aSway * moveRatio;
+        tilt += (Math.sin(wPhase) * aTilt + (facingRight ? aLean : -aLean)) * moveRatio;
+      }
+    }
+
+    const scaleX = (enemy as any).squashX ?? 1.0;
+    const scaleY = (enemy as any).squashY ?? 1.0;
+
+    const totalX = screenX + bobX;
+    const totalY = screenY + bobY;
+    const hasTransform = (enemy as any).flinchRot !== 0 || scaleX !== 1.0 || scaleY !== 1.0;
     const entry = this.getCachedEntry(spriteType, frame, facingRight, flash);
     if (entry) {
-      ctx.drawImage(entry.canvas, screenX - entry.originX, screenY - entry.originY);
+      if (hasTransform) {
+        ctx.save();
+        ctx.translate(totalX, totalY);
+        if (tilt !== 0) ctx.rotate(tilt);
+        if (scaleX !== 1.0 || scaleY !== 1.0) ctx.scale(scaleX, scaleY);
+        ctx.drawImage(entry.canvas, -entry.originX, -entry.originY);
+        ctx.restore();
+      } else {
+        ctx.drawImage(entry.canvas, totalX - entry.originX, totalY - entry.originY);
+      }
     } else {
       // Fallback
       ctx.save();
-      ctx.translate(screenX, screenY);
-      if (!facingRight) ctx.scale(-1, 1);
+      ctx.translate(totalX, totalY);
+      if (tilt !== 0) ctx.rotate(tilt);
+      if (scaleX !== 1.0 || scaleY !== 1.0) {
+        if (!facingRight) ctx.scale(-scaleX, scaleY);
+        else ctx.scale(scaleX, scaleY);
+      } else if (!facingRight) {
+        ctx.scale(-1, 1);
+      }
       if (flash === 'white') this.drawMaskedEntity(ctx, spriteType, frame, '#ffffff');
       else if (flash === 'crimson') this.drawMaskedEntity(ctx, spriteType, frame, PALETTE.BLOOD_CRIMSON.FLASH);
       else {

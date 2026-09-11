@@ -104,10 +104,11 @@ export class GrimHarvestGame {
 
     this.lootManager = new LootManager(1500);
 
-    // 2. Camera & Viewport
+    // 2. Camera & Viewport (Widened FOV Z = 0.80, reveals 1200x675 world view)
     this.camera = new Camera({
       viewportWidth: GrimHarvestGame.VIRTUAL_WIDTH,
       viewportHeight: GrimHarvestGame.VIRTUAL_HEIGHT,
+      zoom: 0.80,
       forwardLock: false,
       smoothSpeed: 8.0,
       bounds: { minX: -2000, maxX: 2000, minY: -2000, maxY: 2000 },
@@ -119,10 +120,11 @@ export class GrimHarvestGame {
 
     // 4. Gothic Render Engine & HUD
     this.backdrop = new GothicBackdrop({
-      viewportWidth: GrimHarvestGame.VIRTUAL_WIDTH,
-      viewportHeight: GrimHarvestGame.VIRTUAL_HEIGHT,
+      viewportWidth: this.camera.viewWidth,
+      viewportHeight: this.camera.viewHeight,
     });
     this.vfx = new DarkFantasyVFX(500);
+    this.vfx.lighting.resize(this.camera.viewWidth, this.camera.viewHeight);
     this.hud = new GothicHUD({
       virtualWidth: GrimHarvestGame.VIRTUAL_WIDTH,
       virtualHeight: GrimHarvestGame.VIRTUAL_HEIGHT,
@@ -158,11 +160,11 @@ export class GrimHarvestGame {
     this.weaponManager.addWeapon('scythe', 1);
     this.upgradeSystem.addWeapon('weapon_scythe', 1);
 
-    // 6. Escalating Wave Director
+    // 6. Escalating Wave Director (Adapted to widened 1200x675 FOV)
     this.waveDirector = new WaveDirector(this.hordeManager, {
-      viewportWidth: GrimHarvestGame.VIRTUAL_WIDTH,
-      viewportHeight: GrimHarvestGame.VIRTUAL_HEIGHT,
-      spawnMargin: 90,
+      viewportWidth: this.camera.viewWidth,
+      viewportHeight: this.camera.viewHeight,
+      spawnMargin: 100,
       arenaBounds: { minX: -2000, maxX: 2000, minY: -2000, maxY: 2000 },
     });
 
@@ -171,7 +173,7 @@ export class GrimHarvestGame {
       this.handlePlayerLevelUp(event.newLevel);
     });
 
-    // 8. Initial Swarm Deployment
+    // 8. Initial Swarm Deployment (spawn beyond 688.4px diagonal view corner)
     this.spawnInitialSwarm();
 
     // 9. DOM Mount
@@ -525,13 +527,20 @@ export class GrimHarvestGame {
     const h = GrimHarvestGame.VIRTUAL_HEIGHT;
     const camX = this.camera.renderX;
     const camY = this.camera.renderY;
+    const viewW = this.camera.viewWidth;
+    const viewH = this.camera.viewHeight;
+    const zoom = this.camera.zoom;
+
+    // --- World Rendering Passes (Scaled by Camera Zoom: 0.80 -> 1200x675 world fits 960x540 canvas) ---
+    ctx.save();
+    ctx.scale(zoom, zoom);
 
     // 1. Multi-Layer Gothic Parallax Backdrop
-    this.backdrop.render(ctx, camX, camY, this.elapsedTime);
+    this.backdrop.render(ctx, camX, camY, this.elapsedTime, viewW, viewH);
 
     // 2. Ground VFX (Decals, Persistent Spell Circles)
-    this.vfx.renderDecals(ctx, this.camera);
-    this.vfx.renderGround(ctx, this.camera);
+    this.vfx.renderDecals(ctx, this.camera, viewW, viewH);
+    this.vfx.renderGround(ctx, this.camera, viewW, viewH);
 
     // 3. Contact Drop Shadows (Pre-Entity Grounded Shadows Pass)
     this.vfx.renderContactDropShadows(
@@ -540,7 +549,9 @@ export class GrimHarvestGame {
       this.player,
       this.hordeManager,
       this.lootManager,
-      this.elapsedTime
+      this.elapsedTime,
+      viewW,
+      viewH
     );
 
     // 4. Draw Loot Drops (Soul Gems) via DarkFantasySprites
@@ -549,7 +560,7 @@ export class GrimHarvestGame {
       if (!item.isAlive) continue;
       const screenX = item.position.x - camX;
       const screenY = item.position.y - camY;
-      if (screenX < -20 || screenX > w + 20 || screenY < -20 || screenY > h + 20) continue;
+      if (screenX < -20 || screenX > viewW + 20 || screenY < -20 || screenY > viewH + 20) continue;
       DarkFantasySprites.drawLoot(ctx, item, this.camera, this.elapsedTime);
     }
 
@@ -559,7 +570,7 @@ export class GrimHarvestGame {
       if (!enemy.isAlive) continue;
       const screenX = enemy.x - camX;
       const screenY = enemy.y - camY;
-      if (screenX < -40 || screenX > w + 40 || screenY < -40 || screenY > h + 40) continue;
+      if (screenX < -40 || screenX > viewW + 40 || screenY < -40 || screenY > viewH + 40) continue;
       DarkFantasySprites.drawEnemy(ctx, enemy, this.camera, this.elapsedTime);
     }
 
@@ -570,18 +581,28 @@ export class GrimHarvestGame {
     this.weaponManager.render(ctx, this.camera);
 
     // 8. Air VFX (Flying blood, bone chips, rising soul sparks, spell trails, glints)
-    this.vfx.renderAir(ctx, this.camera);
+    this.vfx.renderAir(ctx, this.camera, viewW, viewH);
 
     // 9. Foreground Atmospheric Mist Pass
-    this.backdrop.renderForegroundMist(ctx, camX, camY, this.elapsedTime);
+    this.backdrop.renderForegroundMist(ctx, camX, camY, this.elapsedTime, viewW, viewH);
 
     // 10. Dynamic Lighting Pass (Dual-Pass Offscreen Carving + Additive Bloom)
-    this.vfx.lighting.render(ctx, this.camera, {
-      player: this.player,
-      weaponManager: this.weaponManager,
-      lootManager: this.lootManager,
-      elapsedTime: this.elapsedTime,
-    });
+    this.vfx.lighting.render(
+      ctx,
+      this.camera,
+      {
+        player: this.player,
+        weaponManager: this.weaponManager,
+        lootManager: this.lootManager,
+        elapsedTime: this.elapsedTime,
+      },
+      viewW,
+      viewH
+    );
+
+    ctx.restore();
+
+    // --- Screen-Space UI Passes (1:1 Native Resolution 960x540) ---
 
     // 11. Gothic HUD Overlay (Cracked Iron Vitality, XP Bar, Timer, Skull Kills, Inventory, Plaque)
     const hudSnapshot: HUDStateSnapshot = {

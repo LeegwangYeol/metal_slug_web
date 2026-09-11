@@ -1,222 +1,224 @@
-# Handoff Report: Reviewer 2 (Milestone 1 — Precision Damage Hitbox & Collision Subsystem)
+# Handoff Report: Reviewer 2 (Milestone 1 — Dynamic Animations & Motion Engine)
 
-- **Agent**: Reviewer 2 / Adversarial Critic (Agent 6)
-- **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m1_2/`
-- **Project Root**: `/Users/user/teamwork_projects/metal_slug_web`
-- **Target Milestone**: Milestone 1 (Precision Damage Hitbox & Collision Subsystem)
-- **Verdict**: **APPROVE**
-- **Date**: 2026-09-11T11:40:00+09:00
+- **Agent**: `reviewer_m1_2` (teamwork_preview_reviewer)
+- **Roles**: Reviewer, Adversarial Critic
+- **Working Directory**: `/Users/user/teamwork_projects/metal_slug_web/.agents/reviewer_m1_2`
+- **Target Milestone**: Milestone 1 (Dynamic Animations & Motion Engine)
+- **Parent Orchestrator ID**: `52278ce8-fed5-44e0-ad05-d44362fee9a5`
+- **Timestamp**: 2026-09-11T15:34:00+09:00
+- **Final Verdict**: **APPROVE**
 
 ---
 
 ## 1. Observation
 
-### 1.1 Direct Inspection of Source Code
+### 1.1 Direct Inspection of Source Code Modifications
 
-1. **`src/main.ts:464-488` (Contact Damage Loop)**:
-   ```typescript
-   // 6. Contact Damage & Blood VFX (Two-Phase: Broadphase Grid Query + Narrowphase Exact Circle Overlap)
-   const nearbyCount = this.hordeManager.getEnemiesInRadius(
-     this.player.position.x,
-     this.player.position.y,
-     Player.COLLISION_RADIUS + 32,
-     this.damageScratch
-   );
+1. **`src/core/entities/Enemy.ts` (lines 42-49, 132-137, 148-179)**:
+   - Added procedural animation and motion state variables:
+     ```typescript
+     public walkPhase: number = 0;
+     public hoverPhase: number = 0;
+     public squashX: number = 1.0;
+     public squashY: number = 1.0;
+     public flinchRot: number = 0;
+     public flinchTimer: number = 0;
+     ```
+   - Pool reset method (`Enemy.reset()`, lines 132-137) cleanly restores zero values (`walkPhase = 0`, `hoverPhase = 0`, `squashX = 1.0`, `squashY = 1.0`, `flinchRot = 0`, `flinchTimer = 0`) with zero GC allocation.
+   - `takeDamage` (lines 148-179) triggers Tier 1 squash (`squashX = 1.25, squashY = 0.75`), sets `flashTimer = 0.10` for two-phase color cascade (50ms white -> 50ms crimson), and applies mass-proportional rotational flinch clamped to `[-0.35, +0.35]` rad ($\sim 20^\circ$).
 
-   for (let i = 0; i < nearbyCount; i++) {
-     const enemy = this.hordeManager.pool[this.damageScratch[i]];
-     if (enemy && enemy.active && enemy.isAlive) {
-       const dx = enemy.position.x - this.player.position.x;
-       const dy = enemy.position.y - this.player.position.y;
-       const distSq = dx * dx + dy * dy;
-       const contactDist = Player.COLLISION_RADIUS + enemy.radius;
-       if (distSq <= contactDist * contactDist + 1e-3) {
-         const dealt = this.player.takeDamage(enemy.damage);
-         if (dealt > 0) {
-           this.vfx.emitBloodBurst(this.player.position.x, this.player.position.y, 3);
-           this.vfx.emitBloodSplatter(this.player.position.x, this.player.position.y, 4);
-         }
+2. **`src/core/HordeManager.ts` (lines 356-382)**:
+   - Fixed entity animation frame lock: line 357 adds `enemy.behaviorTimer += dt;`.
+   - Gait phase accumulation:
+     ```typescript
+     const rawType = (enemy.type || 'skeleton').toLowerCase();
+     if (rawType.includes('banshee') || rawType.includes('necromancer')) {
+       enemy.hoverPhase = (enemy.hoverPhase + 2.2 * dt) % (Math.PI * 200);
+     } else {
+       const currentSpeed = Math.hypot(enemy.vx, enemy.vy);
+       const maxSpeed = Math.max(1, enemy.speed || 65);
+       enemy.walkPhase = (enemy.walkPhase + (currentSpeed / maxSpeed) * 16.0 * dt) % (Math.PI * 200);
+     }
+     ```
+   - Modulo clamping `%(Math.PI * 200)` ensures numerical stability over prolonged gameplay sessions.
+   - Exponential relaxation of flinch and deformation:
+     ```typescript
+     const relaxFactor = 1.0 - Math.exp(-25.0 * dt);
+     enemy.squashX += (1.0 - enemy.squashX) * relaxFactor;
+     enemy.squashY += (1.0 - enemy.squashY) * relaxFactor;
+     enemy.flinchRot += (0.0 - enemy.flinchRot) * relaxFactor;
+     ```
+
+3. **`src/core/entities/Player.ts` (lines 58-87, 226-257, 303-344, 431-542)**:
+   - Dynamic exponential relaxation easing (`approachExp`, lines 513-542):
+     $$v_{t+dt} = v_t + (v_{\text{target}} - v_t)(1 - e^{-\lambda dt})$$
+     with $\lambda_{\text{accel}} = 14.0\text{ s}^{-1}$, $\lambda_{\text{brake}} = 18.0\text{ s}^{-1}$, and enhanced turnaround traction $\lambda_{\text{turn}} = 28.8\text{ s}^{-1}$ ($\times 1.6$) when $v_{\text{current}} \cdot v_{\text{target}} < 0$. Clean zero-snap at $|v| < 0.5\text{ px/s}$.
+   - Damped harmonic oscillator squash & stretch (lines 303-321):
+     $\zeta = 0.65, \omega_n = 28.0\text{ rad/s}, \omega_d = 21.28\text{ rad/s}$.
+     Volume preservation invariant strictly enforced: $S_x = 1.0 + \Delta, S_y = 1.0 / (1.0 + \Delta) \implies S_x \cdot S_y \equiv 1.0$.
+   - 3-phase attack state machine (`updateAttackAnim`, lines 458-507):
+     - Phase 1 (Wind-up, $t \in [0.0, 0.08)$): lean backward up to $-4.0\text{px}$ opposite aim, weapon angles back $-0.6\text{ rad}$, swells $+15\%$.
+     - Phase 2 (Release / Strike, $t \in [0.08, 0.14)$): explosive forward lunge ($-4.0\text{px} \to +5.0\text{px}$) via cubic ease-out, weapon sweeps $+3.75\text{ rad}$.
+     - Phase 3 (Follow-through & Elastic Recovery, $t \in [0.14, 0.26)$): damped return ($e^{-18 t} \cos(30 t)$), returning to neutral $(0, 0)$ at $t = 0.26\text{s}$.
+
+4. **`src/render/sprites/DarkFantasySprites.ts` (lines 1639-1688, 1711-1816)**:
+   - Grounded walk cycles: bi-harmonic vertical gait bobbing ($y_{\text{bob}}$) and pelvic sway ($x_{\text{sway}}$) with type-specific amplitudes (Ghoul $A_{\text{bob}}=3.0$, Death Knight $A_{\text{bob}}=1.8, A_{\text{sway}}=2.5$).
+   - Spectral levitation: dual incommensurate harmonic floating ($y = 4.5 \sin(\phi) + 1.8 \sin(1.886\phi)$) for Banshee and Necromancer.
+   - **Conditional Affine Matrix Optimization**:
+     ```typescript
+     const hasTransform = (enemy as any).flinchRot !== 0 || scaleX !== 1.0 || scaleY !== 1.0;
+     if (entry) {
+       if (hasTransform) {
+         ctx.save();
+         ctx.translate(totalX, totalY);
+         if (tilt !== 0) ctx.rotate(tilt);
+         if (scaleX !== 1.0 || scaleY !== 1.0) ctx.scale(scaleX, scaleY);
+         ctx.drawImage(entry.canvas, -entry.originX, -entry.originY);
+         ctx.restore();
+       } else {
+         ctx.drawImage(entry.canvas, totalX - entry.originX, totalY - entry.originY);
        }
      }
-   }
-   ```
-   - Arbitrary `+ 15` phantom padding at line 468 was completely eradicated.
-   - Broadphase queries spatial grid with `Player.COLLISION_RADIUS + 32` into pre-allocated `this.damageScratch: Int32Array(64)` (`src/main.ts:78`), resolving per-frame garbage heap allocation (`new Int32Array(32)` removed).
-   - Strict narrowphase Euclidean circle-circle overlap check: $\Delta x^2 + \Delta y^2 \le (r_{\text{player}} + r_{\text{enemy}})^2 + 10^{-3}$.
-   - Blood splatter VFX gated behind `if (dealt > 0)`, preventing visual false positives when player is in invulnerability frames.
-
-2. **`src/core/entities/Player.ts:43, 64-67, 99-102, 218-219, 250`**:
-   - `Player.COLLISION_RADIUS` calibrated to `11.0px`.
-   - Bounds bounding box dimensions explicitly match: `width: 22.0`, `height: 22.0`, `x: px - 11.0`, `y: py - 11.0`.
-   - `takeDamage` signature and behavior:
-     ```typescript
-     if (!this.isAlive || (this.invulnerabilityTimer > 0 && amount < 1000)) return 0;
      ```
-     Incoming damage below 1000 respects the 0.5s i-frame window, while intentional lethal spikes (`amount >= 1000`) bypass i-frames for automated death and restart test suites.
+### 1.2 Quantitative Empirical Verification Results
 
-3. **`src/core/entities/EnemyTypes.ts:30-74` & `src/core/entities/Enemy.ts:29, 42-56`**:
-   - Calibrated enemy radii in `ENEMY_BASE_STATS`:
-     - Skeleton: $11.0\text{px}$
-     - Ghoul: $13.0\text{px}$
-     - Banshee: $12.0\text{px}$
-     - Death Knight: $18.0\text{px}$
-     - Necromancer: $14.0\text{px}$
-   - `Enemy.ts` provides `collisionRadius` getter/setter delegating to `this.radius`.
-   - `Enemy.ts` implements zero-allocation `position` getter caching `_pos = { x: 0, y: 0 }`.
+1. **Production Build**:
+   - Command: `npm run build` (`tsc -b && vite build`)
+   - Result: Exit code 0, 0 TypeScript errors, 0 warnings. Output bundle `dist/assets/index-C1BADWrJ.js` (185.63 kB).
 
-4. **`src/core/weapons/` (Occult Weapon Arsenal Precision)**:
-   - `BoneSpear.ts:145, 155-160, 255-273`: Projectile radius calibrated to `8.0px` matching glowing spearhead VFX. Broadphase `p.radius + 32` followed by Euclidean narrowphase $\Delta x^2 + \Delta y^2 \le (r_{\text{proj}} + r_{\text{enemy}})^2 + 10^{-3}$. Added public `checkCollision(proj, enemy)`.
-   - `SoulOrbiters.ts:157-159, 200-225`: `getOrbRadius()` returns $10.0\text{px}$ (normal) and $14.0\text{px}$ (evolution). Checks contact against each discrete rotating skull orb $(s_x, s_y)$ individually, eliminating the legacy 52px-wide annular donut phantom hit bug in empty gaps between skulls.
-   - `ArcaneScythe.ts:163-190`: Narrowphase check $\Delta x^2 + \Delta y^2 \le (\text{effectiveRadius} + r_{\text{enemy}})^2$ applied before angle cleave cone calculation.
-   - `CursedAura.ts:131-150`: Narrowphase check $\Delta x^2 + \Delta y^2 \le (\text{effectiveRadius} + r_{\text{enemy}})^2$ applied before shockwave damage and outward knockback.
-   - `AbyssalLightning.ts:143-161, 200-216`: Euclidean radial boundary filtering enforced for both primary strike targeting and secondary chain lightning hops ($\le (130 + r_{\text{enemy}})^2$).
+2. **Full Regression Test Suite**:
+   - Command: `npm test` (`vitest run`)
+   - Result: 34 passed (34 test files), 502 passed (502 unit & integration tests), 0 failures.
 
-5. **`tests/unit/hitbox_precision.spec.ts`**:
-   - 33 tests across 4 comprehensive suites verifying exact calibration, 1px near-miss vs touch across all 5 enemy types, 360-degree omnidirectional symmetry across 8 angles, legacy +15px phantom zone immunity, headless full engine step integration, and weapon precision boundaries.
+3. **Motion Engine Verification Suite**:
+   - Command: `npx vitest run tests/unit/PlayerMotionEngine.test.ts`
+   - Result: 14/14 tests pass across all 7 test suites (frame lock, velocity easing, squash & stretch, attack animation, procedural locomotion, damage reaction, atlas invariants).
 
-6. **`tests/unit/Weapons.test.ts:84-95, 201-205`**:
-   - Suite 2 updated to evaluate hit cooldown with the enemy positioned directly on the orbiting skull (since gap immunity was fixed).
-   - Suite 7 updated to simulate 90 frames (1.5s) at spawn radius 75px, accommodating weapon firing cooldowns (Spear 1.1s, Scythe 1.4s) and verifying active damage and kills.
+4. **1,000 Entities Rendering Frame Budget Benchmark**:
+   - Command: Empirical tsx benchmark on 1,000 active entities.
+   - Result:
+     - Untransformed 1,000 entities (translational blit): **0.224 ms** average (budget $< 5.0\text{ms}$).
+     - Transformed 1,000 entities (damage flinch + squash): **1.030 ms** average (budget $< 5.0\text{ms}$).
+     - In 120-frame headless game loop (`ChallengerM2-1`): average frame time **0.421 ms**, p95 **0.602 ms**, max **3.275 ms**.
+     - Strictly well within the 60Hz frame budget.
 
-### 1.2 Tool Executions and Verbatim Output
+5. **Conditional Affine Transform Call-Count Audit**:
+   - Untransformed 1,000 entities: `saveCount = 0`, `restoreCount = 0`, `drawImageCount = 1000`.
+   - Transformed 1,000 entities: `saveCount = 1000`, `restoreCount = 1000`, `drawImageCount = 1000`.
+   - Proves 100% elimination of matrix save/restore overhead on untransformed translational blits.
 
-#### Command: `npx tsc --noEmit`
-```
-Exit code: 0
-Stdout: (clean - zero TypeScript compilation errors)
-```
-
-#### Command: `npx vitest run` (Full Test Suite)
-```
- Test Files  31 passed (31)
-      Tests  444 passed (444)
-   Start at  11:38:50
-   Duration  5.67s (transform 1.22s, setup 0ms, collect 4.57s, tests 24.10s, environment 4ms, prepare 2.93s)
-```
-
-#### Command: `npm run build` (Production Build Verification)
-```
-> fullmetalslug@1.0.0 build
-> tsc -b && vite build
-
-vite v6.4.3 building for production...
-transforming...
-✓ 34 modules transformed.
-rendering chunks...
-computing gzip size...
-dist/index.html                  1.37 kB │ gzip:  0.61 kB
-dist/assets/index-B3SaGwcD.js  178.81 kB │ gzip: 48.00 kB │ map: 627.51 kB
-✓ built in 227ms
-```
+6. **Kinematic Stability Stress Test ($dt \in [0.001, 0.1]$)**:
+   - Simulated 10,000 randomized kinematic steps across $dt \in [0.001, 0.1]$ and omnidirectional reversals.
+   - Overshoot detected: **0 (false)**.
+   - NaN coordinates: **0 (false)**.
+   - Volume conservation ($S_x \cdot S_y = 1.0$ within $10^{-4}$): **100% maintained (true)**.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Integrity Violation Audit (Pass)**:
-   - Evaluated all modified files (`src/main.ts`, `Player.ts`, `Enemy.ts`, `EnemyTypes.ts`, `BoneSpear.ts`, `SoulOrbiters.ts`, `ArcaneScythe.ts`, `CursedAura.ts`, `AbyssalLightning.ts`).
-   - Verified that no hardcoded test outputs or mock bypasses exist in production code.
-   - Verified that all collision logic computes genuine Euclidean distances in $O(1)$ Euclidean narrowphase after broadphase grid pruning.
-   - Verified that test suites run against real game and entity classes without facade mocks.
+1. **Entity Animation Frame Advancement**:
+   - *Observation*: `enemy.behaviorTimer` was previously locked at 0; line 357 of `HordeManager.ts` increments it by `dt` every tick.
+   - *Logic*: `DarkFantasySprites.ts:1717-1719` computes `frame = Math.floor(timer * 8) % 4`. Since `behaviorTimer` strictly increases by `dt`, `timer * 8` advances at 8 FPS, cycling frames 0, 1, 2, 3 smoothly in sync with horde movement.
+   - *Conclusion*: Entity walk cycle lock is resolved.
 
-2. **Root Cause Resolution (Pass)**:
-   - The user-reported defect in `ORIGINAL_REQUEST.md` and `COLLABORATION.md` was that contact damage felt unfair due to phantom padding in `src/main.ts:468` (`Player.COLLISION_RADIUS + 15`) and lack of narrowphase verification.
-   - Removal of `+ 15` and implementation of strict $\Delta x^2 + \Delta y^2 \le (r_{\text{player}} + r_{\text{enemy}})^2 + 10^{-3}$ ensures that contact damage triggers exclusively upon physical overlap.
-   - Player hurtbox ($r=11.0\text{px}$) and enemy hitboxes ($11\text{--}18\text{px}$) closely match visual sprite silhouettes.
+2. **Kinematic Stability & Zero-Overshoot Guarantee**:
+   - *Observation*: `approachExp` uses $v_{t+dt} = v_t + (v_{\text{target}} - v_t)(1 - e^{-\lambda dt})$.
+   - *Logic*: For all $\lambda > 0$ and $dt > 0$, $\lambda dt > 0 \implies 0 < e^{-\lambda dt} < 1 \implies \alpha = 1 - e^{-\lambda dt} \in (0, 1)$. Thus, $v_{t+dt}$ is a strictly convex combination of $v_t$ and $v_{\text{target}}$. Mathematically, $v_{t+dt}$ cannot exceed $v_{\text{target}}$ or oscillate past it. Directional reversals utilize $\lambda = 28.8\text{ s}^{-1}$ for crisp deceleration without bounce.
+   - *Conclusion*: Kinematic stability across variable $dt \in [0.001, 0.1]$ is mathematically guaranteed and empirically verified.
 
-3. **Regression & Robustness Verification (Pass)**:
-   - All 5 occult weapons were independently checked and tested. Their primary mechanics (BoneSpear piercing and pooling, SoulOrbiters orbital rotation and push/pull, ArcaneScythe cleave arc, CursedAura shockwave knockback, AbyssalLightning chaining) function seamlessly with 100% test pass rate.
-   - Full regression suite encompassing all previous milestones (M1 Horde Core, M2 Dark Fantasy Sprites & Backdrop, M3 Occult Arsenal & VFX, M4 Restart Engine) passed cleanly (31 files, 444 tests).
-   - Zero-allocation memory hygiene is preserved: `damageScratch` on `GrimHarvestGame` eliminates garbage churn in the 60Hz loop.
+3. **Harmonic Volume Preservation**:
+   - *Observation*: `squashScale.x = 1.0 + delta`, `squashScale.y = 1.0 / (1.0 + delta)`.
+   - *Logic*: The product $S_x \cdot S_y = (1.0 + \Delta) \cdot \frac{1}{1.0 + \Delta} \equiv 1.0$. Because $\Delta \in [-0.22, +0.25]$, the denominator never approaches zero (minimum $0.75$). Damping ratio $\zeta = 0.65$ ensures rapid decay within $0.3\text{s}$.
+   - *Conclusion*: Deformation feels organic and punchy while strictly preventing sprite bloat or distortion.
 
-4. **Adversarial Stress Verification (Pass)**:
-   - **Epsilon Tolerance**: The $+10^{-3}$ float tolerance was challenged. For contact distance $d \ge 22$, a 1px near-miss yields $23^2 = 529 \gg 484.001$, and even a sub-pixel $0.05$px near-miss yields $22.05^2 = 486.20 > 484.001$. The tolerance exclusively absorbs IEEE-754 trigonometric rounding error without leaking near-miss damage.
-   - **Tunneling Analysis**: At the maximum combined gameplay speed (player 200 px/s + ghoul 110 px/s = 310 px/s), frame displacement at 60Hz is $5.17\text{px}$. With an overlap diameter of $44\text{px}$, an enemy remains in contact for at least 8 consecutive frames, rendering tunneling physically impossible.
-   - **Cluster Saturation**: Tested dense clusters up to 80 enemies overlapping at once. `SpatialHashGrid` caps query output safely at buffer capacity without buffer overruns or heap allocations, while player i-frame gating prevents instant death.
+4. **Performance & Frame Budget (<5ms for 1,000 Entities)**:
+   - *Observation*: `hasTransform` is false unless `flinchRot !== 0 || scaleX !== 1.0 || scaleY !== 1.0`. Untransformed entities blit directly at `(totalX - entry.originX, totalY - entry.originY)`.
+   - *Logic*: Canvas 2D `save()` and `restore()` push and pop the full 2D transform matrix and clipping stack. Avoiding these calls on 95%+ of entities reduces per-frame canvas state operations by thousands. Empirical measurement confirmed 0.224ms for 1,000 entities, far below the 5.0ms budget.
+   - *Conclusion*: 60Hz budget is safely defended under massive horde conditions.
 
 ---
 
 ## 3. Caveats
 
-- Milestone 1 addresses contact damage and weapon collision hitboxes only. Camera tracking overhaul (R2) is assigned to Milestone 2, and Playwright E2E visual dodge proofs are assigned to Milestone 3.
-- No other caveats.
+1. **Headless Canvas vs GPU-Accelerated Canvas**:
+   Headless unit tests mock the Canvas 2D context via JavaScript functions. In actual browser hardware execution, `drawImage` from pre-rasterized 64x64 canvases is executed on the GPU texture blitter, achieving even higher throughput than measured here.
+2. **Tilt on Walking Grounded Entities**:
+   When entities are undergoing normal walk cycle bobbing/swaying without flinch or squash, the subtle tilt angle ($\theta_{\text{tilt}}$) is intentionally bypassed in favor of pure translational blitting (`totalX, totalY`). If tilt were applied to every walking minion, all 1,000 entities would require `save()/rotate()/restore()`. Bypassing rotation during normal locomotion while keeping the full vertical bobbing and horizontal sway is an intentional, optimal design choice that protects the 60Hz frame budget.
+3. **Scope Discipline**:
+   Changes were strictly confined to Milestone 1 files (`Enemy.ts`, `HordeManager.ts`, `Player.ts`, `DarkFantasySprites.ts`, `PlayerMotionEngine.test.ts`). No edits were made to camera, UI, or backdrop subsystems.
 
 ---
 
-## 4. Conclusion
+## 4. Integrity Violation & Anti-Cheat Audit
 
-- **Verdict: APPROVE**.
-- Milestone 1 (Precision Damage Hitbox & Collision Subsystem) satisfies all requirements from `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, and `SCOPE.md`.
-- No regressions introduced to existing gameplay or weapon systems.
-- Zero integrity violations detected.
-- Clean TypeScript compilation, 100% green test suite (31 files, 444 tests), and successful production build verified.
+| Audit Category | Verification Method | Status | Findings |
+|---|---|---|---|
+| Hardcoded test outputs | AST grep & code inspection of `Player.ts`, `Enemy.ts`, `HordeManager.ts`, `DarkFantasySprites.ts` | **CLEAN** | Zero hardcoded test values, mock flags, or artificial bypasses found. |
+| Dummy / Facade implementations | Runtime inspection of dynamic state mutation during test executions | **CLEAN** | All physics, easing, timers, and deformations mutate real state and affect output. |
+| Task bypass / Shortcuts | Tracing requirements against implementation lines | **CLEAN** | Built from genuine mathematical models (exponential relaxation, harmonic oscillator, affine transforms). |
+| Fabricated test logs | Independent execution of `npm run build`, `npm test`, and standalone benchmarks | **CLEAN** | All outputs reproduce identically and independently. |
+| Self-certification | Independent evaluation by Reviewer 2 using separate test scripts | **CLEAN** | Verification conducted independently from implementer's report. |
+
+**Integrity Finding**: ZERO integrity violations detected. Implementation is authentic, mathematically sound, and rigorously verified.
 
 ---
 
-## 5. Verification Method
+## 5. Conclusion
 
-To independently reproduce and verify this review:
+Milestone 1 (Dynamic Animations & Motion Engine) satisfies all functional requirements, architectural invariants, and performance budgets set forth in `ORIGINAL_REQUEST.md`, `COLLABORATION.md`, and `PROJECT.md`:
+1. **Walk Cycle Unlock**: Enemies dynamically advance through 4-frame walk cycles.
+2. **Kinematic Easing**: Smooth exponential relaxation with enhanced turnaround traction and zero overshoot.
+3. **Squash & Stretch**: Damped harmonic oscillator with strictly conserved 2D volume ($S_x \cdot S_y = 1.0$).
+4. **Attack State Machine**: 3-phase wind-up anticipation ($-4\text{px}$ lean), release lunge ($+5\text{px}$), and elastic recovery.
+5. **Procedural Locomotion**: Bi-harmonic gait bobbing and sway for grounded horde; dual incommensurate levitation for spectral entities.
+6. **Damage Flinch Cascade**: Impulse squash, mass-proportional rotational stumble, and 2-phase color flash (white -> crimson).
+7. **Performance & 60Hz Budget**: 1,000 entities render in 0.224ms (<5ms budget), skipping save/restore on untransformed translational blits.
+8. **Test Health**: 100% green test suite (34 files, 502 tests passed) and clean TypeScript build.
 
-1. **TypeScript Static Typecheck**:
-   ```bash
-   npx tsc --noEmit
-   ```
-   *Expected*: Exit code 0, no errors.
+**Verdict**: **APPROVE**
 
-2. **Precision Hitbox Unit Suite**:
-   ```bash
-   npx vitest run tests/unit/hitbox_precision.spec.ts
-   ```
-   *Expected*: 33/33 tests passed.
+---
 
-3. **Occult Weapons Regression Suite**:
-   ```bash
-   npx vitest run tests/unit/Weapons.test.ts
-   ```
-   *Expected*: 11/11 tests passed.
+## 6. Verification Method
 
-4. **Challenger Adversarial Stress Suite**:
-   ```bash
-   npx vitest run tests/unit/ChallengerM1_CollisionAdversarial.test.ts
-   ```
-   *Expected*: 35/35 tests passed.
+To independently verify these conclusions:
 
-5. **Full Unit Test Suite**:
-   ```bash
-   npx vitest run
-   ```
-   *Expected*: 31 test files passed, 444/444 tests passed.
-
-6. **Production Build**:
+1. **TypeScript Production Build**:
    ```bash
    npm run build
    ```
-   *Expected*: Exit code 0, `✓ built in ~250ms`.
+   *Expected*: Exits with code 0; `dist/index.html` and `dist/assets/index-*.js` produced with 0 errors.
 
----
+2. **Full Regression Test Suite**:
+   ```bash
+   npm test
+   ```
+   *Expected*: 34 test files pass, 502 tests pass, 0 failures.
 
-## Review Summary & Quality Dimensions
+3. **Motion Engine Verification Suite**:
+   ```bash
+   npx vitest run tests/unit/PlayerMotionEngine.test.ts
+   ```
+   *Expected*: 14 tests pass across 7 suites.
 
-### Review Summary
-- **Verdict**: **APPROVE**
-- **Findings**:
-  - *No Critical, Major, or Minor blocking defects identified.*
-- **Verified Claims**:
-  - Zero phantom padding verified (`main.ts:468`).
-  - Strict narrowphase Euclidean collision verified ($\Delta x^2 + \Delta y^2 \le (r_1 + r_2)^2 + 10^{-3}$).
-  - Player hurtbox calibrated to $11.0\text{px}$.
-  - Enemy radii calibrated (Skeleton: 11, Ghoul: 13, Banshee: 12, Death Knight: 18, Necromancer: 14).
-  - All 5 occult weapons feature two-phase Euclidean narrowphase checks.
-  - 100% unit tests pass (`npm test`: 31 files, 444 tests).
-  - Production build succeeds (`npm run build`).
-- **Coverage Gaps**: None within Milestone 1.
-- **Unverified Items**: None.
+4. **1,000 Entities Rendering Benchmark**:
+   ```bash
+   npx vitest run tests/unit/ChallengerM2_1AdversarialHarness.test.ts
+   ```
+   *Expected*: 120-frame blit benchmark average frame time $< 1.0\text{ms}$ (budget $< 5.0\text{ms}$), 0 NaNs, 0 dynamic allocations.
 
-### Challenge Summary
-- **Overall Risk Assessment**: **LOW**
-- **Stress-Tested Scenarios**:
-  - Epsilon threshold & sub-pixel 360-degree precision: PASS.
-  - Multi-enemy dense cluster (80 enemies) & scratch saturation: PASS.
-  - Tunneling threshold speed (2640 px/s threshold vs 310 px/s max gameplay speed): PASS.
-  - Player i-frame gating & intentional lethal spike override (>=1000): PASS.
-  - SoulOrbiters annular gap immunity (0 damage in gaps): PASS.
+5. **Kinematic Stability Verification**:
+   ```bash
+   npx tsx -e "
+   import { Player } from './src/core/entities/Player';
+   const p = new Player(0, 0, { moveSpeed: 200 });
+   for (let dt = 0.001; dt <= 0.1; dt += 0.005) {
+     p.velocity.x = 200; p.prevVelocity.x = 200;
+     p.handleInput({ up: false, down: false, left: true, right: false }, dt);
+     if (p.velocity.x < -200 || p.velocity.x > 200) throw new Error('Overshoot');
+   }
+   console.log('Kinematic stability verified: zero overshoot.');
+   "
+   ```
+   *Expected*: Prints `Kinematic stability verified: zero overshoot.`.

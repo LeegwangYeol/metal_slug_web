@@ -134,11 +134,13 @@ describe('Adversarial Challenger Suite: Milestone 1 Restart Engine (challenger_m
         expect(game.deathTimer).toBe(0);
         expect(game.isVictory).toBe(false);
 
-        // Camera tracking snaps cleanly to player centered coordinates (-480, -270)
-        expect(game.camera.x).toBe(-480);
-        expect(game.camera.y).toBe(-270);
-        expect(game.camera.renderX).toBe(-480);
-        expect(game.camera.renderY).toBe(-270);
+        // Camera tracking snaps cleanly to player centered coordinates (-viewWidth / 2, -viewHeight / 2)
+        const expectedCamX = -game.camera.viewWidth / 2;
+        const expectedCamY = -game.camera.viewHeight / 2;
+        expect(game.camera.x).toBe(expectedCamX);
+        expect(game.camera.y).toBe(expectedCamY);
+        expect(game.camera.renderX).toBe(Math.round(expectedCamX));
+        expect(game.camera.renderY).toBe(Math.round(expectedCamY));
         expect(game.camera.shakeIntensity).toBe(0);
         expect(game.camera.shakeOffsetX).toBe(0);
         expect(game.camera.shakeOffsetY).toBe(0);
@@ -414,10 +416,12 @@ describe('Adversarial Challenger Suite: Milestone 1 Restart Engine (challenger_m
       expect(game.waveDirector.getHPMultiplier()).toBeCloseTo(1.0, 4);
 
       // Camera & clocks
-      expect(game.camera.x).toBe(-480);
-      expect(game.camera.y).toBe(-270);
-      expect(game.camera.renderX).toBe(-480);
-      expect(game.camera.renderY).toBe(-270);
+      const expectedCamX = -game.camera.viewWidth / 2;
+      const expectedCamY = -game.camera.viewHeight / 2;
+      expect(game.camera.x).toBe(expectedCamX);
+      expect(game.camera.y).toBe(expectedCamY);
+      expect(game.camera.renderX).toBe(Math.round(expectedCamX));
+      expect(game.camera.renderY).toBe(Math.round(expectedCamY));
       expect(game.camera.shakeIntensity).toBe(0);
       expect(game.elapsedTime).toBe(0);
       expect(game.deathTimer).toBe(0);

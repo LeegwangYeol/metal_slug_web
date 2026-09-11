@@ -36,4 +36,4 @@
 | 1 | Precision Hitbox & Collision Subsystem | Features 1–5 (zero padding, tight hurtboxes/hitboxes, unit tests) | None | DONE |
 | 2 | Camera Overhaul & Cinematic Viewport | Features 6–9 (centered tracking, damping, lookahead, backdrop) | M1 | DONE |
 | 3 | Automated Playwright E2E & Visual Proof | Features 10–11 (E2E dodge test, visual screenshots >50KB) | M1, M2 | DONE |
-| 4 | Green Test Suite & Production Deployment | Features 12–13 (full suite pass, git push, live Vercel HTTP/2 200) | M1, M2, M3 | IN_PROGRESS |
+| 4 | Green Test Suite & Production Deployment | Features 12–13 (full suite pass, git push, live Vercel HTTP/2 200) | M1, M2, M3 | DONE |

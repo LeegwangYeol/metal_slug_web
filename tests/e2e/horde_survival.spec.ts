@@ -298,8 +298,8 @@ test.describe('Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Harde
 
         for (const item of activeLoot) {
           if (!item.isAlive) continue;
-          // Never chase gems dropped inside the deep central zone (< 200px)
-          if (Math.hypot(item.position.x, item.position.y) < 200) continue;
+          // Never chase gems dropped inside the deep central zone if already leveled
+          if (p.level >= 2 && Math.hypot(item.position.x, item.position.y) < 160) continue;
           const gx = item.position.x - px;
           const gy = item.position.y - py;
           const d = Math.hypot(gx, gy);
@@ -406,10 +406,10 @@ test.describe('Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Harde
             score -= 300000;
           }
 
-          // Central Death Convergence Zone avoidance (once broken out, never dive back into center!)
-          if (g.elapsedTime >= 1.5) {
+          // Central Death Convergence Zone avoidance (once leveled up, maintain carousel orbit)
+          if (p.level >= 2 && g.elapsedTime >= 2.0) {
             const futureDistCenter = Math.hypot(playerFutureX, playerFutureY);
-            if (futureDistCenter < 220) {
+            if (futureDistCenter < 180) {
               score -= 10000000;
             }
           }
@@ -422,11 +422,11 @@ test.describe('Milestone M4: Dark Fantasy Horde Survival E2E Playtesting & Harde
             score -= 3000;
           }
 
-          // E. Soul Gem / XP attraction (safe clearance gate: minFutureDist >= 54px)
-          if (bestGemDist < 400 && minFutureDist >= 54) {
+          // E. Soul Gem / XP attraction (safe clearance gate: minFutureDist >= 44px)
+          if (bestGemDist < 400 && minFutureDist >= 44) {
             const gdot = c.dx * gemDirX + c.dy * gemDirY;
             if (gdot > 0) {
-              const priority = (p.level < 2 ? 1200 : 250) * bestGemVal;
+              const priority = (p.level < 2 ? 2800 : 250) * bestGemVal;
               const distFactor = Math.max(0.35, 1 - bestGemDist / 400);
               score += gdot * priority * distFactor;
             }

@@ -1,7 +1,7 @@
-# BRIEFING — 2026-09-11T00:47:00+09:00
+# BRIEFING — 2026-09-11T06:34:00Z
 
 ## Mission
-Adversarially verify pool and entity invariants across restarts for HordeManager, SpatialHashGrid, LootManager, and WeaponManager.
+Empirically stress-test Milestone 1 horde animations and render loop (1,500 active horde performance < 5.0ms, pool reset state synchronization, 120-canvas atlas integrity).
 
 ## 🔒 My Identity
 - Archetype: challenger
@@ -10,45 +10,51 @@ Adversarially verify pool and entity invariants across restarts for HordeManager
 - Original parent: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
 - Milestone: m1
 - Instance: 2 of 2
+- Second invocation parent: 52278ce8-fed5-44e0-ad05-d44362fee9a5
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
 - Empirically verify all invariants — run tests and harnesses directly
 - No phantom hits or ghost entities
 - Wait for explicit user approval before proceeding with implementation
+- Zero ghost animation states across pool recycling
+- Strictly 120-canvas pre-rasterized atlas with zero runtime re-rasterization
 
 ## Current Parent
-- Conversation ID: 16d4f03a-b906-4dcd-a7c3-e24f1752216b
-- Updated: 2026-09-11T00:42:01+09:00
+- Conversation ID: 52278ce8-fed5-44e0-ad05-d44362fee9a5
+- Updated: 2026-09-11T06:30:38Z
 
 ## Review Scope
-- **Files to review**: `src/main.ts`, `src/core/HordeManager.ts`, `src/core/SpatialHashGrid.ts`, `src/core/systems/LootManager.ts`, `src/core/weapons/WeaponManager.ts`, `src/core/weapons/Projectile.ts`
+- **Files to review**: `src/core/entities/Enemy.ts`, `src/core/HordeManager.ts`, `src/render/sprites/DarkFantasySprites.ts`, `src/core/entities/Player.ts`
 - **Interface contracts**: `/Users/user/teamwork_projects/metal_slug_web/PROJECT.md`
-- **Review criteria**: pool/entity invariants across restarts, ghost entities, projectile cleanup, weapon reset
+- **Review criteria**: 1,500 active horde rendering < 5.0ms, zero crashes, zero memory leaks, state desync / pooling reset cleanliness, atlas 120-canvas invariant
 
 ## Attack Surface
 - **Hypotheses tested**:
-  1. Spawning 1,000 enemies + kills causes counter drift or pool leak after restart -> PASSED (35 active, 2,013 pool, 35 spawned, 0 killed).
-  2. SpatialHashGrid contains ghost entities or phantom collision hits after restart -> PASSED (0 ghost entities across all 6,241 cells, 0 phantom hits).
-  3. LootManager leaks active items or retains stale velocities/attraction -> PASSED (0 active, 1,500 pooled, 100% sanitized).
-  4. WeaponManager retains active projectiles or sub-weapon state -> PASSED (0 active projectiles, Rank 1 Scythe equipped).
-  5. Accumulator lag spike causes infinite loop hang -> PASSED (clamped to MAX_SUB_STEPS = 5).
-  6. ProjectilePool.clear() infinite loop vulnerability -> VULNERABILITY FOUND & DOCUMENTED.
+  1. 1,500 active enemies with simultaneous walk bobs, hover float, damage flinch, and hit flash causes crashes, NaNs, or frame draw time >= 5.0ms -> REJECTED / PASSED (0 crashes, 0 NaNs, balanced save/restore, frame draw time = 0.868ms avg).
+  2. Sustained 1,000 frames of 1,500-enemy updates & draws leaks memory -> REJECTED / PASSED (Heap delta = -5.24 MB, zero leakage).
+  3. Pooled Enemy reuse carries ghost animation states (behaviorTimer, walkPhase, hoverPhase, flinchRot, squash) -> REJECTED / PASSED (Enemy.reset() clears all 6 motion properties; reused enemies render at neutral 0-offset coordinates).
+  4. 10,000 rapid churn spawn/despawn cycles accumulate residual state -> REJECTED / PASSED (100% state isolation).
+  5. DarkFantasySprites atlas cache deviates from 120 canvases -> REJECTED / PASSED (strictly 120 canvases).
+  6. Runtime draw calls invoke document.createElement or re-rasterize sprites -> REJECTED / PASSED (0 createElement or generateSpriteEntry calls during runtime draw).
+  7. Negative timer / clock rewind edge case in walk frame calculation -> VULNERABILITY / ADVISORY NOTED: `Math.floor(timer * 8) % 4` produces `-1` for negative timer values, causing cache miss if unhandled.
 - **Vulnerabilities found**:
-  - `ProjectilePool.clear()` uses `while (this.activeCount > 0)` calling `free(...)`. If an entity in `activeIndices` has `!p.active`, `free()` returns early without decrementing `activeCount`, leading to an infinite loop at 100% CPU.
+  - `DarkFantasySprites.ts:1718`: Negative `timer` produces `frame = -1` due to JavaScript signed modulo, producing key `${type}_-1_right_normal` which misses cache and triggers dynamic re-rasterization if negative timestamp is passed.
+  - `HordeStressAdversarial.test.ts:155`: Parallel runner CPU thread contention causes tick duration to border on 8.0ms/40.0ms thresholds.
 - **Untested angles**:
-  - Multi-threaded WebWorker simulation (single-threaded in current architecture).
+  - WebGL hardware canvas acceleration (simulated via headless Canvas2D context).
 
 ## Loaded Skills
 None
 
 ## Key Decisions Made
-- Authored and verified `tests/unit/ChallengerM1_2RestartAdversarial.test.ts` (8 tests passing).
-- Verified full suite: 21 test files, 246 tests passing.
-- Verdict: APPROVE with Advisory Finding for `ProjectilePool.clear()`.
+- Authored `tests/unit/ChallengerM1_2_HordeStress.test.ts` (9 tests passing).
+- Verified full test suite: 36 test files, 523 tests passing 100% green.
+- Verified TypeScript build: `npm run build` succeeds (0 errors).
+- Issued verdict: **APPROVE** with Advisory Finding.
 
 ## Artifact Index
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/DISPATCH.md — Dispatch log
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/progress.md — Liveness & progress tracking
-- /Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/handoff.md — Final handoff report
-- tests/unit/ChallengerM1_2RestartAdversarial.test.ts — Empirical adversarial test suite
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/DISPATCH.md` — Dispatch log
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/progress.md` — Liveness & progress tracking
+- `/Users/user/teamwork_projects/metal_slug_web/.agents/challenger_m1_2/handoff.md` — Final handoff report
+- `tests/unit/ChallengerM1_2_HordeStress.test.ts` — Empirical adversarial test harness

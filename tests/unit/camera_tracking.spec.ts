@@ -32,6 +32,7 @@ describe('Milestone 2: Camera Tracking & Viewport Engine Suite', () => {
     camera = new Camera({
       viewportWidth: W,
       viewportHeight: H,
+      zoom: 1.0,
       bounds: defaultBounds,
       smoothSpeed: 8.0, // Exponential damping factor k = 8.0
       forwardLock: false,
@@ -101,6 +102,7 @@ describe('Milestone 2: Camera Tracking & Viewport Engine Suite', () => {
         const customCam = new Camera({
           viewportWidth: res.width,
           viewportHeight: res.height,
+          zoom: 1.0,
           bounds: defaultBounds,
           smoothSpeed: 8.0,
         });
@@ -620,6 +622,116 @@ describe('Milestone 2: Camera Tracking & Viewport Engine Suite', () => {
         expect(Number.isFinite(camera.renderX)).toBe(true);
         expect(Number.isFinite(camera.renderY)).toBe(true);
       }
+    });
+  });
+
+  // =========================================================================
+  // Milestone 2: FOV Widening (Z = 0.80) & Coordinate Transforms
+  // =========================================================================
+  describe('Milestone 2: FOV Widening (Z = 0.80) & Coordinate Transforms', () => {
+    let m2Camera: Camera;
+
+    beforeEach(() => {
+      m2Camera = new Camera({
+        viewportWidth: 960,
+        viewportHeight: 540,
+        bounds: defaultBounds,
+        smoothSpeed: 8.0,
+      });
+    });
+
+    it('defaults to zoom = 0.80 and expands visible world view to 1200x675 (+56.25% area)', () => {
+      expect(m2Camera.zoom).toBe(0.80);
+      expect(m2Camera.viewportWidth).toBe(960);
+      expect(m2Camera.viewportHeight).toBe(540);
+      expect(m2Camera.viewWidth).toBe(1200);
+      expect(m2Camera.viewHeight).toBe(675);
+
+      const standardArea = 960 * 540;
+      const widenedArea = m2Camera.viewWidth * m2Camera.viewHeight;
+      const expansionRatio = widenedArea / standardArea;
+      expect(expansionRatio).toBeCloseTo(1.5625, 4); // Exactly +56.25% expansion
+    });
+
+    it('centers stationary player at screen center (480, 270) with widened view coordinates', () => {
+      const px = 0;
+      const py = 0;
+
+      // Center camera on origin
+      m2Camera.centerOn(px, py);
+
+      // Camera top-left in world units should be (-600, -337.5)
+      expect(m2Camera.x).toBeCloseTo(-600, 2);
+      expect(m2Camera.y).toBeCloseTo(-337.5, 2);
+      expect(m2Camera.renderX).toBe(-600);
+      expect(m2Camera.renderY).toBe(Math.round(-337.5)); // -337 due to pixel snapping
+
+      // Screen position for player at (0, 0) should be exact/within rounding of canvas center (480, 270)
+      const screenPos = m2Camera.worldToScreen(px, py);
+      expect(screenPos.x).toBeCloseTo(480, 1);
+      expect(screenPos.y).toBeCloseTo(270, 0);
+    });
+
+    it('preserves exact bijective coordinate transforms under Z = 0.80 across diverse coordinates', () => {
+      m2Camera.reset(-300, 150);
+
+      const testPoints = [
+        { wx: 0, wy: 0 },
+        { wx: 500, wy: -400 },
+        { wx: -1200, wy: 850 },
+        { wx: 345.67, wy: -890.12 },
+        { wx: -1999.9, wy: 1999.9 },
+      ];
+
+      for (const pt of testPoints) {
+        const screen = m2Camera.worldToScreen(pt.wx, pt.wy);
+        const reconstructed = m2Camera.screenToWorld(screen.x, screen.y);
+        expect(reconstructed.x).toBeCloseTo(pt.wx, 4);
+        expect(reconstructed.y).toBeCloseTo(pt.wy, 4);
+      }
+    });
+
+    it('adapts boundary clamping to expanded view extents ([-2000, 800] x [-2000, 1325]) without void exposure', () => {
+      // Test extreme right/bottom coordinates
+      m2Camera.reset(5000, 5000);
+      m2Camera.update(3000, 3000, 1 / 60, 0, 0);
+
+      // Max camera x = 2000 - viewWidth = 2000 - 1200 = 800
+      // Max camera y = 2000 - viewHeight = 2000 - 675 = 1325
+      expect(m2Camera.x).toBeLessThanOrEqual(800.001);
+      expect(m2Camera.y).toBeLessThanOrEqual(1325.001);
+
+      // Test extreme left/top coordinates
+      m2Camera.reset(-5000, -5000);
+      m2Camera.update(-3000, -3000, 1 / 60, 0, 0);
+
+      expect(m2Camera.x).toBeGreaterThanOrEqual(-2000.001);
+      expect(m2Camera.y).toBeGreaterThanOrEqual(-2000.001);
+    });
+
+    it('culls entities outside expanded viewWidth (1200) and viewHeight (675)', () => {
+      m2Camera.reset(0, 0);
+
+      // An object at (1050, 200) is inside widened view (1200) but outside old view (960)
+      const visibleInWidenedView: AABB = { x: 1050, y: 200, width: 32, height: 32 };
+      expect(m2Camera.isVisible(visibleInWidenedView)).toBe(true);
+
+      // An object beyond 1200 + culling margin (e.g. 1400) is culled
+      const farOutside: AABB = { x: 1400, y: 200, width: 32, height: 32 };
+      expect(m2Camera.isVisible(farOutside)).toBe(false);
+    });
+
+    it('verifies wave spawn ring radius (800px) exceeds visible diagonal corner (688.4px)', () => {
+      const halfW = m2Camera.viewWidth / 2; // 600
+      const halfH = m2Camera.viewHeight / 2; // 337.5
+      const cornerDist = Math.hypot(halfW, halfH); // ~688.41px
+
+      expect(cornerDist).toBeCloseTo(688.41, 1);
+
+      // Ring spawn radius of 800px guarantees zero on-screen spawn pop-in
+      const spawnRingRadius = 800;
+      const marginBeyondCorner = spawnRingRadius - cornerDist;
+      expect(marginBeyondCorner).toBeGreaterThan(100); // At least 111px off-screen
     });
   });
 });

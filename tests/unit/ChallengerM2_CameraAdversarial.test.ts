@@ -33,6 +33,7 @@ describe('Empirical Challenger Suite: Milestone 2 Camera & Viewport Engine', () 
     camera = new Camera({
       viewportWidth: W,
       viewportHeight: H,
+      zoom: 1.0,
       bounds: stageBounds,
       smoothSpeed: 8.0,
       lookaheadMax: 40.0,
@@ -375,6 +376,7 @@ describe('Empirical Challenger Suite: Milestone 2 Camera & Viewport Engine', () 
       const customCam = new Camera({
         viewportWidth: W,
         viewportHeight: H,
+        zoom: 1.0,
         bounds: tinyBounds,
       });
 
@@ -403,7 +405,7 @@ describe('Empirical Challenger Suite: Milestone 2 Camera & Viewport Engine', () 
       const theoreticalX = targetCamX - (targetCamX - x0) * Math.exp(-k * totalTime);
 
       // 1. 144Hz simulation (144 frames of dt = 1/144)
-      const cam144 = new Camera({ smoothSpeed: k, bounds: stageBounds });
+      const cam144 = new Camera({ smoothSpeed: k, bounds: stageBounds, zoom: 1.0 });
       cam144.reset(x0, 0);
       const dt144 = 1 / 144;
       for (let i = 0; i < 144; i++) {
@@ -411,7 +413,7 @@ describe('Empirical Challenger Suite: Milestone 2 Camera & Viewport Engine', () 
       }
 
       // 2. 60Hz simulation (60 frames of dt = 1/60)
-      const cam60 = new Camera({ smoothSpeed: k, bounds: stageBounds });
+      const cam60 = new Camera({ smoothSpeed: k, bounds: stageBounds, zoom: 1.0 });
       cam60.reset(x0, 0);
       const dt60 = 1 / 60;
       for (let i = 0; i < 60; i++) {
@@ -419,7 +421,7 @@ describe('Empirical Challenger Suite: Milestone 2 Camera & Viewport Engine', () 
       }
 
       // 3. 30Hz simulation (30 frames of dt = 1/30)
-      const cam30 = new Camera({ smoothSpeed: k, bounds: stageBounds });
+      const cam30 = new Camera({ smoothSpeed: k, bounds: stageBounds, zoom: 1.0 });
       cam30.reset(x0, 0);
       const dt30 = 1 / 30;
       for (let i = 0; i < 30; i++) {
@@ -511,6 +513,7 @@ describe('Empirical Challenger Suite: Milestone 2 Camera & Viewport Engine', () 
       const refCam = new Camera({
         viewportWidth: W,
         viewportHeight: H,
+        zoom: 1.0,
         bounds: stageBounds,
       });
       refCam.reset(px - W / 2, py - H / 2);

@@ -24,6 +24,7 @@ export interface CameraBounds {
 export interface CameraOptions {
   viewportWidth?: number;  // default 960
   viewportHeight?: number; // default 540
+  zoom?: number;           // default 0.80 (broadens FOV by +56.25% to 1200x675)
   forwardLock?: boolean;   // default false
   bounds?: CameraBounds;
   smoothSpeed?: number;    // default 8.0 (exponential damping factor k)
@@ -34,6 +35,23 @@ export interface CameraOptions {
 export class Camera {
   public readonly viewportWidth: number;
   public readonly viewportHeight: number;
+  public zoom: number = 0.80;
+
+  /**
+   * Effective visible world viewport width accounting for camera zoom.
+   * At zoom 0.80 on 960px canvas: 1200 world units.
+   */
+  public get viewWidth(): number {
+    return this.viewportWidth / this.zoom;
+  }
+
+  /**
+   * Effective visible world viewport height accounting for camera zoom.
+   * At zoom 0.80 on 540px canvas: 675 world units.
+   */
+  public get viewHeight(): number {
+    return this.viewportHeight / this.zoom;
+  }
 
   // Logical camera world coordinates (top-left of viewport, smoothed tracking)
   public x: number = 0;
@@ -80,6 +98,7 @@ export class Camera {
   constructor(options: CameraOptions = {}) {
     this.viewportWidth = options.viewportWidth ?? 960;
     this.viewportHeight = options.viewportHeight ?? 540;
+    this.zoom = options.zoom ?? 0.80;
     this.forwardLock = options.forwardLock ?? false;
     this.smoothSpeed = options.smoothSpeed ?? 8.0;
     this.lookaheadMax = options.lookaheadMax ?? 40.0;
@@ -89,11 +108,11 @@ export class Camera {
       this.bounds = { ...options.bounds };
     }
 
-    // Symmetrical centered references
-    this.deadzoneLeft = Math.floor(this.viewportWidth * 0.5);
-    this.deadzoneRight = Math.floor(this.viewportWidth * 0.5);
-    this.deadzoneTop = Math.floor(this.viewportHeight * 0.5);
-    this.deadzoneBottom = Math.floor(this.viewportHeight * 0.5);
+    // Symmetrical centered references based on effective visible world extents
+    this.deadzoneLeft = Math.floor(this.viewWidth * 0.5);
+    this.deadzoneRight = Math.floor(this.viewWidth * 0.5);
+    this.deadzoneTop = Math.floor(this.viewHeight * 0.5);
+    this.deadzoneBottom = Math.floor(this.viewHeight * 0.5);
   }
 
   /**
@@ -119,8 +138,8 @@ export class Camera {
    * Immediately centers camera on a target world coordinate without damping delay.
    */
   public centerOn(targetX: number, targetY: number): void {
-    this.x = targetX - this.viewportWidth / 2;
-    this.y = targetY - this.viewportHeight / 2;
+    this.x = targetX - this.viewWidth / 2;
+    this.y = targetY - this.viewHeight / 2;
     this.lookaheadX = 0;
     this.lookaheadY = 0;
     this.clampToBounds();
@@ -168,14 +187,14 @@ export class Camera {
     }
 
     // 3. Ideal centered target camera position (top-left of viewport)
-    const idealTargetX = targetX - this.viewportWidth / 2 + this.lookaheadX;
-    const idealTargetY = targetY - this.viewportHeight / 2 + this.lookaheadY;
+    const idealTargetX = targetX - this.viewWidth / 2 + this.lookaheadX;
+    const idealTargetY = targetY - this.viewHeight / 2 + this.lookaheadY;
 
     // 4. Clamp ideal target to world boundaries (guarantees smooth deceleration at edges)
     const minClampX = this.bounds.minX;
-    const maxClampX = Math.max(this.bounds.minX, this.bounds.maxX - this.viewportWidth);
+    const maxClampX = Math.max(this.bounds.minX, this.bounds.maxX - this.viewWidth);
     const minClampY = this.bounds.minY;
-    const maxClampY = Math.max(this.bounds.minY, this.bounds.maxY - this.viewportHeight);
+    const maxClampY = Math.max(this.bounds.minY, this.bounds.maxY - this.viewHeight);
 
     const clampedTargetX = Math.max(minClampX, Math.min(maxClampX, idealTargetX));
     const clampedTargetY = Math.max(minClampY, Math.min(maxClampY, idealTargetY));
@@ -273,11 +292,11 @@ export class Camera {
 
   private clampToBounds(): void {
     const minClampX = this.bounds.minX;
-    const maxClampX = Math.max(this.bounds.minX, this.bounds.maxX - this.viewportWidth);
+    const maxClampX = Math.max(this.bounds.minX, this.bounds.maxX - this.viewWidth);
     this.x = Math.max(minClampX, Math.min(maxClampX, this.x));
 
     const minClampY = this.bounds.minY;
-    const maxClampY = Math.max(this.bounds.minY, this.bounds.maxY - this.viewportHeight);
+    const maxClampY = Math.max(this.bounds.minY, this.bounds.maxY - this.viewHeight);
     this.y = Math.max(minClampY, Math.min(maxClampY, this.y));
   }
 
@@ -286,8 +305,8 @@ export class Camera {
    */
   public worldToScreen(worldX: number, worldY: number): Vector2D {
     return {
-      x: worldX - this.renderX,
-      y: worldY - this.renderY,
+      x: (worldX - this.renderX) * this.zoom,
+      y: (worldY - this.renderY) * this.zoom,
     };
   }
 
@@ -296,8 +315,8 @@ export class Camera {
    */
   public screenToWorld(screenX: number, screenY: number): Vector2D {
     return {
-      x: screenX + this.renderX,
-      y: screenY + this.renderY,
+      x: screenX / this.zoom + this.renderX,
+      y: screenY / this.zoom + this.renderY,
     };
   }
 
@@ -308,8 +327,8 @@ export class Camera {
     const viewBounds: AABB = {
       x: this.renderX,
       y: this.renderY,
-      width: this.viewportWidth,
-      height: this.viewportHeight,
+      width: this.viewWidth,
+      height: this.viewHeight,
     };
     return BoundingBox.intersects(box, viewBounds);
   }

@@ -353,10 +353,32 @@ export class HordeManager {
       if (enemy.y < minY) enemy.y = minY;
       else if (enemy.y > maxY) enemy.y = maxY;
 
+      // Advance entity behavior timer (unlocks 4-frame sprite walk cycles)
+      enemy.behaviorTimer += dt;
+
+      // Advance type-specific gait phases
+      const rawType = (enemy.type || 'skeleton').toLowerCase();
+      if (rawType.includes('banshee') || rawType.includes('necromancer')) {
+        enemy.hoverPhase = (enemy.hoverPhase + 2.2 * dt) % (Math.PI * 200);
+      } else {
+        const currentSpeed = Math.hypot(enemy.vx, enemy.vy);
+        const maxSpeed = Math.max(1, enemy.speed || 65);
+        enemy.walkPhase = (enemy.walkPhase + (currentSpeed / maxSpeed) * 16.0 * dt) % (Math.PI * 200);
+      }
+
       // Damage flash decay
       if (enemy.flashTimer > 0) {
         enemy.flashTimer = Math.max(0, enemy.flashTimer - dt);
       }
+
+      // Damage flinch & squash relaxation
+      if (enemy.flinchTimer > 0) {
+        enemy.flinchTimer = Math.max(0, enemy.flinchTimer - dt);
+      }
+      const relaxFactor = 1.0 - Math.exp(-25.0 * dt);
+      enemy.squashX += (1.0 - enemy.squashX) * relaxFactor;
+      enemy.squashY += (1.0 - enemy.squashY) * relaxFactor;
+      enemy.flinchRot += (0.0 - enemy.flinchRot) * relaxFactor;
 
       // Orientation
       if (enemy.vx > 1) {

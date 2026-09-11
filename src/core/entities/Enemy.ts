@@ -39,6 +39,14 @@ export class Enemy {
   public behaviorTimer: number = 0;
   public facingRight: boolean = true;
 
+  // Procedural Animation & Motion State (flat zero-allocation numbers)
+  public walkPhase: number = 0;
+  public hoverPhase: number = 0;
+  public squashX: number = 1.0;
+  public squashY: number = 1.0;
+  public flinchRot: number = 0;
+  public flinchTimer: number = 0;
+
   private _pos = { x: 0, y: 0 };
 
   public get collisionRadius(): number {
@@ -121,12 +129,20 @@ export class Enemy {
     this.behaviorTimer = 0;
     this.facingRight = true;
 
+    this.walkPhase = 0;
+    this.hoverPhase = 0;
+    this.squashX = 1.0;
+    this.squashY = 1.0;
+    this.flinchRot = 0;
+    this.flinchTimer = 0;
+
     this.active = true;
     this.isAlive = true;
   }
 
   /**
    * Inflicts damage on enemy and sets damage flash timer.
+   * Applies impulse deformation squash and rotational flinch stumble.
    * Returns actual damage dealt.
    */
   public takeDamage(amount: number, knockbackX: number = 0, knockbackY: number = 0): number {
@@ -134,11 +150,24 @@ export class Enemy {
 
     const actual = Math.min(this.hp, amount);
     this.hp -= actual;
-    this.flashTimer = 0.1; // 100ms visual flash
+    this.flashTimer = 0.10; // 100ms visual flash cascade (50ms white -> 50ms crimson)
 
+    // Tier 1: Impulse Squash & Stretch deformation
+    this.squashX = 1.25;
+    this.squashY = 0.75;
+
+    // Tier 2: Rotational Flinch / Stumble proportional to knockback impulse
+    this.flinchTimer = 0.15;
     if (this.mass > 0) {
+      const impulseRot = (knockbackX * 0.002) / this.mass;
+      this.flinchRot = Math.max(
+        -0.35,
+        Math.min(0.35, impulseRot !== 0 ? impulseRot : (this.facingRight ? -0.15 : 0.15))
+      );
       this.pushVx += knockbackX / this.mass;
       this.pushVy += knockbackY / this.mass;
+    } else {
+      this.flinchRot = this.facingRight ? -0.15 : 0.15;
     }
 
     if (this.hp <= 0) {
