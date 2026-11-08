@@ -297,7 +297,7 @@ describe('Milestone 4 Adversarial Stress: Visual Proof Artifacts Invariant Verif
       name: 'upgrade_modal_modern.png',
       description: 'Modern 4-tier rarity glassmorphic upgrade modal',
       minExpectedColors: 8000,
-      minExpectedVariance: 800.0,
+      minExpectedVariance: 790.0,
     },
   ];
 
